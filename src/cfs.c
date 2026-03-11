@@ -20,6 +20,7 @@
 #elif defined(CFS_OS_LINUX) || defined(CFS_OS_MACOS) || defined(CFS_OS_BSD) || \
     defined(CFS_ENV_CYGWIN)
 /* POSIX native includes */
+#include <unistd.h>
 #else
 /* Fallback includes */
 #endif
@@ -1324,4 +1325,306 @@ CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
   if (!rt || !config)
     return -1;
   return 0;
+}
+CFS_API cfs_bool cfs_status_known(cfs_file_status s) {
+  return s.type != cfs_file_type_none;
+}
+
+CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
+                                cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || p->length == 0 || !out) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return -1;
+  }
+#if defined(CFS_OS_WINDOWS)
+  {
+    struct _stat64 st;
+    if (_wstat64(p->str, &st) == 0) {
+      *out = (cfs_uintmax_t)st.st_nlink;
+      return 0;
+    }
+  }
+#else
+  {
+    struct stat st;
+    if (stat(p->str, &st) == 0) {
+      *out = (cfs_uintmax_t)st.st_nlink;
+      return 0;
+    }
+  }
+#endif
+  if (ec)
+    *ec = cfs_get_last_error();
+  return -1;
+}
+
+CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
+                            cfs_perm_options opts, cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || p->length == 0 || opts != cfs_perm_options_replace) {
+    if (ec)
+      cfs_set_error(
+          ec, 0, cfs_errc_invalid_argument); /* Only support replace for now */
+    return -1;
+  }
+#if defined(CFS_OS_WINDOWS)
+  if (_wchmod(p->str, (int)prms) == 0) {
+    return 0;
+  }
+#else
+  if (chmod(p->str, (mode_t)prms) == 0) {
+    return 0;
+  }
+#endif
+  if (ec)
+    *ec = cfs_get_last_error();
+  return -1;
+}
+
+CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
+                           cfs_bool *out, cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p1 || !p2 || p1->length == 0 || p2->length == 0 || !out) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return -1;
+  }
+#if defined(CFS_OS_WINDOWS)
+  {
+    HANDLE h1 = CreateFileW(
+        p1->str, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    HANDLE h2 = CreateFileW(
+        p2->str, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    if (h1 != INVALID_HANDLE_VALUE && h2 != INVALID_HANDLE_VALUE) {
+      BY_HANDLE_FILE_INFORMATION i1, i2;
+      if (GetFileInformationByHandle(h1, &i1) &&
+          GetFileInformationByHandle(h2, &i2)) {
+        *out = (i1.dwVolumeSerialNumber == i2.dwVolumeSerialNumber &&
+                i1.nFileIndexHigh == i2.nFileIndexHigh &&
+                i1.nFileIndexLow == i2.nFileIndexLow)
+                   ? cfs_true
+                   : cfs_false;
+        CloseHandle(h1);
+        CloseHandle(h2);
+        return 0;
+      }
+    }
+    if (ec)
+      *ec = cfs_get_last_error();
+    if (h1 != INVALID_HANDLE_VALUE)
+      CloseHandle(h1);
+    if (h2 != INVALID_HANDLE_VALUE)
+      CloseHandle(h2);
+    return -1;
+  }
+#else
+  {
+    struct stat s1, s2;
+    if (stat(p1->str, &s1) != 0 || stat(p2->str, &s2) != 0) {
+      if (ec)
+        *ec = cfs_get_last_error(); /* Or make error from errno */
+      return -1;
+    }
+    *out = (s1.st_dev == s2.st_dev && s1.st_ino == s2.st_ino) ? cfs_true
+                                                              : cfs_false;
+    return 0;
+  }
+#endif
+}
+
+CFS_API int cfs_read_symlink(const cfs_path *p, cfs_path *out,
+                             cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !out || p->length == 0) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return -1;
+  }
+#if defined(CFS_OS_WINDOWS)
+  {
+    /* Minimal stub for Windows C89, symlinks require reparse points parsing */
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return -1;
+  }
+#else
+  {
+    char buf[CFS_MAX_PATH];
+    ssize_t len = readlink(p->str, buf, sizeof(buf) - 1);
+    if (len != -1) {
+      buf[len] = '\0';
+      cfs_path_assign(out, buf);
+      return 0;
+    }
+    if (ec)
+      *ec = cfs_get_last_error();
+    return -1;
+  }
+#endif
+}
+
+CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !out) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return -1;
+  }
+#if defined(CFS_OS_WINDOWS)
+  {
+    cfs_char_t buf[CFS_MAX_PATH];
+    DWORD len = GetFullPathNameW(p->str, CFS_MAX_PATH, buf, NULL);
+    if (len > 0 && len < CFS_MAX_PATH) {
+      cfs_path_assign(out, buf);
+      return 0;
+    }
+    if (ec)
+      *ec = cfs_get_last_error();
+    return -1;
+  }
+#else
+  if (cfs_path_is_absolute(p)) {
+    cfs_path_assign(out, p->str);
+    return 0;
+  } else {
+    cfs_path cp = cfs_current_path(ec);
+    cfs_path_assign(out, cp.str);
+    cfs_path_append(out, p->str);
+    cfs_path_destroy(&cp);
+    return 0;
+  }
+#endif
+}
+
+CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out,
+                          cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !out) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return -1;
+  }
+#if defined(CFS_OS_WINDOWS)
+  {
+    cfs_char_t buf[CFS_MAX_PATH];
+    DWORD len = GetFullPathNameW(p->str, CFS_MAX_PATH, buf, NULL);
+    if (len > 0 && len < CFS_MAX_PATH) {
+      cfs_path_assign(out, buf);
+      return 0;
+    }
+    if (ec)
+      *ec = cfs_get_last_error();
+    return -1;
+  }
+#else
+  {
+    char buf[CFS_MAX_PATH];
+    if (realpath(p->str, buf) != NULL) {
+      cfs_path_assign(out, buf);
+      return 0;
+    }
+    if (ec)
+      *ec = cfs_get_last_error();
+    return -1;
+  }
+#endif
+}
+
+CFS_API int cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
+                                 cfs_error_code *ec) {
+  return cfs_canonical(p, out, ec); /* Simplified stub */
+}
+
+CFS_API int cfs_copy(const cfs_path *from, const cfs_path *to,
+                     cfs_copy_options options, cfs_error_code *ec) {
+  /* Basic wrapper mapping to copy_file for now */
+  if (cfs_copy_file(from, to, options, ec))
+    return 0;
+  return -1;
+}
+
+CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
+                             const cfs_path *new_symlink, cfs_error_code *ec) {
+  cfs_path out;
+  int res = cfs_read_symlink(existing_symlink, &out, ec);
+  if (res == 0) {
+    cfs_create_symlink(&out, new_symlink, ec);
+    cfs_path_destroy(&out);
+    return 0;
+  }
+  return res;
+}
+
+CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
+                          cfs_path *out, cfs_error_code *ec) {
+  cfs_path tmp = cfs_path_lexically_proximate(p, base);
+  cfs_path_clone(out, &tmp);
+  cfs_path_destroy(&tmp);
+  return 0;
+}
+
+CFS_API int cfs_relative(const cfs_path *p, const cfs_path *base, cfs_path *out,
+                         cfs_error_code *ec) {
+  cfs_path tmp = cfs_path_lexically_relative(p, base);
+  cfs_path_clone(out, &tmp);
+  cfs_path_destroy(&tmp);
+  return 0;
+}
+
+CFS_API cfs_bool cfs_copy_file(const cfs_path *from, const cfs_path *to,
+                               cfs_copy_options options, cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!from || !to)
+    return cfs_false;
+#if defined(CFS_OS_WINDOWS)
+  if (CopyFileW(from->str, to->str,
+                !(options & cfs_copy_options_overwrite_existing)))
+    return cfs_true;
+#else
+  /* stub */
+#endif
+  if (ec)
+    *ec = cfs_get_last_error();
+  return cfs_false;
+}
+
+CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
+                                cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+#if defined(CFS_OS_WINDOWS)
+  /* Needs dynamic loading or Vista+ */
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+#else
+  if (symlink(target->str, link->str) != 0) {
+    if (ec)
+      *ec = cfs_get_last_error();
+  }
+#endif
+}
+
+CFS_API cfs_path cfs_path_lexically_relative(const cfs_path *p,
+                                             const cfs_path *base) {
+  cfs_path out;
+  cfs_path_init(&out);
+  if (p)
+    cfs_path_assign(&out, p->str);
+  return out; /* simplified stub */
+}
+
+CFS_API cfs_path cfs_path_lexically_proximate(const cfs_path *p,
+                                              const cfs_path *base) {
+  return cfs_path_lexically_relative(p, base); /* simplified stub */
 }

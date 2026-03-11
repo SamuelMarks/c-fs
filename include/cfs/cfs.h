@@ -368,6 +368,32 @@ CFS_API cfs_error_code
 cfs_path_replace_extension(cfs_path *p, const cfs_char_t *replacement);
 /* 113. Removes the terminal filename component (truncates back to parent) */
 CFS_API void cfs_path_remove_filename(cfs_path *p);
+/* 114. Returns absolute path */
+CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec);
+
+/* Copy file options mirroring std::filesystem::copy_options */
+typedef enum cfs_copy_options {
+  cfs_copy_options_none = 0,
+  cfs_copy_options_skip_existing = 1,
+  cfs_copy_options_overwrite_existing = 2,
+  cfs_copy_options_update_existing = 4
+} cfs_copy_options;
+
+/* Phase 20: Missing std::filesystem functions */
+CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out, cfs_error_code *ec);
+CFS_API int cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
+                                 cfs_error_code *ec);
+CFS_API int cfs_read_symlink(const cfs_path *p, cfs_path *out,
+                             cfs_error_code *ec);
+CFS_API int cfs_relative(const cfs_path *p, const cfs_path *base, cfs_path *out,
+                         cfs_error_code *ec);
+CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
+                          cfs_path *out, cfs_error_code *ec);
+CFS_API int cfs_copy(const cfs_path *from, const cfs_path *to,
+                     cfs_copy_options options, cfs_error_code *ec);
+CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
+                             const cfs_path *new_symlink, cfs_error_code *ec);
+
 /* Phase 13: Path Observers & Comparisons */
 
 /* Observers */
@@ -427,6 +453,19 @@ typedef enum cfs_file_type {
 /* OS-agnostic permissions (matches std::filesystem::perms) */
 typedef unsigned int cfs_perms;
 
+typedef enum cfs_perm_options {
+  cfs_perm_options_replace = 1,
+  cfs_perm_options_add = 2,
+  cfs_perm_options_remove = 4,
+  cfs_perm_options_nofollow = 8
+} cfs_perm_options;
+
+typedef enum cfs_directory_options {
+  cfs_directory_options_none = 0,
+  cfs_directory_options_follow_directory_symlink = 1,
+  cfs_directory_options_skip_permission_denied = 2
+} cfs_directory_options;
+
 /* Status struct holding retrieved OS attributes */
 typedef struct cfs_file_status {
   cfs_file_type type;
@@ -437,6 +476,7 @@ typedef struct cfs_file_status {
 CFS_API cfs_file_status cfs_status(const cfs_path *p, cfs_error_code *ec);
 CFS_API cfs_file_status cfs_symlink_status(const cfs_path *p,
                                            cfs_error_code *ec);
+CFS_API cfs_bool cfs_status_known(cfs_file_status s);
 
 /* 145. Exists Observer */
 CFS_API cfs_bool cfs_exists(cfs_file_status s);
@@ -471,12 +511,6 @@ CFS_API void cfs_create_directory_symlink(const cfs_path *target,
                                           cfs_error_code *ec);
 
 /* Copy file options mirroring std::filesystem::copy_options */
-typedef enum cfs_copy_options {
-  cfs_copy_options_none = 0,
-  cfs_copy_options_skip_existing = 1,
-  cfs_copy_options_overwrite_existing = 2,
-  cfs_copy_options_update_existing = 4
-} cfs_copy_options;
 
 /* 168. Copy files strictly */
 CFS_API cfs_bool cfs_copy_file(const cfs_path *from, const cfs_path *to,
@@ -524,6 +558,14 @@ typedef long cfs_file_time_type;
 #endif
 CFS_API cfs_file_time_type cfs_last_write_time(const cfs_path *p,
                                                cfs_error_code *ec);
+
+/* 17X. Permissions and Links */
+CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
+                            cfs_perm_options opts, cfs_error_code *ec);
+CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
+                                cfs_error_code *ec);
+CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
+                           cfs_bool *out, cfs_error_code *ec);
 
 /* 178-179. Environment paths */
 CFS_API cfs_path cfs_current_path(cfs_error_code *ec);
