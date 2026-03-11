@@ -1568,6 +1568,7 @@ CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
 CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
                           cfs_path *out, cfs_error_code *ec) {
   cfs_path tmp = cfs_path_lexically_proximate(p, base);
+  (void)ec;
   cfs_path_clone(out, &tmp);
   cfs_path_destroy(&tmp);
   return 0;
@@ -1576,6 +1577,7 @@ CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
 CFS_API int cfs_relative(const cfs_path *p, const cfs_path *base, cfs_path *out,
                          cfs_error_code *ec) {
   cfs_path tmp = cfs_path_lexically_relative(p, base);
+  (void)ec;
   cfs_path_clone(out, &tmp);
   cfs_path_destroy(&tmp);
   return 0;
@@ -1604,6 +1606,8 @@ CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
   if (ec)
     cfs_clear_error(ec);
 #if defined(CFS_OS_WINDOWS)
+  (void)target;
+  (void)link;
   /* Needs dynamic loading or Vista+ */
   if (ec)
     cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
@@ -1619,6 +1623,7 @@ CFS_API cfs_path cfs_path_lexically_relative(const cfs_path *p,
                                              const cfs_path *base) {
   cfs_path out;
   cfs_path_init(&out);
+  (void)base;
   if (p)
     cfs_path_assign(&out, p->str);
   return out; /* simplified stub */

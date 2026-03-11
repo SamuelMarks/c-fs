@@ -62,6 +62,8 @@ TEST path_decomposition() {
 static int test_completed_ops = 0;
 
 static void async_callback(cfs_request_t *req, void *user_data) {
+  (void)req;
+  (void)user_data;
   test_completed_ops++;
 }
 
