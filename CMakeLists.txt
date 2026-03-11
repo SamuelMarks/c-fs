@@ -82,6 +82,10 @@ if(CFS_ENABLE_LTO)
     check_ipo_supported(RESULT ipo_supported OUTPUT error)
     if(ipo_supported)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        if(MINGW AND NOT CFS_BUILD_SHARED)
+            find_program(CMAKE_AR NAMES gcc-ar)
+            find_program(CMAKE_RANLIB NAMES gcc-ranlib)
+        endif()
     else()
         message(WARNING "IPO/LTO is not supported: ${error}")
     endif()
@@ -100,8 +104,10 @@ if(CFS_HEADER_ONLY)
     add_library(cfs INTERFACE)
     target_include_directories(cfs INTERFACE 
         $<BUILD_INTERFACE:${CFS_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
     )
+    target_compile_definitions(cfs INTERFACE CFS_HEADER_ONLY_MODE)
     if(CFS_UNICODE)
         target_compile_definitions(cfs INTERFACE CFS_UNICODE)
     endif()

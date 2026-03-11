@@ -41,15 +41,15 @@ TEST path_decomposition() {
   cfs_path p, res;
   cfs_path_init_str(&p, CFS_STR("dir/subdir/file.txt"));
 
-  res = cfs_path_filename(&p);
+  cfs_path_filename(&p, &res);
   ASSERT_EQ(0, cfs_strcmp(CFS_STR("file.txt"), cfs_path_c_str(&res)));
   cfs_path_destroy(&res);
 
-  res = cfs_path_extension(&p);
+  cfs_path_extension(&p, &res);
   ASSERT_EQ(0, cfs_strcmp(CFS_STR(".txt"), cfs_path_c_str(&res)));
   cfs_path_destroy(&res);
 
-  res = cfs_path_stem(&p);
+  cfs_path_stem(&p, &res);
   ASSERT_EQ(0, cfs_strcmp(CFS_STR("file"), cfs_path_c_str(&res)));
   cfs_path_destroy(&res);
 
