@@ -1,0 +1,30 @@
+c-fs Agent Directives
+======================
+
+This file contains absolute directives for LLMs, autonomous agents, and codebase refactoring tools working within the `c-fs` repository.
+
+1. STANDARD C89 STRICTNESS
+   - The entire codebase MUST rigorously conform to ISO C90 (C89).
+   - No `//` style comments. Use `/* comment */` strictly.
+   - All variable declarations MUST occur at the top of the lexical scope/block. No mid-block declarations.
+   - Guard POSIX/C99 header inclusions (like `<stdint.h>`, `<stdbool.h>`, `<unistd.h>`) as they are unavailable on legacy MSVC environments.
+   - Map 64-bit integer types safely (`__extension__ unsigned long long` on GCC, `__int64` on MSVC).
+
+2. FORMATTING & CLANG-FORMAT
+   - All `#include` blocks must be wrapped perfectly in `/* clang-format off */` and `/* clang-format on */` pragmas to prevent `clang-format` from reordering includes in a way that breaks dependency sequences (e.g., `<winsock2.h>` vs Windows standard headers).
+   - There should be a maximum of ONE occurrence of `/* clang-format off */` and `/* clang-format on */` block per file, located at the top where the includes live.
+   - When finished making edits, always run `fd -eh -ec -x clang-format -i --style=LLVM` to unify spacing.
+
+3. MSVC LEGACY & SAFE CRT
+   - MSVC 2005 (Windows XP era compiler) is a primary test target.
+   - Do NOT include `<windows.h>` globally. Rely on specific headers (like `<winsock2.h>`) to reduce binary bloat.
+   - If a modern Windows feature is missing in MSVC 2005 (e.g., `CONDITION_VARIABLE`), provide `#if defined(_MSC_VER) && _MSC_VER < 1500` fallback pathways natively.
+   - Always prefer Safe CRT functions (`wcscpy_s`, `strcpy_s`, `wcsncpy_s`) when under MSVC. These are abstracted behind the `CFS_STRCPY_SAFE` and `CFS_STRNCPY_SAFE` macros. Use these macros instead of raw C-string operations directly where possible.
+
+4. ERROR HANDLING & RETURN CODES
+   - Standard non-void, non-math functions MUST return an `int` representing an exit code (`0` for success). Output values should be passed via pointer arguments.
+   - Never ignore warnings (like bit-shift truncations or unused variables). Resolve unused parameter warnings using `(void)param;`.
+
+5. GIT & CI
+   - Never `git push` autonomously.
+   - Test changes locally using the `/c-ci/` runner scripts provided in the parent ecosystem directories before concluding a task.
