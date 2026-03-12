@@ -903,10 +903,17 @@ CFS_API cfs_bool cfs_remove(const cfs_path *p, cfs_error_code *ec) {
   if (!p || p->length == 0)
     return cfs_false;
 #if defined(CFS_OS_WINDOWS)
+#if defined(CFS_UNICODE)
   if (_wremove(p->str) == 0)
     return cfs_true;
   if (RemoveDirectoryW(p->str))
     return cfs_true;
+#else
+  if (remove(p->str) == 0)
+    return cfs_true;
+  if (RemoveDirectoryA(p->str))
+    return cfs_true;
+#endif
 #else
   if (remove(p->str) == 0)
     return cfs_true;
@@ -924,9 +931,15 @@ CFS_API cfs_uintmax_t cfs_file_size(const cfs_path *p, cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   {
     struct _stat64 st;
+#if defined(CFS_UNICODE)
     if (_wstat64(p->str, &st) == 0) {
       return (cfs_uintmax_t)st.st_size;
     }
+#else
+    if (_stat64(p->str, &st) == 0) {
+      return (cfs_uintmax_t)st.st_size;
+    }
+#endif
   }
 #else
   {
@@ -1130,9 +1143,15 @@ CFS_API int cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
     return -1;
   (*out_shm)->size = size;
 #if defined(CFS_OS_WINDOWS)
+#if defined(CFS_UNICODE)
   (*out_shm)->map_handle = CreateFileMappingW(
       INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
       (DWORD)(((cfs_uintmax_t)size) >> 32), (DWORD)(size & 0xFFFFFFFF), name);
+#else
+  (*out_shm)->map_handle = CreateFileMappingA(
+      INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
+      (DWORD)(((cfs_uintmax_t)size) >> 32), (DWORD)(size & 0xFFFFFFFF), name);
+#endif
   if (!(*out_shm)->map_handle) {
     cfs_free(*out_shm);
     *out_shm = NULL;
@@ -1193,7 +1212,11 @@ CFS_API int cfs_named_semaphore_create(const cfs_char_t *name,
   if (!*out_sem)
     return -1;
 #if defined(CFS_OS_WINDOWS)
+#if defined(CFS_UNICODE)
   (*out_sem)->handle = CreateSemaphoreW(NULL, initial_count, 0x7FFFFFFF, name);
+#else
+  (*out_sem)->handle = CreateSemaphoreA(NULL, initial_count, 0x7FFFFFFF, name);
+#endif
   if (!(*out_sem)->handle) {
     cfs_free(*out_sem);
     *out_sem = NULL;
@@ -1342,7 +1365,11 @@ CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
 #if defined(CFS_OS_WINDOWS)
   {
     struct _stat64 st;
+#if defined(CFS_UNICODE)
     if (_wstat64(p->str, &st) == 0) {
+#else
+    if (_stat64(p->str, &st) == 0) {
+#endif
       *out = (cfs_uintmax_t)st.st_nlink;
       return 0;
     }
@@ -1372,7 +1399,11 @@ CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
     return -1;
   }
 #if defined(CFS_OS_WINDOWS)
+#if defined(CFS_UNICODE)
   if (_wchmod(p->str, (int)prms) == 0) {
+#else
+  if (_chmod(p->str, (int)prms) == 0) {
+#endif
     return 0;
   }
 #else
@@ -1396,12 +1427,23 @@ CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
   }
 #if defined(CFS_OS_WINDOWS)
   {
-    HANDLE h1 = CreateFileW(
-        p1->str, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-    HANDLE h2 = CreateFileW(
-        p2->str, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    HANDLE h1;
+    HANDLE h2;
+#if defined(CFS_UNICODE)
+    h1 = CreateFileW(p1->str, 0,
+                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                     NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    h2 = CreateFileW(p2->str, 0,
+                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                     NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#else
+    h1 = CreateFileA(p1->str, 0,
+                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                     NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    h2 = CreateFileA(p2->str, 0,
+                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                     NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#endif
     if (h1 != INVALID_HANDLE_VALUE && h2 != INVALID_HANDLE_VALUE) {
       BY_HANDLE_FILE_INFORMATION i1, i2;
       if (GetFileInformationByHandle(h1, &i1) &&
@@ -1482,7 +1524,12 @@ CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   {
     cfs_char_t buf[CFS_MAX_PATH];
-    DWORD len = GetFullPathNameW(p->str, CFS_MAX_PATH, buf, NULL);
+    DWORD len;
+#if defined(CFS_UNICODE)
+    len = GetFullPathNameW(p->str, CFS_MAX_PATH, buf, NULL);
+#else
+    len = GetFullPathNameA(p->str, CFS_MAX_PATH, buf, NULL);
+#endif
     if (len > 0 && len < CFS_MAX_PATH) {
       cfs_path_assign(out, buf);
       return 0;
@@ -1517,7 +1564,12 @@ CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out,
 #if defined(CFS_OS_WINDOWS)
   {
     cfs_char_t buf[CFS_MAX_PATH];
-    DWORD len = GetFullPathNameW(p->str, CFS_MAX_PATH, buf, NULL);
+    DWORD len;
+#if defined(CFS_UNICODE)
+    len = GetFullPathNameW(p->str, CFS_MAX_PATH, buf, NULL);
+#else
+    len = GetFullPathNameA(p->str, CFS_MAX_PATH, buf, NULL);
+#endif
     if (len > 0 && len < CFS_MAX_PATH) {
       cfs_path_assign(out, buf);
       return 0;
@@ -1590,8 +1642,13 @@ CFS_API cfs_bool cfs_copy_file(const cfs_path *from, const cfs_path *to,
   if (!from || !to)
     return cfs_false;
 #if defined(CFS_OS_WINDOWS)
+#if defined(CFS_UNICODE)
   if (CopyFileW(from->str, to->str,
                 !(options & cfs_copy_options_overwrite_existing)))
+#else
+  if (CopyFileA(from->str, to->str,
+                !(options & cfs_copy_options_overwrite_existing)))
+#endif
     return cfs_true;
 #else
   /* stub */
