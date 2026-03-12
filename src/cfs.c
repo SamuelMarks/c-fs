@@ -28,7 +28,7 @@
 /* Implementation details */
 
 static cfs_bool cfs_is_separator(cfs_char_t c);
-static cfs_error_code cfs_path_reserve(cfs_path *p, cfs_size_t new_cap);
+static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap);
 
 /* Phase 5.5: Execution Context & Modality Implementations */
 
@@ -51,7 +51,8 @@ static void cfs_execute_op_inline(cfs_request_t *req) {
     cfs_remove(&req->target_path, &req->error);
     break;
   case cfs_opcode_file_size: {
-    cfs_uintmax_t size = cfs_file_size(&req->target_path, &req->error);
+    cfs_uintmax_t size = 0;
+    cfs_file_size(&req->target_path, &size, &req->error);
     if (req->result_buffer && req->result_size >= sizeof(cfs_uintmax_t)) {
       *((cfs_uintmax_t *)req->result_buffer) = size;
     }
@@ -229,7 +230,7 @@ static void *cfs_worker_thread(void *arg) {
     if (!req->cancelled) {
       cfs_execute_op_inline(req);
     } else {
-      req->error = cfs_make_error_code_from_os(125); /* ECANCELED fallback */
+      cfs_make_error_code_from_os(125, &req->error); /* ECANCELED fallback */
     }
 
     cfs_queue_push(pool->completion_queue, req);
@@ -361,14 +362,14 @@ CFS_API cfs_runtime_t *cfs_runtime_init(const cfs_runtime_config *config,
 
   if (!config) {
     if (ec)
-      *ec = cfs_make_error_code_from_os(22); /* EINVAL fallback */
+      cfs_make_error_code_from_os(22, ec); /* EINVAL fallback */
     return NULL;
   }
 
   rt = (cfs_runtime_t *)cfs_malloc(sizeof(cfs_runtime_t));
   if (!rt) {
     if (ec)
-      *ec = cfs_make_error_code_from_os(12); /* ENOMEM fallback */
+      cfs_make_error_code_from_os(12, ec); /* ENOMEM fallback */
     return NULL;
   }
 
@@ -571,20 +572,20 @@ CFS_API void cfs_clear_error(cfs_error_code *ec) {
   cfs_set_error(ec, 0, cfs_errc_success);
 }
 
-CFS_API cfs_error_code cfs_make_error_code_from_os(int os_error) {
-  cfs_error_code ec;
-  ec.value = os_error;
-  ec.errc = os_error == 0 ? cfs_errc_success
-                          : cfs_errc_unknown_error; /* simplified for now */
-  return ec;
+CFS_API int cfs_make_error_code_from_os(int os_error, cfs_error_code *out) {
+  if (out) {
+    out->value = os_error;
+    out->errc = os_error == 0 ? cfs_errc_success : cfs_errc_unknown_error;
+  }
+  return 0;
 }
 
-CFS_API cfs_error_code cfs_get_last_error(void) {
+CFS_API int cfs_get_last_error(cfs_error_code *out) {
 #if defined(CFS_OS_WINDOWS)
-  return cfs_make_error_code_from_os(GetLastError());
+  return cfs_make_error_code_from_os(GetLastError(), out);
 #else
   /* missing errno include but simplify for now */
-  return cfs_make_error_code_from_os(1);
+  return cfs_make_error_code_from_os(1, out);
 #endif
 }
 
@@ -602,14 +603,12 @@ CFS_API void cfs_path_init(cfs_path *p) {
   p->capacity = 0;
 }
 
-CFS_API cfs_error_code cfs_path_init_str(cfs_path *p,
-                                         const cfs_char_t *source) {
-  cfs_error_code ec = cfs_make_error_code_from_os(0);
+CFS_API int cfs_path_init_str(cfs_path *p, const cfs_char_t *source) {
   cfs_path_init(p);
   if (source) {
-    cfs_path_assign(p, source);
+    return cfs_path_assign(p, source);
   }
-  return ec;
+  return 0;
 }
 
 CFS_API void cfs_path_destroy(cfs_path *p) {
@@ -622,25 +621,27 @@ CFS_API void cfs_path_destroy(cfs_path *p) {
   p->capacity = 0;
 }
 
-CFS_API cfs_error_code cfs_path_clone(cfs_path *dest, const cfs_path *src) {
-  cfs_error_code ec = cfs_make_error_code_from_os(0);
+CFS_API int cfs_path_clone(cfs_path *dest, const cfs_path *src) {
   if (!dest || !src)
-    return ec;
+    return -1;
   cfs_path_init(dest);
   if (src->str) {
-    cfs_path_assign(dest, src->str);
+    return cfs_path_assign(dest, src->str);
   }
-  return ec;
+  return 0;
 }
 
-CFS_API const cfs_char_t *cfs_path_c_str(const cfs_path *p) {
-  return (p && p->str) ? p->str : CFS_STR("");
+CFS_API int cfs_path_c_str(const cfs_path *p, const cfs_char_t **out) {
+  if (!out)
+    return -1;
+  *out = (p && p->str) ? p->str : CFS_STR("");
+  return 0;
 }
 
-CFS_API cfs_path *cfs_path_make_preferred(cfs_path *p) {
+CFS_API int cfs_path_make_preferred(cfs_path *p) {
   cfs_size_t i;
   if (!p || !p->str)
-    return p;
+    return -1;
   for (i = 0; i < p->length; i++) {
 #if defined(CFS_OS_WINDOWS)
     if (p->str[i] == CFS_CHAR('/'))
@@ -650,17 +651,20 @@ CFS_API cfs_path *cfs_path_make_preferred(cfs_path *p) {
       p->str[i] = CFS_CHAR('/');
 #endif
   }
-  return p;
+  return 0;
 }
 
-CFS_API cfs_char_t *cfs_path_generic_string(const cfs_path *p) {
+CFS_API int cfs_path_generic_string(const cfs_path *p, cfs_char_t **out) {
   cfs_char_t *res;
   cfs_size_t i;
+  if (!out)
+    return -1;
+  *out = NULL;
   if (!p || !p->str)
-    return NULL;
+    return -1;
   res = (cfs_char_t *)cfs_malloc((p->length + 1) * sizeof(cfs_char_t));
   if (!res)
-    return NULL;
+    return -1;
   CFS_STRCPY_SAFE(res, p->length + 1, p->str);
   for (i = 0; i < p->length; i++) {
 #if defined(CFS_OS_WINDOWS)
@@ -668,7 +672,8 @@ CFS_API cfs_char_t *cfs_path_generic_string(const cfs_path *p) {
       res[i] = CFS_CHAR('/');
 #endif
   }
-  return res;
+  *out = res;
+  return 0;
 }
 
 CFS_API void cfs_path_clear(cfs_path *p) {
@@ -688,41 +693,42 @@ CFS_API void cfs_path_swap(cfs_path *lhs, cfs_path *rhs) {
   *rhs = temp;
 }
 
-CFS_API cfs_error_code cfs_path_concat(cfs_path *p, const cfs_char_t *source) {
-  cfs_error_code ec = cfs_make_error_code_from_os(0);
+CFS_API int cfs_path_concat(cfs_path *p, const cfs_char_t *source) {
   cfs_size_t src_len;
   cfs_size_t new_len;
   if (!p || !source)
-    return ec;
+    return -1;
   src_len = cfs_strlen(source);
   if (src_len == 0)
-    return ec;
+    return 0;
   new_len = p->length + src_len;
-  ec = cfs_path_reserve(p, new_len + 1);
-  if (ec.value != 0)
-    return ec;
+  if (cfs_path_reserve(p, new_len + 1) != 0)
+    return -1;
   CFS_STRCPY_SAFE(p->str + p->length, p->capacity - p->length, source);
   p->length = new_len;
-  return ec;
+  return 0;
 }
 
 /* cfs_path_append implementation from recovered file ending */
-CFS_API cfs_error_code cfs_path_append(cfs_path *p, const cfs_char_t *source) {
-  cfs_error_code ec = cfs_make_error_code_from_os(0);
+CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
   cfs_size_t src_len;
   cfs_bool p_has_sep = cfs_false;
   cfs_bool src_has_sep = cfs_false;
   cfs_size_t new_len;
 
   if (!p || !source)
-    return ec;
+    return -1;
 
-  if (cfs_path_is_empty(p)) {
-    return cfs_path_assign(p, source);
+  {
+    cfs_bool empty;
+    cfs_path_is_empty(p, &empty);
+    if (empty) {
+      return cfs_path_assign(p, source);
+    }
   }
 
   if (source[0] == 0)
-    return ec;
+    return 0;
 
 #if defined(CFS_OS_WINDOWS)
   if (source[0] == CFS_CHAR('\\') || source[0] == CFS_CHAR('/') ||
@@ -746,9 +752,8 @@ CFS_API cfs_error_code cfs_path_append(cfs_path *p, const cfs_char_t *source) {
   else if (p_has_sep && src_has_sep)
     new_len--;
 
-  ec = cfs_path_reserve(p, new_len + 1);
-  if (ec.value != 0)
-    return ec;
+  if (cfs_path_reserve(p, new_len + 1) != 0)
+    return -1;
 
   if (!p_has_sep && !src_has_sep) {
     p->str[p->length] = CFS_PREFERRED_SEPARATOR;
@@ -760,22 +765,19 @@ CFS_API cfs_error_code cfs_path_append(cfs_path *p, const cfs_char_t *source) {
 
   CFS_STRCPY_SAFE(p->str + p->length, p->capacity - p->length, source);
   p->length = new_len;
-  return ec;
+  return 0;
 }
 
 static cfs_bool cfs_is_separator(cfs_char_t c) {
   return c == CFS_CHAR('/') || c == CFS_CHAR('\\');
 }
 
-static cfs_error_code cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
-  cfs_error_code ec = cfs_make_error_code_from_os(0);
+static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
   cfs_char_t *new_str;
-  if (!p) {
-    ec = cfs_make_error_code_from_os(22); /* EINVAL */
-    return ec;
-  }
+  if (!p)
+    return -1;
   if (new_cap <= p->capacity)
-    return ec;
+    return 0;
 
   if (p->str) {
     new_str = (cfs_char_t *)cfs_realloc(p->str, new_cap * sizeof(cfs_char_t));
@@ -783,38 +785,35 @@ static cfs_error_code cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
     new_str = (cfs_char_t *)cfs_malloc(new_cap * sizeof(cfs_char_t));
   }
 
-  if (!new_str) {
-    ec = cfs_make_error_code_from_os(12); /* ENOMEM */
-    return ec;
-  }
+  if (!new_str)
+    return -1;
 
   p->str = new_str;
   p->capacity = new_cap;
-  return ec;
+  return 0;
 }
 
-CFS_API cfs_bool cfs_path_is_empty(const cfs_path *p) {
-  return !p || p->length == 0;
+CFS_API int cfs_path_is_empty(const cfs_path *p, cfs_bool *out) {
+  if (!out)
+    return -1;
+  *out = (!p || p->length == 0);
+  return 0;
 }
 
-CFS_API cfs_error_code cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
-  cfs_error_code ec = cfs_make_error_code_from_os(0);
+CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
   cfs_size_t len;
-  if (!p) {
-    ec = cfs_make_error_code_from_os(22); /* EINVAL */
-    return ec;
-  }
+  if (!p)
+    return -1;
   if (!source) {
     cfs_path_clear(p);
-    return ec;
+    return 0;
   }
   len = cfs_strlen(source);
-  ec = cfs_path_reserve(p, len + 1);
-  if (ec.value != 0)
-    return ec;
+  if (cfs_path_reserve(p, len + 1) != 0)
+    return -1;
   CFS_STRCPY_SAFE(p->str, p->capacity, source);
   p->length = len;
-  return ec;
+  return 0;
 }
 
 CFS_API void *cfs_malloc(cfs_size_t size) { return malloc(size); }
@@ -832,7 +831,7 @@ CFS_API int cfs_path_filename(const cfs_path *p, cfs_path *out) {
     return -1;
   cfs_path_init(out);
   if (!p || p->length == 0)
-    return 0;
+    return -1;
 
   for (i = p->length; i > 0; i--) {
     if (cfs_is_separator(p->str[i - 1]))
@@ -851,7 +850,7 @@ CFS_API int cfs_path_extension(const cfs_path *p, cfs_path *out) {
     return -1;
   cfs_path_init(out);
   if (!p || p->length == 0)
-    return 0;
+    return -1;
 
   for (i = p->length; i > 0; i--) {
     if (p->str[i - 1] == CFS_CHAR('.')) {
@@ -873,7 +872,7 @@ CFS_API int cfs_path_stem(const cfs_path *p, cfs_path *out) {
     return -1;
   cfs_path_init(out);
   if (!p || p->length == 0)
-    return 0;
+    return -1;
 
   cfs_path_filename(p, &fn);
   if (fn.length == 0) {
@@ -897,47 +896,52 @@ CFS_API int cfs_path_stem(const cfs_path *p, cfs_path *out) {
   return 0;
 }
 
-CFS_API cfs_bool cfs_remove(const cfs_path *p, cfs_error_code *ec) {
+CFS_API int cfs_remove(const cfs_path *p, cfs_error_code *ec) {
   if (ec)
     cfs_clear_error(ec);
   if (!p || p->length == 0)
-    return cfs_false;
+    return -1;
 #if defined(CFS_OS_WINDOWS)
 #if defined(CFS_UNICODE)
   if (_wremove(p->str) == 0)
-    return cfs_true;
+    return 0;
   if (RemoveDirectoryW(p->str))
-    return cfs_true;
+    return 0;
 #else
   if (remove(p->str) == 0)
-    return cfs_true;
+    return 0;
   if (RemoveDirectoryA(p->str))
-    return cfs_true;
+    return 0;
 #endif
 #else
   if (remove(p->str) == 0)
-    return cfs_true;
+    return 0;
 #endif
   if (ec)
-    *ec = cfs_get_last_error();
-  return cfs_false;
+    cfs_get_last_error(ec);
+  return -1;
 }
 
-CFS_API cfs_uintmax_t cfs_file_size(const cfs_path *p, cfs_error_code *ec) {
+CFS_API int cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
+                          cfs_error_code *ec) {
   if (ec)
     cfs_clear_error(ec);
   if (!p || p->length == 0)
-    return 0;
+    return -1;
 #if defined(CFS_OS_WINDOWS)
   {
     struct _stat64 st;
 #if defined(CFS_UNICODE)
     if (_wstat64(p->str, &st) == 0) {
-      return (cfs_uintmax_t)st.st_size;
+      if (out)
+        *out = (cfs_uintmax_t)st.st_size;
+      return 0;
     }
 #else
     if (_stat64(p->str, &st) == 0) {
-      return (cfs_uintmax_t)st.st_size;
+      if (out)
+        *out = (cfs_uintmax_t)st.st_size;
+      return 0;
     }
 #endif
   }
@@ -945,13 +949,15 @@ CFS_API cfs_uintmax_t cfs_file_size(const cfs_path *p, cfs_error_code *ec) {
   {
     struct stat st;
     if (stat(p->str, &st) == 0) {
-      return (cfs_uintmax_t)st.st_size;
+      if (out)
+        *out = (cfs_uintmax_t)st.st_size;
+      return 0;
     }
   }
 #endif
   if (ec)
-    *ec = cfs_get_last_error();
-  return 0;
+    cfs_get_last_error(ec);
+  return -1;
 }
 
 /* Phase 3: Platform-Specific Async & Message Passing Implementations */
@@ -1349,8 +1355,11 @@ CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
     return -1;
   return 0;
 }
-CFS_API cfs_bool cfs_status_known(cfs_file_status s) {
-  return s.type != cfs_file_type_none;
+CFS_API int cfs_status_known(cfs_file_status s, cfs_bool *out) {
+  if (!out)
+    return -1;
+  *out = (s.type != cfs_file_type_none);
+  return 0;
 }
 
 CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
@@ -1384,7 +1393,7 @@ CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
   }
 #endif
   if (ec)
-    *ec = cfs_get_last_error();
+    cfs_get_last_error(ec);
   return -1;
 }
 
@@ -1412,7 +1421,7 @@ CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
   }
 #endif
   if (ec)
-    *ec = cfs_get_last_error();
+    cfs_get_last_error(ec);
   return -1;
 }
 
@@ -1459,7 +1468,7 @@ CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
       }
     }
     if (ec)
-      *ec = cfs_get_last_error();
+      cfs_get_last_error(ec);
     if (h1 != INVALID_HANDLE_VALUE)
       CloseHandle(h1);
     if (h2 != INVALID_HANDLE_VALUE)
@@ -1471,7 +1480,7 @@ CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
     struct stat s1, s2;
     if (stat(p1->str, &s1) != 0 || stat(p2->str, &s2) != 0) {
       if (ec)
-        *ec = cfs_get_last_error(); /* Or make error from errno */
+        cfs_get_last_error(ec); /* Or make error from errno */
       return -1;
     }
     *out = (s1.st_dev == s2.st_dev && s1.st_ino == s2.st_ino) ? cfs_true
@@ -1507,7 +1516,7 @@ CFS_API int cfs_read_symlink(const cfs_path *p, cfs_path *out,
       return 0;
     }
     if (ec)
-      *ec = cfs_get_last_error();
+      cfs_get_last_error(ec);
     return -1;
   }
 #endif
@@ -1535,7 +1544,7 @@ CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec) {
       return 0;
     }
     if (ec)
-      *ec = cfs_get_last_error();
+      cfs_get_last_error(ec);
     return -1;
   }
 #else
@@ -1575,7 +1584,7 @@ CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out,
       return 0;
     }
     if (ec)
-      *ec = cfs_get_last_error();
+      cfs_get_last_error(ec);
     return -1;
   }
 #else
@@ -1586,7 +1595,7 @@ CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out,
       return 0;
     }
     if (ec)
-      *ec = cfs_get_last_error();
+      cfs_get_last_error(ec);
     return -1;
   }
 #endif
@@ -1619,7 +1628,8 @@ CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
 
 CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
                           cfs_path *out, cfs_error_code *ec) {
-  cfs_path tmp = cfs_path_lexically_proximate(p, base);
+  cfs_path tmp;
+  cfs_path_lexically_proximate(p, base, &tmp);
   (void)ec;
   cfs_path_clone(out, &tmp);
   cfs_path_destroy(&tmp);
@@ -1628,19 +1638,20 @@ CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
 
 CFS_API int cfs_relative(const cfs_path *p, const cfs_path *base, cfs_path *out,
                          cfs_error_code *ec) {
-  cfs_path tmp = cfs_path_lexically_relative(p, base);
+  cfs_path tmp;
+  cfs_path_lexically_relative(p, base, &tmp);
   (void)ec;
   cfs_path_clone(out, &tmp);
   cfs_path_destroy(&tmp);
   return 0;
 }
 
-CFS_API cfs_bool cfs_copy_file(const cfs_path *from, const cfs_path *to,
-                               cfs_copy_options options, cfs_error_code *ec) {
+CFS_API int cfs_copy_file(const cfs_path *from, const cfs_path *to,
+                          cfs_copy_options options, cfs_error_code *ec) {
   if (ec)
     cfs_clear_error(ec);
   if (!from || !to)
-    return cfs_false;
+    return -1;
 #if defined(CFS_OS_WINDOWS)
 #if defined(CFS_UNICODE)
   if (CopyFileW(from->str, to->str,
@@ -1649,13 +1660,13 @@ CFS_API cfs_bool cfs_copy_file(const cfs_path *from, const cfs_path *to,
   if (CopyFileA(from->str, to->str,
                 !(options & cfs_copy_options_overwrite_existing)))
 #endif
-    return cfs_true;
+    return 0;
 #else
   /* stub */
 #endif
   if (ec)
-    *ec = cfs_get_last_error();
-  return cfs_false;
+    cfs_get_last_error(ec);
+  return -1;
 }
 
 CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
@@ -1671,22 +1682,23 @@ CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
 #else
   if (symlink(target->str, link->str) != 0) {
     if (ec)
-      *ec = cfs_get_last_error();
+      cfs_get_last_error(ec);
   }
 #endif
 }
 
-CFS_API cfs_path cfs_path_lexically_relative(const cfs_path *p,
-                                             const cfs_path *base) {
-  cfs_path out;
-  cfs_path_init(&out);
+CFS_API int cfs_path_lexically_relative(const cfs_path *p, const cfs_path *base,
+                                        cfs_path *out) {
+  if (!out)
+    return -1;
+  cfs_path_init(out);
   (void)base;
   if (p)
-    cfs_path_assign(&out, p->str);
-  return out; /* simplified stub */
+    cfs_path_assign(out, p->str);
+  return 0; /* simplified stub */
 }
 
-CFS_API cfs_path cfs_path_lexically_proximate(const cfs_path *p,
-                                              const cfs_path *base) {
-  return cfs_path_lexically_relative(p, base); /* simplified stub */
+CFS_API int cfs_path_lexically_proximate(const cfs_path *p,
+                                         const cfs_path *base, cfs_path *out) {
+  return cfs_path_lexically_relative(p, base, out); /* simplified stub */
 }

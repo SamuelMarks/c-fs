@@ -11,14 +11,30 @@
 TEST path_initialization() {
   cfs_path p;
   cfs_path_init(&p);
-  ASSERT_EQ(1, cfs_path_is_empty(&p));
+  {
+    cfs_bool empty;
+    cfs_path_is_empty(&p, &empty);
+    ASSERT_EQ(1, empty);
+  }
 
   cfs_path_init_str(&p, CFS_STR("test/path"));
-  ASSERT_EQ(0, cfs_path_is_empty(&p));
-  ASSERT_EQ(0, cfs_strcmp(CFS_STR("test/path"), cfs_path_c_str(&p)));
+  {
+    cfs_bool empty;
+    cfs_path_is_empty(&p, &empty);
+    ASSERT_EQ(0, empty);
+  }
+  {
+    const cfs_char_t *c_str;
+    cfs_path_c_str(&p, &c_str);
+    ASSERT_EQ(0, cfs_strcmp(CFS_STR("test/path"), c_str));
+  }
 
   cfs_path_destroy(&p);
-  ASSERT_EQ(1, cfs_path_is_empty(&p));
+  {
+    cfs_bool empty;
+    cfs_path_is_empty(&p, &empty);
+    ASSERT_EQ(1, empty);
+  }
   PASS();
 }
 
@@ -28,9 +44,17 @@ TEST path_appending() {
   cfs_path_append(&p, CFS_STR("file.txt"));
 
 #if defined(CFS_OS_WINDOWS)
-  ASSERT_EQ(0, cfs_strcmp(CFS_STR("dir\\file.txt"), cfs_path_c_str(&p)));
+  {
+    const cfs_char_t *c_str;
+    cfs_path_c_str(&p, &c_str);
+    ASSERT_EQ(0, cfs_strcmp(CFS_STR("dir\\file.txt"), c_str));
+  }
 #else
-  ASSERT_EQ(0, cfs_strcmp(CFS_STR("dir/file.txt"), cfs_path_c_str(&p)));
+  {
+    const cfs_char_t *c_str;
+    cfs_path_c_str(&p, &c_str);
+    ASSERT_EQ(0, cfs_strcmp(CFS_STR("dir/file.txt"), c_str));
+  }
 #endif
 
   cfs_path_destroy(&p);
@@ -42,15 +66,27 @@ TEST path_decomposition() {
   cfs_path_init_str(&p, CFS_STR("dir/subdir/file.txt"));
 
   cfs_path_filename(&p, &res);
-  ASSERT_EQ(0, cfs_strcmp(CFS_STR("file.txt"), cfs_path_c_str(&res)));
+  {
+    const cfs_char_t *c_str;
+    cfs_path_c_str(&res, &c_str);
+    ASSERT_EQ(0, cfs_strcmp(CFS_STR("file.txt"), c_str));
+  }
   cfs_path_destroy(&res);
 
   cfs_path_extension(&p, &res);
-  ASSERT_EQ(0, cfs_strcmp(CFS_STR(".txt"), cfs_path_c_str(&res)));
+  {
+    const cfs_char_t *c_str;
+    cfs_path_c_str(&res, &c_str);
+    ASSERT_EQ(0, cfs_strcmp(CFS_STR(".txt"), c_str));
+  }
   cfs_path_destroy(&res);
 
   cfs_path_stem(&p, &res);
-  ASSERT_EQ(0, cfs_strcmp(CFS_STR("file"), cfs_path_c_str(&res)));
+  {
+    const cfs_char_t *c_str;
+    cfs_path_c_str(&res, &c_str);
+    ASSERT_EQ(0, cfs_strcmp(CFS_STR("file"), c_str));
+  }
   cfs_path_destroy(&res);
 
   cfs_path_destroy(&p);

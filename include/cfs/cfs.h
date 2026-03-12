@@ -302,8 +302,8 @@ CFS_API void cfs_clear_error(cfs_error_code *ec);
 CFS_API const char *cfs_error_message(cfs_errc err);
 
 /* 65-67. OS Translation Hooks */
-CFS_API cfs_error_code cfs_make_error_code_from_os(int os_error);
-CFS_API cfs_error_code cfs_get_last_error(void);
+CFS_API int cfs_make_error_code_from_os(int os_error, cfs_error_code *out);
+CFS_API int cfs_get_last_error(cfs_error_code *out);
 /* Phase 8: Path Struct Basics */
 
 /* 76. Define platform-specific path separator macros */
@@ -322,20 +322,20 @@ typedef struct cfs_path {
 
 /* 72-75, 77-79. Path Initialization, Mutation, and Destruction */
 CFS_API void cfs_path_init(cfs_path *p);
-CFS_API cfs_error_code cfs_path_init_str(cfs_path *p, const cfs_char_t *source);
+CFS_API int cfs_path_init_str(cfs_path *p, const cfs_char_t *source);
 CFS_API void cfs_path_destroy(cfs_path *p);
-CFS_API cfs_error_code cfs_path_clone(cfs_path *dest, const cfs_path *src);
-CFS_API cfs_path *cfs_path_make_preferred(cfs_path *p);
-CFS_API const cfs_char_t *cfs_path_c_str(const cfs_path *p);
+CFS_API int cfs_path_clone(cfs_path *dest, const cfs_path *src);
+CFS_API int cfs_path_make_preferred(cfs_path *p);
+CFS_API int cfs_path_c_str(const cfs_path *p, const cfs_char_t **out);
 /* Returns dynamically allocated generic path string (e.g. forward slashes on
  * Windows). Caller must free. */
-CFS_API cfs_char_t *cfs_path_generic_string(const cfs_path *p);
+CFS_API int cfs_path_generic_string(const cfs_path *p, cfs_char_t **out);
 /* Phase 9: Path Building */
 
 /* 81-84, 88. Path assignment, concatenation, and manipulation */
-CFS_API cfs_error_code cfs_path_assign(cfs_path *p, const cfs_char_t *source);
-CFS_API cfs_error_code cfs_path_append(cfs_path *p, const cfs_char_t *source);
-CFS_API cfs_error_code cfs_path_concat(cfs_path *p, const cfs_char_t *source);
+CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source);
+CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source);
+CFS_API int cfs_path_concat(cfs_path *p, const cfs_char_t *source);
 CFS_API void cfs_path_clear(cfs_path *p);
 CFS_API void cfs_path_swap(cfs_path *lhs, cfs_path *rhs);
 /* Phase 10: Path Decomposition - Root Analysis */
@@ -361,11 +361,11 @@ CFS_API int cfs_path_extension(const cfs_path *p, cfs_path *out);
 /* Phase 12: Path Modifiers */
 
 /* 111. Replaces the terminal filename component */
-CFS_API cfs_error_code cfs_path_replace_filename(cfs_path *p,
-                                                 const cfs_char_t *replacement);
+CFS_API int cfs_path_replace_filename(cfs_path *p,
+                                      const cfs_char_t *replacement);
 /* 112. Replaces the extension of the terminal component */
-CFS_API cfs_error_code
-cfs_path_replace_extension(cfs_path *p, const cfs_char_t *replacement);
+CFS_API int cfs_path_replace_extension(cfs_path *p,
+                                       const cfs_char_t *replacement);
 /* 113. Removes the terminal filename component (truncates back to parent) */
 CFS_API void cfs_path_remove_filename(cfs_path *p);
 /* 114. Returns absolute path */
@@ -397,31 +397,31 @@ CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
 /* Phase 13: Path Observers & Comparisons */
 
 /* Observers */
-CFS_API cfs_bool cfs_path_is_empty(const cfs_path *p);
-CFS_API cfs_bool cfs_path_has_root_path(const cfs_path *p);
-CFS_API cfs_bool cfs_path_has_root_name(const cfs_path *p);
-CFS_API cfs_bool cfs_path_has_root_directory(const cfs_path *p);
-CFS_API cfs_bool cfs_path_has_relative_path(const cfs_path *p);
-CFS_API cfs_bool cfs_path_has_parent_path(const cfs_path *p);
-CFS_API cfs_bool cfs_path_has_filename(const cfs_path *p);
-CFS_API cfs_bool cfs_path_has_stem(const cfs_path *p);
-CFS_API cfs_bool cfs_path_has_extension(const cfs_path *p);
-CFS_API cfs_bool cfs_path_is_absolute(const cfs_path *p);
-CFS_API cfs_bool cfs_path_is_relative(const cfs_path *p);
+CFS_API int cfs_path_is_empty(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_has_root_path(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_has_root_name(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_has_filename(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_has_stem(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_has_extension(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_is_absolute(const cfs_path *p, cfs_bool *out);
+CFS_API int cfs_path_is_relative(const cfs_path *p, cfs_bool *out);
 
 /* Lexicographical comparison */
 CFS_API int cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs);
 /* Phase 14: Lexical Path Operations */
 
 /* 132. Lexically normalizes the path (resolves . and .. internally) */
-CFS_API cfs_path cfs_path_lexically_normal(const cfs_path *p);
+CFS_API int cfs_path_lexically_normal(const cfs_path *p, cfs_path *out);
 /* 134. Returns a path representing how to get from base to p */
-CFS_API cfs_path cfs_path_lexically_relative(const cfs_path *p,
-                                             const cfs_path *base);
+CFS_API int cfs_path_lexically_relative(const cfs_path *p, const cfs_path *base,
+                                        cfs_path *out);
 /* 135. Returns relative path if mathematically divergent, otherwise the
  * original path */
-CFS_API cfs_path cfs_path_lexically_proximate(const cfs_path *p,
-                                              const cfs_path *base);
+CFS_API int cfs_path_lexically_proximate(const cfs_path *p,
+                                         const cfs_path *base, cfs_path *out);
 
 /* Internal path element iterator structure */
 typedef struct cfs_path_element {
@@ -473,33 +473,36 @@ typedef struct cfs_file_status {
 } cfs_file_status;
 
 /* 141-142. Core Status Queries */
-CFS_API cfs_file_status cfs_status(const cfs_path *p, cfs_error_code *ec);
-CFS_API cfs_file_status cfs_symlink_status(const cfs_path *p,
-                                           cfs_error_code *ec);
-CFS_API cfs_bool cfs_status_known(cfs_file_status s);
+CFS_API int cfs_status(const cfs_path *p, cfs_file_status *out,
+                       cfs_error_code *ec);
+CFS_API int cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
+                               cfs_error_code *ec);
+CFS_API int cfs_status_known(cfs_file_status s, cfs_bool *out);
 
 /* 145. Exists Observer */
-CFS_API cfs_bool cfs_exists(cfs_file_status s);
-CFS_API cfs_bool cfs_exists_path(const cfs_path *p, cfs_error_code *ec);
+CFS_API int cfs_exists(cfs_file_status s, cfs_bool *out);
+CFS_API int cfs_exists_path(const cfs_path *p, cfs_bool *out,
+                            cfs_error_code *ec);
 
 /* 151-159. Filesystem Type Queries */
-CFS_API cfs_bool cfs_is_block_file(cfs_file_status s);
-CFS_API cfs_bool cfs_is_character_file(cfs_file_status s);
-CFS_API cfs_bool cfs_is_directory(cfs_file_status s);
-CFS_API cfs_bool cfs_is_fifo(cfs_file_status s);
-CFS_API cfs_bool cfs_is_other(cfs_file_status s);
-CFS_API cfs_bool cfs_is_regular_file(cfs_file_status s);
-CFS_API cfs_bool cfs_is_socket(cfs_file_status s);
-CFS_API cfs_bool cfs_is_symlink(cfs_file_status s);
+CFS_API int cfs_is_block_file(cfs_file_status s, cfs_bool *out);
+CFS_API int cfs_is_character_file(cfs_file_status s, cfs_bool *out);
+CFS_API int cfs_is_directory(cfs_file_status s, cfs_bool *out);
+CFS_API int cfs_is_fifo(cfs_file_status s, cfs_bool *out);
+CFS_API int cfs_is_other(cfs_file_status s, cfs_bool *out);
+CFS_API int cfs_is_regular_file(cfs_file_status s, cfs_bool *out);
+CFS_API int cfs_is_socket(cfs_file_status s, cfs_bool *out);
+CFS_API int cfs_is_symlink(cfs_file_status s, cfs_bool *out);
 
 /* 154. Is Empty Query (Directory or zero-byte file) */
-CFS_API cfs_bool cfs_is_empty_path(const cfs_path *p, cfs_error_code *ec);
+CFS_API int cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
+                              cfs_error_code *ec);
 /* Phase 17: Filesystem Operations - Creation */
 
 /* 161. Create a single directory node */
-CFS_API cfs_bool cfs_create_directory(const cfs_path *p, cfs_error_code *ec);
+CFS_API int cfs_create_directory(const cfs_path *p, cfs_error_code *ec);
 /* 162. Recursively create directory nodes */
-CFS_API cfs_bool cfs_create_directories(const cfs_path *p, cfs_error_code *ec);
+CFS_API int cfs_create_directories(const cfs_path *p, cfs_error_code *ec);
 
 /* 163-165. Create links */
 CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
@@ -513,14 +516,15 @@ CFS_API void cfs_create_directory_symlink(const cfs_path *target,
 /* Copy file options mirroring std::filesystem::copy_options */
 
 /* 168. Copy files strictly */
-CFS_API cfs_bool cfs_copy_file(const cfs_path *from, const cfs_path *to,
-                               cfs_copy_options options, cfs_error_code *ec);
+CFS_API int cfs_copy_file(const cfs_path *from, const cfs_path *to,
+                          cfs_copy_options options, cfs_error_code *ec);
 /* Phase 18: Filesystem Operations - Modification */
 
 /* 171. Remove single file or empty directory */
-CFS_API cfs_bool cfs_remove(const cfs_path *p, cfs_error_code *ec);
+CFS_API int cfs_remove(const cfs_path *p, cfs_error_code *ec);
 /* 172. Remove all contents recursively. Returns number of removed objects */
-CFS_API cfs_size_t cfs_remove_all(const cfs_path *p, cfs_error_code *ec);
+CFS_API int cfs_remove_all(const cfs_path *p, cfs_size_t *out,
+                           cfs_error_code *ec);
 
 /* 173. Rename/Move node */
 CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
@@ -537,7 +541,8 @@ typedef unsigned long cfs_uintmax_t;
 #endif
 CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
                              cfs_error_code *ec);
-CFS_API cfs_uintmax_t cfs_file_size(const cfs_path *p, cfs_error_code *ec);
+CFS_API int cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
+                          cfs_error_code *ec);
 
 /* 176. Space Information */
 typedef struct cfs_space_info {
@@ -545,7 +550,8 @@ typedef struct cfs_space_info {
   cfs_uintmax_t free;
   cfs_uintmax_t available;
 } cfs_space_info;
-CFS_API cfs_space_info cfs_space(const cfs_path *p, cfs_error_code *ec);
+CFS_API int cfs_space(const cfs_path *p, cfs_space_info *out,
+                      cfs_error_code *ec);
 
 /* 177. File Write Time */
 /* Mapped natively to time_t or system tick representation */
@@ -556,8 +562,8 @@ typedef __int64 cfs_file_time_type;
 #else
 typedef long cfs_file_time_type;
 #endif
-CFS_API cfs_file_time_type cfs_last_write_time(const cfs_path *p,
-                                               cfs_error_code *ec);
+CFS_API int cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
+                                cfs_error_code *ec);
 
 /* 17X. Permissions and Links */
 CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
@@ -568,9 +574,9 @@ CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
                            cfs_bool *out, cfs_error_code *ec);
 
 /* 178-179. Environment paths */
-CFS_API cfs_path cfs_current_path(cfs_error_code *ec);
+CFS_API int cfs_current_path(cfs_path *out, cfs_error_code *ec);
 CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec);
-CFS_API cfs_path cfs_temp_directory_path(cfs_error_code *ec);
+CFS_API int cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec);
 /* Phase 19: Directory Iteration */
 
 /* 181. Directory entry structure caching path and status */
