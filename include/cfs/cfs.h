@@ -5,6 +5,10 @@
 #include <stddef.h>
 /* clang-format on */
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* Phase 3: Platform & Compiler Detection Macros */
 
 /* 22-25. OS Detection */
@@ -17,6 +21,8 @@
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||   \
     defined(__bsdi__) || defined(__DragonFly__)
 #define CFS_OS_BSD
+#elif defined(__WATCOMC__) && defined(__DOS__) || defined(__MSDOS__)
+#define CFS_OS_DOS
 #else
 /* Unknown OS fallback (assume POSIX by default if needed) */
 #endif
@@ -70,15 +76,6 @@
 #define CFS_INLINE static
 #endif
 
-/* 34. Define CFS_EXTERN_C_BEGIN and CFS_EXTERN_C_END */
-#ifdef __cplusplus
-#define CFS_EXTERN_C_BEGIN extern "C" {
-#define CFS_EXTERN_C_END }
-#else
-#define CFS_EXTERN_C_BEGIN
-#define CFS_EXTERN_C_END
-#endif
-
 /* 37. Thread-local storage macros */
 #if defined(CFS_MULTITHREADED)
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L &&                \
@@ -103,7 +100,6 @@
 #define CFS_EXTERNALLY_VISIBLE
 #endif
 
-CFS_EXTERN_C_BEGIN
 /* Phase 5: Memory & Core Types */
 
 /* 41. cfs_char_t mapped dynamically to char or wchar_t */
@@ -299,7 +295,7 @@ typedef struct cfs_error_code {
 CFS_API void cfs_set_error(cfs_error_code *ec, int os_value,
                            cfs_errc standard_value);
 CFS_API void cfs_clear_error(cfs_error_code *ec);
-CFS_API const char *cfs_error_message(cfs_errc err);
+CFS_API int cfs_error_message(cfs_errc err, const char **out);
 
 /* 65-67. OS Translation Hooks */
 CFS_API int cfs_make_error_code_from_os(int os_error, cfs_error_code *out);
@@ -588,21 +584,24 @@ typedef struct cfs_directory_entry {
 
 /* 182-185. Standard Directory Iterator */
 typedef struct cfs_directory_iterator cfs_directory_iterator;
-CFS_API cfs_directory_iterator *cfs_dir_itr_init(const cfs_path *p,
-                                                 cfs_error_code *ec);
-/* Returns a pointer to the internal entry, or NULL if iteration complete or
- * error */
-CFS_API const cfs_directory_entry *cfs_dir_itr_next(cfs_directory_iterator *it,
-                                                    cfs_error_code *ec);
+CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
+                             cfs_error_code *ec);
+/* Returns 0 on success, with a pointer to the internal entry, or 1 if iteration
+ * complete, or -1 on error */
+CFS_API int cfs_dir_itr_next(cfs_directory_iterator *it,
+                             const cfs_directory_entry **out_entry,
+                             cfs_error_code *ec);
 CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it);
 
 /* 186-189. Recursive Directory Iterator */
 typedef struct cfs_recursive_directory_iterator
     cfs_recursive_directory_iterator;
-CFS_API cfs_recursive_directory_iterator *
-cfs_rec_dir_itr_init(const cfs_path *p, cfs_error_code *ec);
-CFS_API const cfs_directory_entry *
-cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it, cfs_error_code *ec);
+CFS_API int cfs_rec_dir_itr_init(const cfs_path *p,
+                                 cfs_recursive_directory_iterator **out_it,
+                                 cfs_error_code *ec);
+CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
+                                 const cfs_directory_entry **out_entry,
+                                 cfs_error_code *ec);
 /* Prevents the iterator from descending into the currently evaluated directory
  * node */
 CFS_API void
@@ -657,8 +656,8 @@ struct cfs_request_t {
 };
 
 /* 4. Implement cfs_runtime_init() */
-CFS_API cfs_runtime_t *cfs_runtime_init(const cfs_runtime_config *config,
-                                        cfs_error_code *ec);
+CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
+                             cfs_runtime_t **out_rt, cfs_error_code *ec);
 
 /* 5. Implement cfs_runtime_destroy() */
 CFS_API void cfs_runtime_destroy(cfs_runtime_t *runtime);
@@ -746,7 +745,7 @@ CFS_API void cfs_process_destroy(cfs_process_t *proc);
 typedef struct cfs_shm_segment cfs_shm_segment;
 CFS_API int cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
                            cfs_shm_segment **out_shm);
-CFS_API void *cfs_shm_map(cfs_shm_segment *shm);
+CFS_API int cfs_shm_map(cfs_shm_segment *shm, void **out);
 CFS_API void cfs_shm_unmap(cfs_shm_segment *shm, void *addr);
 CFS_API void cfs_shm_destroy(cfs_shm_segment *shm);
 
@@ -801,7 +800,9 @@ typedef struct cfs_sandbox_config {
 CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
                                     const cfs_sandbox_config *config);
 
-CFS_EXTERN_C_END
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #if defined(CFS_HEADER_ONLY_MODE)
 #include "cfs.c"

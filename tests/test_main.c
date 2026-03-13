@@ -1,5 +1,9 @@
 /* clang-format off */
+#if !defined(__STDC_WANT_LIB_EXT1__)
+#define __STDC_WANT_LIB_EXT1__ 1
+#endif
 #include "cfs/cfs.h"
+#include <string.h>
 #include "greatest.h"
 
 #if defined(CFS_OS_WINDOWS)
@@ -109,12 +113,14 @@ TEST thread_pool_async_validation() {
   cfs_path p;
   cfs_error_code ec;
   int i;
+  int res;
 
   config.mode = cfs_modality_multithread;
   config.thread_pool_size = 4;
   config.ipc_path = NULL;
 
-  rt = cfs_runtime_init(&config, &ec);
+  res = cfs_runtime_init(&config, &rt, &ec);
+  ASSERT_EQ(0, res);
   ASSERT_NEQ(NULL, rt);
 
   test_completed_ops = 0;
@@ -143,7 +149,8 @@ TEST thread_pool_async_validation() {
 /* Step 47. Write greenthread / scheduler stubs test cases */
 TEST greenthread_scheduler_validation() {
   cfs_greenthread_scheduler *sched = NULL;
-  int res = cfs_greenthread_scheduler_init(&sched);
+  int res;
+  res = cfs_greenthread_scheduler_init(&sched);
   ASSERT_EQ(0, res);
   ASSERT_NEQ(NULL, sched);
 

@@ -8,7 +8,7 @@
         #define WIN32_LEAN_AND_MEAN
         #include <winsock2.h>
     #endif
-    #if !defined(_WIN32) && !defined(_WIN64) && !defined(CFS_ENV_CYGWIN) /* Assuming POSIX otherwise */
+    #if !defined(_WIN32) && !defined(_WIN64) && !defined(CFS_ENV_CYGWIN) && !defined(__WATCOMC__) && !defined(__MSDOS__) /* Assuming POSIX otherwise */
         #include <pthread.h>
     #endif
 #include "cfs/cfs.h"
@@ -21,6 +21,8 @@
     defined(CFS_ENV_CYGWIN)
 /* POSIX native includes */
 #include <unistd.h>
+#elif defined(CFS_OS_DOS)
+/* DOS stub includes */
 #else
 /* Fallback includes */
 #endif
@@ -113,6 +115,30 @@ static void cfs_mutex_init(cfs_mutex_t *m) {
 static void cfs_mutex_destroy(cfs_mutex_t *m) { DeleteCriticalSection(&m->cs); }
 static void cfs_mutex_lock(cfs_mutex_t *m) { EnterCriticalSection(&m->cs); }
 static void cfs_mutex_unlock(cfs_mutex_t *m) { LeaveCriticalSection(&m->cs); }
+#elif defined(CFS_OS_DOS)
+struct cfs_mutex_t {
+  int dummy;
+};
+struct cfs_cond_t {
+  int dummy;
+};
+struct cfs_thread_t {
+  int dummy;
+};
+
+static void cfs_mutex_init(cfs_mutex_t *m) { (void)m; }
+static void cfs_mutex_destroy(cfs_mutex_t *m) { (void)m; }
+static void cfs_mutex_lock(cfs_mutex_t *m) { (void)m; }
+static void cfs_mutex_unlock(cfs_mutex_t *m) { (void)m; }
+
+static void cfs_cond_init(cfs_cond_t *c) { (void)c; }
+static void cfs_cond_destroy(cfs_cond_t *c) { (void)c; }
+static void cfs_cond_wait(cfs_cond_t *c, cfs_mutex_t *m) {
+  (void)c;
+  (void)m;
+}
+static void cfs_cond_signal(cfs_cond_t *c) { (void)c; }
+static void cfs_cond_broadcast(cfs_cond_t *c) { (void)c; }
 #else
 struct cfs_mutex_t {
   pthread_mutex_t m;
@@ -213,6 +239,8 @@ struct cfs_thread_pool_t {
 /* 17. Worker Thread Loop */
 #if defined(CFS_OS_WINDOWS)
 static DWORD WINAPI cfs_worker_thread(LPVOID arg) {
+#elif defined(CFS_OS_DOS)
+static void *cfs_worker_thread(void *arg) {
 #else
 static void *cfs_worker_thread(void *arg) {
 #endif
@@ -266,6 +294,10 @@ static cfs_thread_pool_t *cfs_thread_pool_create(cfs_size_t num_threads,
 #if defined(CFS_OS_WINDOWS)
     pool->threads[i].h =
         CreateThread(NULL, 0, cfs_worker_thread, pool, 0, NULL);
+#elif defined(CFS_OS_DOS)
+    (void)pool;
+    (void)i;
+    (void)cfs_worker_thread;
 #else
     pthread_create(&pool->threads[i].t, NULL, cfs_worker_thread, pool);
 #endif
@@ -287,6 +319,9 @@ static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
       WaitForSingleObject(pool->threads[i].h, INFINITE);
       CloseHandle(pool->threads[i].h);
     }
+#elif defined(CFS_OS_DOS)
+    (void)pool;
+    (void)i;
 #else
     pthread_join(pool->threads[i].t, NULL);
 #endif
@@ -354,23 +389,29 @@ CFS_API int cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
   return 0;
 }
 
-CFS_API cfs_runtime_t *cfs_runtime_init(const cfs_runtime_config *config,
-                                        cfs_error_code *ec) {
+CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
+                             cfs_runtime_t **out_rt, cfs_error_code *ec) {
   cfs_runtime_t *rt;
   if (ec)
     cfs_clear_error(ec);
+  if (!out_rt) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return -1;
+  }
+  *out_rt = NULL;
 
   if (!config) {
     if (ec)
       cfs_make_error_code_from_os(22, ec); /* EINVAL fallback */
-    return NULL;
+    return -1;
   }
 
   rt = (cfs_runtime_t *)cfs_malloc(sizeof(cfs_runtime_t));
   if (!rt) {
     if (ec)
       cfs_make_error_code_from_os(12, ec); /* ENOMEM fallback */
-    return NULL;
+    return -1;
   }
 
   rt->config = *config;
@@ -391,7 +432,8 @@ CFS_API cfs_runtime_t *cfs_runtime_init(const cfs_runtime_config *config,
         rt->work_queue, rt->completion_queue);
   }
 
-  return rt;
+  *out_rt = rt;
+  return 0;
 }
 
 CFS_API void cfs_runtime_destroy(cfs_runtime_t *runtime) {
@@ -589,9 +631,12 @@ CFS_API int cfs_get_last_error(cfs_error_code *out) {
 #endif
 }
 
-CFS_API const char *cfs_error_message(cfs_errc err) {
+CFS_API int cfs_error_message(cfs_errc err, const char **out) {
   (void)err;
-  return "Error";
+  if (!out)
+    return -1;
+  *out = "Error";
+  return 0;
 }
 
 /* Phase 8 & 9: Path Struct Basics */
@@ -1170,13 +1215,15 @@ CFS_API int cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
   return 0;
 }
 
-CFS_API void *cfs_shm_map(cfs_shm_segment *shm) {
-  if (!shm)
-    return NULL;
+CFS_API int cfs_shm_map(cfs_shm_segment *shm, void **out) {
+  if (!shm || !out)
+    return -1;
 #if defined(CFS_OS_WINDOWS)
-  return MapViewOfFile(shm->map_handle, FILE_MAP_ALL_ACCESS, 0, 0, shm->size);
+  *out = MapViewOfFile(shm->map_handle, FILE_MAP_ALL_ACCESS, 0, 0, shm->size);
+  return *out ? 0 : -1;
 #else
-  return NULL; /* mmap stub */
+  *out = NULL; /* mmap stub */
+  return -1;
 #endif
 }
 
@@ -1506,10 +1553,18 @@ CFS_API int cfs_read_symlink(const cfs_path *p, cfs_path *out,
       cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
     return -1;
   }
+#elif defined(CFS_OS_DOS)
+  {
+    /* Minimal stub for DOS C89, symlinks require reparse points parsing */
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return -1;
+  }
 #else
   {
     char buf[CFS_MAX_PATH];
-    ssize_t len = readlink(p->str, buf, sizeof(buf) - 1);
+    ssize_t len;
+    len = readlink(p->str, buf, sizeof(buf) - 1);
     if (len != -1) {
       buf[len] = '\0';
       cfs_path_assign(out, buf);
@@ -1547,16 +1602,29 @@ CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec) {
       cfs_get_last_error(ec);
     return -1;
   }
+#elif defined(CFS_OS_DOS)
+  {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return -1;
+  }
 #else
-  if (cfs_path_is_absolute(p)) {
-    cfs_path_assign(out, p->str);
-    return 0;
-  } else {
-    cfs_path cp = cfs_current_path(ec);
-    cfs_path_assign(out, cp.str);
-    cfs_path_append(out, p->str);
+  {
+    cfs_bool is_abs = cfs_false;
+    cfs_path cp;
+    if (cfs_path_is_absolute(p, &is_abs) == 0 && is_abs) {
+      cfs_path_assign(out, p->str);
+      return 0;
+    }
+    cfs_path_init(&cp);
+    if (cfs_current_path(&cp, ec) == 0) {
+      cfs_path_assign(out, cp.str);
+      cfs_path_append(out, p->str);
+      cfs_path_destroy(&cp);
+      return 0;
+    }
     cfs_path_destroy(&cp);
-    return 0;
+    return -1;
   }
 #endif
 }
@@ -1585,6 +1653,12 @@ CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out,
     }
     if (ec)
       cfs_get_last_error(ec);
+    return -1;
+  }
+#elif defined(CFS_OS_DOS)
+  {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
     return -1;
   }
 #else
@@ -1679,6 +1753,11 @@ CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
   /* Needs dynamic loading or Vista+ */
   if (ec)
     cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+#elif defined(CFS_OS_DOS)
+  (void)target;
+  (void)link;
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
 #else
   if (symlink(target->str, link->str) != 0) {
     if (ec)
@@ -1701,4 +1780,106 @@ CFS_API int cfs_path_lexically_relative(const cfs_path *p, const cfs_path *base,
 CFS_API int cfs_path_lexically_proximate(const cfs_path *p,
                                          const cfs_path *base, cfs_path *out) {
   return cfs_path_lexically_relative(p, base, out); /* simplified stub */
+}
+
+CFS_API int cfs_path_is_absolute(const cfs_path *p, cfs_bool *out) {
+  if (!out)
+    return -1;
+  *out = cfs_false;
+  if (!p || p->length == 0 || !p->str)
+    return 0;
+#if defined(CFS_OS_WINDOWS)
+  if (p->length >= 2 && p->str[1] == CFS_CHAR(':')) {
+    if (p->length >= 3 &&
+        (p->str[2] == CFS_CHAR('\\') || p->str[2] == CFS_CHAR('/')))
+      *out = cfs_true;
+  } else if (p->str[0] == CFS_CHAR('\\') || p->str[0] == CFS_CHAR('/')) {
+    *out = cfs_true;
+  }
+#elif defined(CFS_OS_DOS)
+  if (p->length >= 2 && p->str[1] == CFS_CHAR(':')) {
+    if (p->length >= 3 &&
+        (p->str[2] == CFS_CHAR('\\') || p->str[2] == CFS_CHAR('/')))
+      *out = cfs_true;
+  } else if (p->str[0] == CFS_CHAR('\\') || p->str[0] == CFS_CHAR('/')) {
+    *out = cfs_true;
+  }
+#else
+  if (p->str[0] == CFS_CHAR('/'))
+    *out = cfs_true;
+#endif
+  return 0;
+}
+
+CFS_API int cfs_current_path(cfs_path *out, cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!out) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return -1;
+  }
+#if defined(CFS_OS_WINDOWS)
+  {
+    cfs_char_t buf[CFS_MAX_PATH];
+    DWORD len;
+#if defined(CFS_UNICODE)
+    len = GetCurrentDirectoryW(CFS_MAX_PATH, buf);
+#else
+    len = GetCurrentDirectoryA(CFS_MAX_PATH, buf);
+#endif
+    if (len > 0 && len < CFS_MAX_PATH) {
+      cfs_path_assign(out, buf);
+      return 0;
+    }
+    if (ec)
+      cfs_get_last_error(ec);
+    return -1;
+  }
+#elif defined(CFS_OS_DOS)
+  {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return -1;
+  }
+#else
+  {
+    char buf[CFS_MAX_PATH];
+    if (getcwd(buf, sizeof(buf)) != NULL) {
+      cfs_path_assign(out, buf);
+      return 0;
+    }
+    if (ec)
+      cfs_get_last_error(ec);
+    return -1;
+  }
+#endif
+}
+
+CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec) {
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !p->str) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return;
+  }
+#if defined(CFS_OS_WINDOWS)
+#if defined(CFS_UNICODE)
+  if (SetCurrentDirectoryW(p->str) == 0) {
+#else
+  if (SetCurrentDirectoryA(p->str) == 0) {
+#endif
+    if (ec)
+      cfs_get_last_error(ec);
+  }
+#elif defined(CFS_OS_DOS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+#else
+  if (chdir(p->str) != 0) {
+    if (ec)
+      cfs_get_last_error(ec);
+  }
+#endif
 }
