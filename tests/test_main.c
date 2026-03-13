@@ -161,12 +161,45 @@ TEST greenthread_scheduler_validation() {
   PASS();
 }
 
+TEST memory_allocation() {
+  void *ptr = NULL;
+  ASSERT_EQ(0, cfs_malloc(1024, &ptr));
+  ASSERT_NEQ(NULL, ptr);
+  ASSERT_EQ(0, cfs_realloc(ptr, 2048, &ptr));
+  ASSERT_NEQ(NULL, ptr);
+  cfs_free(ptr);
+
+  ASSERT_EQ(0, cfs_calloc(10, 10, &ptr));
+  ASSERT_NEQ(NULL, ptr);
+  cfs_free(ptr);
+  PASS();
+}
+
+TEST string_handling() {
+  cfs_char_t buf[100];
+  cfs_size_t len;
+  cfs_char_t *out = NULL;
+  cfs_strcpy(buf, CFS_STR("Hello"), &out);
+  cfs_strlen(buf, &len);
+  ASSERT_EQ(5, len);
+
+  cfs_strcat(buf, CFS_STR(" World"), &out);
+  cfs_strlen(buf, &len);
+  ASSERT_EQ(11, len);
+
+  ASSERT_EQ(0, cfs_strcmp(buf, CFS_STR("Hello World")));
+  ASSERT_EQ(0, cfs_strncmp(buf, CFS_STR("Hello W"), 7));
+  PASS();
+}
+
 SUITE(cfs_suite) {
   RUN_TEST(path_initialization);
   RUN_TEST(path_appending);
   RUN_TEST(path_decomposition);
   RUN_TEST(thread_pool_async_validation);
   RUN_TEST(greenthread_scheduler_validation);
+  RUN_TEST(memory_allocation);
+  RUN_TEST(string_handling);
 }
 
 GREATEST_MAIN_DEFS();

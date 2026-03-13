@@ -28,7 +28,7 @@
 
 /* Implementation details */
 
-static cfs_bool cfs_is_separator(cfs_char_t c);
+static int cfs_is_separator(cfs_char_t c, cfs_bool *out);
 static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap);
 
 /* Phase 5.5: Execution Context & Modality Implementations */
@@ -200,8 +200,12 @@ static void cfs_queue_push(cfs_queue_t *q, cfs_request_t *req) {
   cfs_mutex_unlock(&q->lock);
 }
 
-static cfs_request_t *cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data) {
+static int cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data,
+                         cfs_request_t **out_req) {
   cfs_request_t *req = NULL;
+  if (!out_req)
+    return -1;
+  *out_req = NULL;
   cfs_mutex_lock(&q->lock);
 
   while (q->head == NULL && !q->shutdown && wait_for_data) {
@@ -217,7 +221,8 @@ static cfs_request_t *cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data) {
   }
 
   cfs_mutex_unlock(&q->lock);
-  return req;
+  *out_req = req;
+  return req ? 0 : -1;
 }
 
 static void cfs_queue_shutdown(cfs_queue_t *q) {
@@ -244,10 +249,10 @@ static void *cfs_worker_thread(void *arg) {
 static void *cfs_worker_thread(void *arg) {
 #endif
   cfs_thread_pool_t *pool = (cfs_thread_pool_t *)arg;
+  cfs_request_t *req = NULL;
 
   while (1) {
-    cfs_request_t *req = cfs_queue_pop(pool->work_queue, cfs_true);
-    if (!req) {
+    if (cfs_queue_pop(pool->work_queue, cfs_true, &req) != 0 || !req) {
       /* Cascade shutdown signal to wake up other waiting threads when using
        * event fallback */
       cfs_cond_broadcast(&pool->work_queue->cond);
@@ -270,23 +275,27 @@ static void *cfs_worker_thread(void *arg) {
 #endif
 }
 
-static cfs_thread_pool_t *cfs_thread_pool_create(cfs_size_t num_threads,
-                                                 cfs_queue_t *work,
-                                                 cfs_queue_t *comp) {
-  cfs_thread_pool_t *pool =
-      (cfs_thread_pool_t *)cfs_malloc(sizeof(cfs_thread_pool_t));
+static int cfs_thread_pool_create(cfs_size_t num_threads, cfs_queue_t *work,
+                                  cfs_queue_t *comp,
+                                  cfs_thread_pool_t **out_pool) {
   cfs_size_t i;
+  cfs_thread_pool_t *pool = NULL;
+  if (!out_pool)
+    return -1;
+  *out_pool = NULL;
+
+  cfs_malloc(sizeof(cfs_thread_pool_t), (void **)&pool);
   if (!pool)
-    return NULL;
+    return -1;
 
   pool->num_threads = num_threads;
   pool->work_queue = work;
   pool->completion_queue = comp;
-  pool->threads = (cfs_thread_t *)cfs_calloc(num_threads, sizeof(cfs_thread_t));
+  cfs_calloc(num_threads, sizeof(cfs_thread_t), (void **)&(pool->threads));
 
   if (!pool->threads) {
     cfs_free(pool);
-    return NULL;
+    return -1;
   }
 
   for (i = 0; i < num_threads; ++i) {
@@ -302,7 +311,8 @@ static cfs_thread_pool_t *cfs_thread_pool_create(cfs_size_t num_threads,
 #endif
   }
 
-  return pool;
+  *out_pool = pool;
+  return 0;
 }
 
 static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
@@ -338,7 +348,7 @@ CFS_API int cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
   if (!rt || !p)
     return -1;
 
-  req = (cfs_request_t *)cfs_malloc(sizeof(cfs_request_t));
+  cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return -1;
 
@@ -366,7 +376,7 @@ CFS_API int cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
   if (!rt || !p)
     return -1;
 
-  req = (cfs_request_t *)cfs_malloc(sizeof(cfs_request_t));
+  cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return -1;
 
@@ -376,7 +386,7 @@ CFS_API int cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
   cfs_path_init(&req->dest_path);
 
   req->result_size = sizeof(cfs_uintmax_t);
-  req->result_buffer = cfs_malloc(req->result_size);
+  cfs_malloc(req->result_size, (void **)&req->result_buffer);
   cfs_clear_error(&req->error);
   req->callback = cb;
   req->user_data = user_data;
@@ -406,7 +416,7 @@ CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
     return -1;
   }
 
-  rt = (cfs_runtime_t *)cfs_malloc(sizeof(cfs_runtime_t));
+  cfs_malloc(sizeof(cfs_runtime_t), (void **)&rt);
   if (!rt) {
     if (ec)
       cfs_make_error_code_from_os(12, ec); /* ENOMEM fallback */
@@ -421,14 +431,14 @@ CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
   /* TODO: initialize thread pools, IPC, etc based on config->mode */
   if (rt->config.mode == cfs_modality_async ||
       rt->config.mode == cfs_modality_multithread) {
-    rt->work_queue = (cfs_queue_t *)cfs_malloc(sizeof(cfs_queue_t));
-    rt->completion_queue = (cfs_queue_t *)cfs_malloc(sizeof(cfs_queue_t));
+    cfs_malloc(sizeof(cfs_queue_t), (void **)&(rt->work_queue));
+    cfs_malloc(sizeof(cfs_queue_t), (void **)&(rt->completion_queue));
     cfs_queue_init(rt->work_queue);
     cfs_queue_init(rt->completion_queue);
 
-    rt->thread_pool = cfs_thread_pool_create(
+    cfs_thread_pool_create(
         rt->config.thread_pool_size > 0 ? rt->config.thread_pool_size : 4,
-        rt->work_queue, rt->completion_queue);
+        rt->work_queue, rt->completion_queue, &rt->thread_pool);
   }
 
   *out_rt = rt;
@@ -481,11 +491,12 @@ CFS_API void cfs_dispatch_request(cfs_runtime_t *runtime, cfs_request_t *req,
 /* 19. cfs_runtime_poll() */
 CFS_API int cfs_runtime_poll(cfs_runtime_t *rt) {
   int processed = 0;
-  cfs_request_t *req;
+  cfs_request_t *req = NULL;
   if (!rt || !rt->completion_queue)
     return 0;
 
-  while ((req = cfs_queue_pop(rt->completion_queue, cfs_false)) != NULL) {
+  while (cfs_queue_pop(rt->completion_queue, cfs_false, &req) == 0 &&
+         req != NULL) {
     if (req->callback) {
       req->callback(req, req->user_data);
     }
@@ -498,44 +509,57 @@ CFS_API int cfs_runtime_poll(cfs_runtime_t *rt) {
 /* Re-implementing lost Phase 6, 7, 8, 9 functions */
 
 /* Phase 6: String Handling */
-CFS_API cfs_size_t cfs_strlen(const cfs_char_t *str) {
+CFS_API int cfs_strlen(const cfs_char_t *str, cfs_size_t *out) {
   cfs_size_t len = 0;
+  if (!out)
+    return -1;
+  *out = 0;
   if (!str)
-    return 0;
+    return -1;
   while (str[len])
     len++;
-  return len;
+  *out = len;
+  return 0;
 }
 
-CFS_API cfs_char_t *cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src) {
+CFS_API int cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
+                       cfs_char_t **out) {
   cfs_size_t i = 0;
+  if (out)
+    *out = dest;
   if (!dest || !src)
-    return dest;
+    return -1;
   while ((dest[i] = src[i]) != 0)
     i++;
-  return dest;
+  return 0;
 }
 
-CFS_API cfs_char_t *cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
-                                cfs_size_t n) {
+CFS_API int cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src, cfs_size_t n,
+                        cfs_char_t **out) {
   cfs_size_t i;
+  if (out)
+    *out = dest;
   if (!dest || !src)
-    return dest;
+    return -1;
   for (i = 0; i < n && src[i] != 0; i++)
     dest[i] = src[i];
   for (; i < n; i++)
     dest[i] = 0;
-  return dest;
+  return 0;
 }
 
-CFS_API cfs_char_t *cfs_strcat(cfs_char_t *dest, const cfs_char_t *src) {
-  cfs_size_t dest_len = cfs_strlen(dest);
+CFS_API int cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
+                       cfs_char_t **out) {
+  cfs_size_t dest_len = 0;
   cfs_size_t i = 0;
+  if (out)
+    *out = dest;
+  cfs_strlen(dest, &dest_len);
   if (!dest || !src)
-    return dest;
+    return -1;
   while ((dest[dest_len + i] = src[i]) != 0)
     i++;
-  return dest;
+  return 0;
 }
 
 CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs) {
@@ -568,35 +592,47 @@ CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
 }
 
 #if defined(CFS_OS_WINDOWS)
-CFS_API cfs_size_t cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
-                                     cfs_size_t dest_len) {
+CFS_API int cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
+                              cfs_size_t dest_len, cfs_size_t *out_req) {
   int req = MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, dest, (int)dest_len);
-  return (req > 0) ? (cfs_size_t)req : 0;
+  if (out_req) {
+    *out_req = (req > 0) ? (cfs_size_t)req : 0;
+  }
+  return (req > 0) ? 0 : -1;
 }
 
-CFS_API cfs_size_t cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
-                                     cfs_size_t dest_len) {
+CFS_API int cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
+                              cfs_size_t dest_len, cfs_size_t *out_req) {
   int req = WideCharToMultiByte(CP_UTF8, 0, utf16_str, -1, dest, (int)dest_len,
                                 NULL, NULL);
-  return (req > 0) ? (cfs_size_t)req : 0;
+  if (out_req) {
+    *out_req = (req > 0) ? (cfs_size_t)req : 0;
+  }
+  return (req > 0) ? 0 : -1;
 }
 #endif
 
-CFS_API cfs_size_t cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
-                                  cfs_size_t dest_len) {
+CFS_API int cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
+                           cfs_size_t dest_len, cfs_size_t *out_req) {
 #if defined(CFS_OS_WINDOWS)
-  return cfs_utf8_to_utf16(mb_str, dest, dest_len);
+  return cfs_utf8_to_utf16(mb_str, dest, dest_len, out_req);
 #else
-  return 0; /* Fallback not used on POSIX where cfs_char_t is char */
+  if (out_req) {
+    *out_req = 0; /* Fallback not used on POSIX where cfs_char_t is char */
+  }
+  return -1;
 #endif
 }
 
-CFS_API cfs_size_t cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
-                                  cfs_size_t dest_len) {
+CFS_API int cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
+                           cfs_size_t dest_len, cfs_size_t *out_req) {
 #if defined(CFS_OS_WINDOWS)
-  return cfs_utf16_to_utf8(wide_str, dest, dest_len);
+  return cfs_utf16_to_utf8(wide_str, dest, dest_len, out_req);
 #else
-  return 0; /* Fallback not used on POSIX */
+  if (out_req) {
+    *out_req = 0; /* Fallback not used on POSIX */
+  }
+  return -1;
 #endif
 }
 
@@ -706,7 +742,7 @@ CFS_API int cfs_path_generic_string(const cfs_path *p, cfs_char_t **out) {
   *out = NULL;
   if (!p || !p->str)
     return -1;
-  res = (cfs_char_t *)cfs_malloc((p->length + 1) * sizeof(cfs_char_t));
+  cfs_malloc((p->length + 1) * sizeof(cfs_char_t), (void **)&res);
   if (!res)
     return -1;
   CFS_STRCPY_SAFE(res, p->length + 1, p->str);
@@ -742,7 +778,7 @@ CFS_API int cfs_path_concat(cfs_path *p, const cfs_char_t *source) {
   cfs_size_t new_len;
   if (!p || !source)
     return -1;
-  src_len = cfs_strlen(source);
+  cfs_strlen(source, &src_len);
   if (src_len == 0)
     return 0;
   new_len = p->length + src_len;
@@ -759,6 +795,9 @@ CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
   cfs_bool p_has_sep = cfs_false;
   cfs_bool src_has_sep = cfs_false;
   cfs_size_t new_len;
+#if defined(CFS_OS_WINDOWS)
+  cfs_size_t len = 0;
+#endif
 
   if (!p || !source)
     return -1;
@@ -776,7 +815,7 @@ CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
 
 #if defined(CFS_OS_WINDOWS)
   if (source[0] == CFS_CHAR('\\') || source[0] == CFS_CHAR('/') ||
-      (cfs_strlen(source) >= 2 && source[1] == CFS_CHAR(':'))) {
+      ((cfs_strlen(source, &len), len >= 2) && source[1] == CFS_CHAR(':'))) {
     return cfs_path_assign(p, source);
   }
 #else
@@ -785,10 +824,10 @@ CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
   }
 #endif
 
-  src_len = cfs_strlen(source);
+  cfs_strlen(source, &src_len);
   if (p->length > 0)
-    p_has_sep = cfs_is_separator(p->str[p->length - 1]);
-  src_has_sep = cfs_is_separator(source[0]);
+    cfs_is_separator(p->str[p->length - 1], &p_has_sep);
+  cfs_is_separator(source[0], &src_has_sep);
 
   new_len = p->length + src_len;
   if (!p_has_sep && !src_has_sep)
@@ -812,8 +851,11 @@ CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
   return 0;
 }
 
-static cfs_bool cfs_is_separator(cfs_char_t c) {
-  return c == CFS_CHAR('/') || c == CFS_CHAR('\\');
+static int cfs_is_separator(cfs_char_t c, cfs_bool *out) {
+  if (!out)
+    return -1;
+  *out = (c == CFS_CHAR('/') || c == CFS_CHAR('\\')) ? cfs_true : cfs_false;
+  return 0;
 }
 
 static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
@@ -824,9 +866,9 @@ static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
     return 0;
 
   if (p->str) {
-    new_str = (cfs_char_t *)cfs_realloc(p->str, new_cap * sizeof(cfs_char_t));
+    cfs_realloc(p->str, new_cap * sizeof(cfs_char_t), (void **)&new_str);
   } else {
-    new_str = (cfs_char_t *)cfs_malloc(new_cap * sizeof(cfs_char_t));
+    cfs_malloc(new_cap * sizeof(cfs_char_t), (void **)&new_str);
   }
 
   if (!new_str)
@@ -852,7 +894,7 @@ CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
     cfs_path_clear(p);
     return 0;
   }
-  len = cfs_strlen(source);
+  cfs_strlen(source, &len);
   if (cfs_path_reserve(p, len + 1) != 0)
     return -1;
   CFS_STRCPY_SAFE(p->str, p->capacity, source);
@@ -860,13 +902,21 @@ CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
   return 0;
 }
 
-CFS_API void *cfs_malloc(cfs_size_t size) { return malloc(size); }
-CFS_API void cfs_free(void *ptr) { free(ptr); }
-CFS_API void *cfs_realloc(void *ptr, cfs_size_t size) {
-  return realloc(ptr, size);
+CFS_API int cfs_malloc(cfs_size_t size, void **out) {
+  if (out)
+    *out = malloc(size);
+  return (out && *out) ? 0 : -1;
 }
-CFS_API void *cfs_calloc(cfs_size_t num, cfs_size_t size) {
-  return calloc(num, size);
+CFS_API void cfs_free(void *ptr) { free(ptr); }
+CFS_API int cfs_realloc(void *ptr, cfs_size_t size, void **out) {
+  if (out)
+    *out = realloc(ptr, size);
+  return (out && *out) ? 0 : -1;
+}
+CFS_API int cfs_calloc(cfs_size_t num, cfs_size_t size, void **out) {
+  if (out)
+    *out = calloc(num, size);
+  return (out && *out) ? 0 : -1;
 }
 
 CFS_API int cfs_path_filename(const cfs_path *p, cfs_path *out) {
@@ -878,7 +928,9 @@ CFS_API int cfs_path_filename(const cfs_path *p, cfs_path *out) {
     return -1;
 
   for (i = p->length; i > 0; i--) {
-    if (cfs_is_separator(p->str[i - 1]))
+    cfs_bool is_sep = cfs_false;
+    cfs_is_separator(p->str[i - 1], &is_sep);
+    if (is_sep)
       break;
   }
 
@@ -898,13 +950,21 @@ CFS_API int cfs_path_extension(const cfs_path *p, cfs_path *out) {
 
   for (i = p->length; i > 0; i--) {
     if (p->str[i - 1] == CFS_CHAR('.')) {
-      if (i > 1 && !cfs_is_separator(p->str[i - 2])) {
-        cfs_path_assign(out, p->str + i - 1);
-        return 0;
+      if (i > 1) {
+        cfs_bool is_sep = cfs_false;
+        cfs_is_separator(p->str[i - 2], &is_sep);
+        if (!is_sep) {
+          cfs_path_assign(out, p->str + i - 1);
+          return 0;
+        }
       }
     }
-    if (cfs_is_separator(p->str[i - 1]))
-      break;
+    {
+      cfs_bool is_sep = cfs_false;
+      cfs_is_separator(p->str[i - 1], &is_sep);
+      if (is_sep)
+        break;
+    }
   }
   return 0;
 }
@@ -1067,7 +1127,7 @@ CFS_API int cfs_message_pipe_create(const cfs_char_t *path,
                                     cfs_message_pipe **out_pipe) {
   if (!path || !out_pipe)
     return -1;
-  *out_pipe = (cfs_message_pipe *)cfs_malloc(sizeof(cfs_message_pipe));
+  cfs_malloc(sizeof(cfs_message_pipe), (void **)out_pipe);
   if (*out_pipe)
     (*out_pipe)->handle = NULL;
   return (*out_pipe) ? 0 : -1;
@@ -1084,7 +1144,7 @@ CFS_API int cfs_serialize_request(const cfs_request_t *req, void **buffer,
     return -1;
   /* Simplistic serialization simulation */
   *size = sizeof(int) + sizeof(cfs_size_t) * 2; /* Opcode + path lengths */
-  *buffer = cfs_malloc(*size);
+  cfs_malloc(*size, (void **)buffer);
   if (!*buffer)
     return -1;
   ((int *)*buffer)[0] = req->opcode;
@@ -1095,7 +1155,7 @@ CFS_API int cfs_deserialize_request(const void *buffer, cfs_size_t size,
                                     cfs_request_t **req) {
   if (!buffer || !req || size < sizeof(int))
     return -1;
-  *req = (cfs_request_t *)cfs_malloc(sizeof(cfs_request_t));
+  cfs_malloc(sizeof(cfs_request_t), (void **)req);
   if (!*req)
     return -1;
   (*req)->opcode = ((int *)buffer)[0];
@@ -1125,7 +1185,7 @@ CFS_API int cfs_process_spawn(const cfs_char_t *executable,
                               cfs_process_t **out_proc) {
   if (!executable || !out_proc)
     return -1;
-  *out_proc = (cfs_process_t *)cfs_malloc(sizeof(cfs_process_t));
+  cfs_malloc(sizeof(cfs_process_t), (void **)out_proc);
   if (!*out_proc)
     return -1;
 
@@ -1188,7 +1248,7 @@ CFS_API int cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
                            cfs_shm_segment **out_shm) {
   if (!name || !out_shm || size == 0)
     return -1;
-  *out_shm = (cfs_shm_segment *)cfs_malloc(sizeof(cfs_shm_segment));
+  cfs_malloc(sizeof(cfs_shm_segment), (void **)out_shm);
   if (!*out_shm)
     return -1;
   (*out_shm)->size = size;
@@ -1260,7 +1320,7 @@ CFS_API int cfs_named_semaphore_create(const cfs_char_t *name,
                                        cfs_named_semaphore **out_sem) {
   if (!name || !out_sem)
     return -1;
-  *out_sem = (cfs_named_semaphore *)cfs_malloc(sizeof(cfs_named_semaphore));
+  cfs_malloc(sizeof(cfs_named_semaphore), (void **)out_sem);
   if (!*out_sem)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -1328,7 +1388,7 @@ CFS_API int cfs_greenthread_spawn(cfs_greenthread_func func, void *arg,
   (void)arg;
   if (!out_gt)
     return -1;
-  *out_gt = (cfs_greenthread_t *)cfs_malloc(sizeof(cfs_greenthread_t));
+  cfs_malloc(sizeof(cfs_greenthread_t), (void **)out_gt);
   if (*out_gt)
     (*out_gt)->context = NULL;
   return (*out_gt) ? 0 : -1;
@@ -1345,8 +1405,7 @@ CFS_API int
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched) {
   if (!out_sched)
     return -1;
-  *out_sched = (cfs_greenthread_scheduler *)cfs_malloc(
-      sizeof(cfs_greenthread_scheduler));
+  cfs_malloc(sizeof(cfs_greenthread_scheduler), (void **)out_sched);
   if (*out_sched)
     (*out_sched)->current = NULL;
   return (*out_sched) ? 0 : -1;
@@ -1370,7 +1429,7 @@ CFS_API int cfs_dir_itr_init_async(cfs_runtime_t *rt, const cfs_path *p,
   if (!rt || !p)
     return -1;
 
-  req = (cfs_request_t *)cfs_malloc(sizeof(cfs_request_t));
+  cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return -1;
 
@@ -1690,7 +1749,8 @@ CFS_API int cfs_copy(const cfs_path *from, const cfs_path *to,
 CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
                              const cfs_path *new_symlink, cfs_error_code *ec) {
   cfs_path out;
-  int res = cfs_read_symlink(existing_symlink, &out, ec);
+  int res;
+  res = cfs_read_symlink(existing_symlink, &out, ec);
   if (res == 0) {
     cfs_create_symlink(&out, new_symlink, ec);
     cfs_path_destroy(&out);

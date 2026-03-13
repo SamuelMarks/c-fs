@@ -149,22 +149,33 @@ typedef size_t cfs_size_t;
 /* Global Out-Of-Memory Error Fallback Hook */
 typedef void (*cfs_oom_handler_t)(void);
 
-/* 44-48. Memory Allocation Wrappers */
+/** \brief 44-48. Memory Allocation Wrappers */
 CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler);
-CFS_API void *cfs_malloc(cfs_size_t size);
+/** \brief cfs_malloc */
+CFS_API int cfs_malloc(cfs_size_t size, void **out);
+/** \brief cfs_free */
 CFS_API void cfs_free(void *ptr);
-CFS_API void *cfs_realloc(void *ptr, cfs_size_t new_size);
-CFS_API void *cfs_calloc(cfs_size_t num, cfs_size_t size);
+/** \brief cfs_realloc */
+CFS_API int cfs_realloc(void *ptr, cfs_size_t new_size, void **out);
+/** \brief cfs_calloc */
+CFS_API int cfs_calloc(cfs_size_t num, cfs_size_t size, void **out);
 
 /* Phase 6: String Handling & Charsets */
 
-/* 51-54. Native string handling abstractions */
-CFS_API cfs_size_t cfs_strlen(const cfs_char_t *str);
-CFS_API cfs_char_t *cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src);
-CFS_API cfs_char_t *cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
-                                cfs_size_t n);
-CFS_API cfs_char_t *cfs_strcat(cfs_char_t *dest, const cfs_char_t *src);
+/** \brief 51-54. Native string handling abstractions */
+CFS_API int cfs_strlen(const cfs_char_t *str, cfs_size_t *out);
+/** \brief cfs_strcpy */
+CFS_API int cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
+                       cfs_char_t **out);
+/** \brief cfs_strncpy */
+CFS_API int cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src, cfs_size_t n,
+                        cfs_char_t **out);
+/** \brief cfs_strcat */
+CFS_API int cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
+                       cfs_char_t **out);
+/** \brief cfs_strcmp */
 CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs);
+/** \brief cfs_strncmp */
 CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
                         cfs_size_t count);
 
@@ -180,25 +191,27 @@ CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
   strncpy_s((dst), (dst_sz), (src), (n))
 #endif
 #else
-#define CFS_STRCPY_SAFE(dst, dst_sz, src) cfs_strcpy((dst), (src))
-#define CFS_STRNCPY_SAFE(dst, dst_sz, src, n) cfs_strncpy((dst), (src), (n))
+#define CFS_STRCPY_SAFE(dst, dst_sz, src) cfs_strcpy((dst), (src), NULL)
+#define CFS_STRNCPY_SAFE(dst, dst_sz, src, n)                                  \
+  cfs_strncpy((dst), (src), (n), NULL)
 #endif
 #if defined(CFS_OS_WINDOWS)
 /* UTF-8 to UTF-16 conversion (Returns required buffer size in chars if dest is
  * NULL) */
-CFS_API cfs_size_t cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
-                                     cfs_size_t dest_len);
+CFS_API int cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
+                              cfs_size_t dest_len, cfs_size_t *out_req);
 /* UTF-16 to UTF-8 conversion (Returns required buffer size in bytes if dest is
  * NULL) */
-CFS_API cfs_size_t cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
-                                     cfs_size_t dest_len);
+CFS_API int cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
+                              cfs_size_t dest_len, cfs_size_t *out_req);
 #endif
 
-/* ANSI to Wide character conversion (Generic Fallbacks) */
-CFS_API cfs_size_t cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
-                                  cfs_size_t dest_len);
-CFS_API cfs_size_t cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
-                                  cfs_size_t dest_len);
+/** \brief ANSI to Wide character conversion (Generic Fallbacks) */
+CFS_API int cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
+                           cfs_size_t dest_len, cfs_size_t *out_req);
+/** \brief cfs_wide_to_mb */
+CFS_API int cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
+                           cfs_size_t dest_len, cfs_size_t *out_req);
 /* Phase 7: Error Handling & System Codes */
 
 /* 62. Define cfs_errc mapping to std::errc (POSIX states) */
@@ -291,14 +304,17 @@ typedef struct cfs_error_code {
   cfs_errc errc; /* The unified POSIX mapping */
 } cfs_error_code;
 
-/* 63-64, 68. Global / Thread-Local Error Interfacing */
+/** \brief 63-64, 68. Global / Thread-Local Error Interfacing */
 CFS_API void cfs_set_error(cfs_error_code *ec, int os_value,
                            cfs_errc standard_value);
+/** \brief cfs_clear_error */
 CFS_API void cfs_clear_error(cfs_error_code *ec);
+/** \brief cfs_error_message */
 CFS_API int cfs_error_message(cfs_errc err, const char **out);
 
-/* 65-67. OS Translation Hooks */
+/** \brief 65-67. OS Translation Hooks */
 CFS_API int cfs_make_error_code_from_os(int os_error, cfs_error_code *out);
+/** \brief cfs_get_last_error */
 CFS_API int cfs_get_last_error(cfs_error_code *out);
 /* Phase 8: Path Struct Basics */
 
@@ -316,55 +332,66 @@ typedef struct cfs_path {
   cfs_size_t capacity;
 } cfs_path;
 
-/* 72-75, 77-79. Path Initialization, Mutation, and Destruction */
+/** \brief 72-75, 77-79. Path Initialization, Mutation, and Destruction */
 CFS_API void cfs_path_init(cfs_path *p);
+/** \brief cfs_path_init_str */
 CFS_API int cfs_path_init_str(cfs_path *p, const cfs_char_t *source);
+/** \brief cfs_path_destroy */
 CFS_API void cfs_path_destroy(cfs_path *p);
+/** \brief cfs_path_clone */
 CFS_API int cfs_path_clone(cfs_path *dest, const cfs_path *src);
+/** \brief cfs_path_make_preferred */
 CFS_API int cfs_path_make_preferred(cfs_path *p);
+/** \brief cfs_path_c_str */
 CFS_API int cfs_path_c_str(const cfs_path *p, const cfs_char_t **out);
 /* Returns dynamically allocated generic path string (e.g. forward slashes on
  * Windows). Caller must free. */
 CFS_API int cfs_path_generic_string(const cfs_path *p, cfs_char_t **out);
 /* Phase 9: Path Building */
 
-/* 81-84, 88. Path assignment, concatenation, and manipulation */
+/** \brief 81-84, 88. Path assignment, concatenation, and manipulation */
 CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source);
+/** \brief cfs_path_append */
 CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source);
+/** \brief cfs_path_concat */
 CFS_API int cfs_path_concat(cfs_path *p, const cfs_char_t *source);
+/** \brief cfs_path_clear */
 CFS_API void cfs_path_clear(cfs_path *p);
+/** \brief cfs_path_swap */
 CFS_API void cfs_path_swap(cfs_path *lhs, cfs_path *rhs);
 /* Phase 10: Path Decomposition - Root Analysis */
 
-/* Extracts drive letters (Windows) or root nodes. Returns path instance. */
+/** \brief Extracts drive letters (Windows) or root nodes. Returns path
+ * instance. */
 CFS_API int cfs_path_root_name(const cfs_path *p, cfs_path *out);
-/* Extracts base root separator. Returns path instance. */
+/** \brief Extracts base root separator. Returns path instance. */
 CFS_API int cfs_path_root_directory(const cfs_path *p, cfs_path *out);
-/* Combines root name and root directory. Returns path instance. */
+/** \brief Combines root name and root directory. Returns path instance. */
 CFS_API int cfs_path_root_path(const cfs_path *p, cfs_path *out);
 /* Phase 11: Path Decomposition - Elements */
 
-/* 101. Returns path relative to the root path */
+/** \brief 101. Returns path relative to the root path */
 CFS_API int cfs_path_relative_path(const cfs_path *p, cfs_path *out);
-/* 102. Returns path of the parent directory */
+/** \brief 102. Returns path of the parent directory */
 CFS_API int cfs_path_parent_path(const cfs_path *p, cfs_path *out);
-/* 103. Returns the filename component */
+/** \brief 103. Returns the filename component */
 CFS_API int cfs_path_filename(const cfs_path *p, cfs_path *out);
-/* 104. Returns the stem (filename without extension) */
+/** \brief 104. Returns the stem (filename without extension) */
 CFS_API int cfs_path_stem(const cfs_path *p, cfs_path *out);
-/* 105. Returns the file extension */
+/** \brief 105. Returns the file extension */
 CFS_API int cfs_path_extension(const cfs_path *p, cfs_path *out);
 /* Phase 12: Path Modifiers */
 
-/* 111. Replaces the terminal filename component */
+/** \brief 111. Replaces the terminal filename component */
 CFS_API int cfs_path_replace_filename(cfs_path *p,
                                       const cfs_char_t *replacement);
-/* 112. Replaces the extension of the terminal component */
+/** \brief 112. Replaces the extension of the terminal component */
 CFS_API int cfs_path_replace_extension(cfs_path *p,
                                        const cfs_char_t *replacement);
-/* 113. Removes the terminal filename component (truncates back to parent) */
+/** \brief 113. Removes the terminal filename component (truncates back to
+ * parent) */
 CFS_API void cfs_path_remove_filename(cfs_path *p);
-/* 114. Returns absolute path */
+/** \brief 114. Returns absolute path */
 CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec);
 
 /* Copy file options mirroring std::filesystem::copy_options */
@@ -375,43 +402,59 @@ typedef enum cfs_copy_options {
   cfs_copy_options_update_existing = 4
 } cfs_copy_options;
 
-/* Phase 20: Missing std::filesystem functions */
+/** \brief Phase 20: Missing std::filesystem functions */
 CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out, cfs_error_code *ec);
+/** \brief cfs_weakly_canonical */
 CFS_API int cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
                                  cfs_error_code *ec);
+/** \brief cfs_read_symlink */
 CFS_API int cfs_read_symlink(const cfs_path *p, cfs_path *out,
                              cfs_error_code *ec);
+/** \brief cfs_relative */
 CFS_API int cfs_relative(const cfs_path *p, const cfs_path *base, cfs_path *out,
                          cfs_error_code *ec);
+/** \brief cfs_proximate */
 CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
                           cfs_path *out, cfs_error_code *ec);
+/** \brief cfs_copy */
 CFS_API int cfs_copy(const cfs_path *from, const cfs_path *to,
                      cfs_copy_options options, cfs_error_code *ec);
+/** \brief cfs_copy_symlink */
 CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
                              const cfs_path *new_symlink, cfs_error_code *ec);
 
 /* Phase 13: Path Observers & Comparisons */
 
-/* Observers */
+/** \brief Observers */
 CFS_API int cfs_path_is_empty(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_has_root_path */
 CFS_API int cfs_path_has_root_path(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_has_root_name */
 CFS_API int cfs_path_has_root_name(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_has_root_directory */
 CFS_API int cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_has_relative_path */
 CFS_API int cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_has_parent_path */
 CFS_API int cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_has_filename */
 CFS_API int cfs_path_has_filename(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_has_stem */
 CFS_API int cfs_path_has_stem(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_has_extension */
 CFS_API int cfs_path_has_extension(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_is_absolute */
 CFS_API int cfs_path_is_absolute(const cfs_path *p, cfs_bool *out);
+/** \brief cfs_path_is_relative */
 CFS_API int cfs_path_is_relative(const cfs_path *p, cfs_bool *out);
 
-/* Lexicographical comparison */
+/** \brief Lexicographical comparison */
 CFS_API int cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs);
 /* Phase 14: Lexical Path Operations */
 
-/* 132. Lexically normalizes the path (resolves . and .. internally) */
+/** \brief 132. Lexically normalizes the path (resolves . and .. internally) */
 CFS_API int cfs_path_lexically_normal(const cfs_path *p, cfs_path *out);
-/* 134. Returns a path representing how to get from base to p */
+/** \brief 134. Returns a path representing how to get from base to p */
 CFS_API int cfs_path_lexically_relative(const cfs_path *p, const cfs_path *base,
                                         cfs_path *out);
 /* 135. Returns relative path if mathematically divergent, otherwise the
@@ -468,61 +511,74 @@ typedef struct cfs_file_status {
   cfs_perms permissions;
 } cfs_file_status;
 
-/* 141-142. Core Status Queries */
+/** \brief 141-142. Core Status Queries */
 CFS_API int cfs_status(const cfs_path *p, cfs_file_status *out,
                        cfs_error_code *ec);
+/** \brief cfs_symlink_status */
 CFS_API int cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
                                cfs_error_code *ec);
+/** \brief cfs_status_known */
 CFS_API int cfs_status_known(cfs_file_status s, cfs_bool *out);
 
-/* 145. Exists Observer */
+/** \brief 145. Exists Observer */
 CFS_API int cfs_exists(cfs_file_status s, cfs_bool *out);
+/** \brief cfs_exists_path */
 CFS_API int cfs_exists_path(const cfs_path *p, cfs_bool *out,
                             cfs_error_code *ec);
 
-/* 151-159. Filesystem Type Queries */
+/** \brief 151-159. Filesystem Type Queries */
 CFS_API int cfs_is_block_file(cfs_file_status s, cfs_bool *out);
+/** \brief cfs_is_character_file */
 CFS_API int cfs_is_character_file(cfs_file_status s, cfs_bool *out);
+/** \brief cfs_is_directory */
 CFS_API int cfs_is_directory(cfs_file_status s, cfs_bool *out);
+/** \brief cfs_is_fifo */
 CFS_API int cfs_is_fifo(cfs_file_status s, cfs_bool *out);
+/** \brief cfs_is_other */
 CFS_API int cfs_is_other(cfs_file_status s, cfs_bool *out);
+/** \brief cfs_is_regular_file */
 CFS_API int cfs_is_regular_file(cfs_file_status s, cfs_bool *out);
+/** \brief cfs_is_socket */
 CFS_API int cfs_is_socket(cfs_file_status s, cfs_bool *out);
+/** \brief cfs_is_symlink */
 CFS_API int cfs_is_symlink(cfs_file_status s, cfs_bool *out);
 
-/* 154. Is Empty Query (Directory or zero-byte file) */
+/** \brief 154. Is Empty Query (Directory or zero-byte file) */
 CFS_API int cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
                               cfs_error_code *ec);
 /* Phase 17: Filesystem Operations - Creation */
 
-/* 161. Create a single directory node */
+/** \brief 161. Create a single directory node */
 CFS_API int cfs_create_directory(const cfs_path *p, cfs_error_code *ec);
-/* 162. Recursively create directory nodes */
+/** \brief 162. Recursively create directory nodes */
 CFS_API int cfs_create_directories(const cfs_path *p, cfs_error_code *ec);
 
-/* 163-165. Create links */
+/** \brief 163-165. Create links */
 CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
                                   cfs_error_code *ec);
+/** \brief cfs_create_symlink */
 CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
                                 cfs_error_code *ec);
+/** \brief cfs_create_directory_symlink */
 CFS_API void cfs_create_directory_symlink(const cfs_path *target,
                                           const cfs_path *link,
                                           cfs_error_code *ec);
 
 /* Copy file options mirroring std::filesystem::copy_options */
 
-/* 168. Copy files strictly */
+/** \brief 168. Copy files strictly */
 CFS_API int cfs_copy_file(const cfs_path *from, const cfs_path *to,
                           cfs_copy_options options, cfs_error_code *ec);
 /* Phase 18: Filesystem Operations - Modification */
 
-/* 171. Remove single file or empty directory */
+/** \brief 171. Remove single file or empty directory */
 CFS_API int cfs_remove(const cfs_path *p, cfs_error_code *ec);
-/* 172. Remove all contents recursively. Returns number of removed objects */
+/** \brief 172. Remove all contents recursively. Returns number of removed
+ * objects */
 CFS_API int cfs_remove_all(const cfs_path *p, cfs_size_t *out,
                            cfs_error_code *ec);
 
-/* 173. Rename/Move node */
+/** \brief 173. Rename/Move node */
 CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
                         cfs_error_code *ec);
 
@@ -535,8 +591,10 @@ typedef unsigned __int64 cfs_uintmax_t;
 #else
 typedef unsigned long cfs_uintmax_t;
 #endif
+/** \brief cfs_resize_file */
 CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
                              cfs_error_code *ec);
+/** \brief cfs_file_size */
 CFS_API int cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
                           cfs_error_code *ec);
 
@@ -546,6 +604,7 @@ typedef struct cfs_space_info {
   cfs_uintmax_t free;
   cfs_uintmax_t available;
 } cfs_space_info;
+/** \brief cfs_space */
 CFS_API int cfs_space(const cfs_path *p, cfs_space_info *out,
                       cfs_error_code *ec);
 
@@ -558,20 +617,25 @@ typedef __int64 cfs_file_time_type;
 #else
 typedef long cfs_file_time_type;
 #endif
+/** \brief cfs_last_write_time */
 CFS_API int cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
                                 cfs_error_code *ec);
 
-/* 17X. Permissions and Links */
+/** \brief 17X. Permissions and Links */
 CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
                             cfs_perm_options opts, cfs_error_code *ec);
+/** \brief cfs_hard_link_count */
 CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
                                 cfs_error_code *ec);
+/** \brief cfs_equivalent */
 CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
                            cfs_bool *out, cfs_error_code *ec);
 
-/* 178-179. Environment paths */
+/** \brief 178-179. Environment paths */
 CFS_API int cfs_current_path(cfs_path *out, cfs_error_code *ec);
+/** \brief cfs_current_path_set */
 CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec);
+/** \brief cfs_temp_directory_path */
 CFS_API int cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec);
 /* Phase 19: Directory Iteration */
 
@@ -584,6 +648,7 @@ typedef struct cfs_directory_entry {
 
 /* 182-185. Standard Directory Iterator */
 typedef struct cfs_directory_iterator cfs_directory_iterator;
+/** \brief cfs_dir_itr_init */
 CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
                              cfs_error_code *ec);
 /* Returns 0 on success, with a pointer to the internal entry, or 1 if iteration
@@ -591,14 +656,17 @@ CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
 CFS_API int cfs_dir_itr_next(cfs_directory_iterator *it,
                              const cfs_directory_entry **out_entry,
                              cfs_error_code *ec);
+/** \brief cfs_dir_itr_close */
 CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it);
 
 /* 186-189. Recursive Directory Iterator */
 typedef struct cfs_recursive_directory_iterator
     cfs_recursive_directory_iterator;
+/** \brief cfs_rec_dir_itr_init */
 CFS_API int cfs_rec_dir_itr_init(const cfs_path *p,
                                  cfs_recursive_directory_iterator **out_it,
                                  cfs_error_code *ec);
+/** \brief cfs_rec_dir_itr_next */
 CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
                                  const cfs_directory_entry **out_entry,
                                  cfs_error_code *ec);
@@ -606,9 +674,10 @@ CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
  * node */
 CFS_API void
 cfs_rec_dir_itr_disable_recursion_pending(cfs_recursive_directory_iterator *it);
-/* Moves the iterator one level up in the directory tree */
+/** \brief Moves the iterator one level up in the directory tree */
 CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
                                  cfs_error_code *ec);
+/** \brief cfs_rec_dir_itr_close */
 CFS_API void cfs_rec_dir_itr_close(cfs_recursive_directory_iterator *it);
 
 /* Phase 5.5: Execution Context & Modality */
@@ -655,14 +724,14 @@ struct cfs_request_t {
   cfs_bool cancelled;
 };
 
-/* 4. Implement cfs_runtime_init() */
+/** \brief 4. Implement cfs_runtime_init() */
 CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
                              cfs_runtime_t **out_rt, cfs_error_code *ec);
 
-/* 5. Implement cfs_runtime_destroy() */
+/** \brief 5. Implement cfs_runtime_destroy() */
 CFS_API void cfs_runtime_destroy(cfs_runtime_t *runtime);
 
-/* 9. Create generic request dispatcher internal function */
+/** \brief 9. Create generic request dispatcher internal function */
 CFS_API void cfs_dispatch_request(cfs_runtime_t *runtime, cfs_request_t *req,
                                   cfs_callback_t cb, void *user_data);
 
@@ -700,22 +769,24 @@ typedef struct cfs_queue_t cfs_queue_t;
 /* 16. Thread Pool */
 typedef struct cfs_thread_pool_t cfs_thread_pool_t;
 
-/* 13. Non-blocking API variants */
+/** \brief 13. Non-blocking API variants */
 CFS_API int cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
                              cfs_callback_t cb, void *user_data);
+/** \brief cfs_file_size_async */
 CFS_API int cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
                                 cfs_callback_t cb, void *user_data);
 
-/* 19. cfs_runtime_poll() */
+/** \brief 19. cfs_runtime_poll() */
 CFS_API int cfs_runtime_poll(cfs_runtime_t *rt);
 
 /* Phase 3: Platform-Specific Async & Message Passing */
 
-/* 29. Reference counting to cfs_request_t */
+/** \brief 29. Reference counting to cfs_request_t */
 CFS_API void cfs_request_retain(cfs_request_t *req);
+/** \brief cfs_request_release */
 CFS_API void cfs_request_release(cfs_request_t *req);
 
-/* 30. Implement cancellation logic */
+/** \brief 30. Implement cancellation logic */
 CFS_API int cfs_cancel_request(cfs_runtime_t *rt, cfs_request_t *req);
 
 /* Platform Specific Async Backend Configurations */
@@ -724,11 +795,15 @@ typedef struct cfs_iocp_context cfs_iocp_context;
 
 /* 24-26. Message Passing Actors */
 typedef struct cfs_message_pipe cfs_message_pipe;
+/** \brief cfs_message_pipe_create */
 CFS_API int cfs_message_pipe_create(const cfs_char_t *path,
                                     cfs_message_pipe **out_pipe);
+/** \brief cfs_message_pipe_destroy */
 CFS_API void cfs_message_pipe_destroy(cfs_message_pipe *pipe);
+/** \brief cfs_serialize_request */
 CFS_API int cfs_serialize_request(const cfs_request_t *req, void **buffer,
                                   cfs_size_t *size);
+/** \brief cfs_deserialize_request */
 CFS_API int cfs_deserialize_request(const void *buffer, cfs_size_t size,
                                     cfs_request_t **req);
 
@@ -736,42 +811,59 @@ CFS_API int cfs_deserialize_request(const void *buffer, cfs_size_t size,
 
 /* 31. Multiprocess modality backend (Process Handles) */
 typedef struct cfs_process_t cfs_process_t;
+/** \brief cfs_process_spawn */
 CFS_API int cfs_process_spawn(const cfs_char_t *executable,
                               cfs_process_t **out_proc);
+/** \brief cfs_process_wait */
 CFS_API int cfs_process_wait(cfs_process_t *proc);
+/** \brief cfs_process_destroy */
 CFS_API void cfs_process_destroy(cfs_process_t *proc);
 
 /* 32. Shared Memory (shm) segments */
 typedef struct cfs_shm_segment cfs_shm_segment;
+/** \brief cfs_shm_create */
 CFS_API int cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
                            cfs_shm_segment **out_shm);
+/** \brief cfs_shm_map */
 CFS_API int cfs_shm_map(cfs_shm_segment *shm, void **out);
+/** \brief cfs_shm_unmap */
 CFS_API void cfs_shm_unmap(cfs_shm_segment *shm, void *addr);
+/** \brief cfs_shm_destroy */
 CFS_API void cfs_shm_destroy(cfs_shm_segment *shm);
 
 /* 33. Multiprocess semaphore */
 typedef struct cfs_named_semaphore cfs_named_semaphore;
+/** \brief cfs_named_semaphore_create */
 CFS_API int cfs_named_semaphore_create(const cfs_char_t *name,
                                        int initial_count,
                                        cfs_named_semaphore **out_sem);
+/** \brief cfs_named_semaphore_wait */
 CFS_API int cfs_named_semaphore_wait(cfs_named_semaphore *sem);
+/** \brief cfs_named_semaphore_post */
 CFS_API int cfs_named_semaphore_post(cfs_named_semaphore *sem);
+/** \brief cfs_named_semaphore_destroy */
 CFS_API void cfs_named_semaphore_destroy(cfs_named_semaphore *sem);
 
 /* 35-37. Greenthread modality (ucontext / setjmp) */
 typedef struct cfs_greenthread_t cfs_greenthread_t;
 typedef void (*cfs_greenthread_func)(void *);
 
+/** \brief cfs_greenthread_spawn */
 CFS_API int cfs_greenthread_spawn(cfs_greenthread_func func, void *arg,
                                   cfs_greenthread_t **out_gt);
+/** \brief cfs_greenthread_yield */
 CFS_API int cfs_greenthread_yield(void);
+/** \brief cfs_greenthread_destroy */
 CFS_API void cfs_greenthread_destroy(cfs_greenthread_t *gt);
 
 /* 36. Greenthread scheduler */
 typedef struct cfs_greenthread_scheduler cfs_greenthread_scheduler;
+/** \brief stub */
 CFS_API int
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched);
+/** \brief cfs_greenthread_scheduler_run */
 CFS_API int cfs_greenthread_scheduler_run(cfs_greenthread_scheduler *sched);
+/** \brief stub */
 CFS_API void
 cfs_greenthread_scheduler_destroy(cfs_greenthread_scheduler *sched);
 
@@ -788,6 +880,7 @@ cfs_greenthread_scheduler_destroy(cfs_greenthread_scheduler *sched);
 
 /* 42. Integrate new context parameter into directory iterators */
 typedef struct cfs_directory_iterator_async cfs_directory_iterator_async;
+/** \brief cfs_dir_itr_init_async */
 CFS_API int cfs_dir_itr_init_async(cfs_runtime_t *rt, const cfs_path *p,
                                    cfs_callback_t cb, void *user_data);
 
@@ -797,6 +890,7 @@ typedef struct cfs_sandbox_config {
   cfs_bool restrict_symlinks;
 } cfs_sandbox_config;
 
+/** \brief cfs_runtime_set_sandbox */
 CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
                                     const cfs_sandbox_config *config);
 
