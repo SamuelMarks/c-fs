@@ -9,7 +9,7 @@
 
 A highly robust, strictly ISO C90 (C89) compliant port of the C++17 `std::filesystem` library. `c-fs` is designed for embedding directly into legacy systems, deep embedded environments, and modern workflows needing high-performance, cross-platform path manipulation and OS stream controls. 
 
-Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling, thread pooling, and execution modality abstractions, enabling sophisticated concurrent I/O on any compiler from MSVC 2005 (Windows XP) to modern Clang/GCC.
+Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling, thread pooling, and execution modality abstractions, enabling sophisticated concurrent I/O on any compiler from MSVC 2005 & MSVC 2026 to modern Clang/GCC.
 
 ## Core Features
 
@@ -26,7 +26,7 @@ Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling
 The library relies heavily on platform detection macros to switch between backend implementations natively.
 
 *   **Compilers:** GCC, Clang, MSVC (2005 through 2026), MinGW.
-*   **Operating Systems:** Windows (XP+), macOS, Linux, FreeBSD/OpenBSD.
+*   **Operating Systems:** DOS; Windows, macOS, Linux, FreeBSD/OpenBSD.
 *   **Environments:** Native, Cygwin, Alpine (Musl), Debian (Glibc).
 
 ## Integration

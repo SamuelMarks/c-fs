@@ -4,14 +4,17 @@
     #include <string.h>
     #include <sys/stat.h>
     #include <wchar.h>
+#include "cfs/cfs.h"
     #if defined(_WIN32) || defined(_WIN64)
         #define WIN32_LEAN_AND_MEAN
         #include <winsock2.h>
     #endif
-    #if !defined(_WIN32) && !defined(_WIN64) && !defined(CFS_ENV_CYGWIN) && !defined(__WATCOMC__) && !defined(__MSDOS__) /* Assuming POSIX otherwise */
+    #if defined(CFS_OS_LINUX) || defined(CFS_OS_MACOS) || defined(CFS_OS_BSD) || defined(CFS_ENV_CYGWIN)
+        #include <unistd.h>
+    #elif !defined(_WIN32) && !defined(_WIN64) && !defined(CFS_ENV_CYGWIN) && !defined(__WATCOMC__) && !defined(__MSDOS__) /* Assuming POSIX otherwise */
         #include <pthread.h>
+        #include <unistd.h>
     #endif
-#include "cfs/cfs.h"
 /* clang-format on */
 
 /* 38. Architectural #ifdef blocks delegating to MSVC native vs POSIX */
@@ -20,7 +23,6 @@
 #elif defined(CFS_OS_LINUX) || defined(CFS_OS_MACOS) || defined(CFS_OS_BSD) || \
     defined(CFS_ENV_CYGWIN)
 /* POSIX native includes */
-#include <unistd.h>
 #elif defined(CFS_OS_DOS)
 /* DOS stub includes */
 #else
