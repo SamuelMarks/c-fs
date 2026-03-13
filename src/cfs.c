@@ -1,20 +1,17 @@
 /* clang-format off */
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <string.h>
-    #include <sys/stat.h>
-    #include <wchar.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <wchar.h>
 #include "cfs/cfs.h"
-    #if defined(_WIN32) || defined(_WIN64)
-        #define WIN32_LEAN_AND_MEAN
-        #include <winsock2.h>
-    #endif
-    #if defined(CFS_OS_LINUX) || defined(CFS_OS_MACOS) || defined(CFS_OS_BSD) || defined(CFS_ENV_CYGWIN)
-        #include <unistd.h>
-    #elif !defined(_WIN32) && !defined(_WIN64) && !defined(CFS_ENV_CYGWIN) && !defined(__WATCOMC__) && !defined(__MSDOS__) /* Assuming POSIX otherwise */
-        #include <pthread.h>
-        #include <unistd.h>
-    #endif
+#if defined(_WIN32) || defined(_WIN64)
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#elif !defined(__WATCOMC__) && !defined(__MSDOS__) && !defined(CFS_OS_DOS)
+#include <pthread.h>
+#include <unistd.h>
+#endif
 /* clang-format on */
 
 /* 38. Architectural #ifdef blocks delegating to MSVC native vs POSIX */
@@ -1884,4 +1881,328 @@ CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec) {
       cfs_get_last_error(ec);
   }
 #endif
+}
+
+/* --- Auto-generated stubs for missing functions --- */
+CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler) { (void)handler; }
+
+CFS_API int cfs_path_root_name(const cfs_path *p, cfs_path *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_root_directory(const cfs_path *p, cfs_path *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_root_path(const cfs_path *p, cfs_path *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_relative_path(const cfs_path *p, cfs_path *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_parent_path(const cfs_path *p, cfs_path *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_replace_filename(cfs_path *p,
+                                      const cfs_char_t *replacement) {
+  (void)p;
+  (void)replacement;
+  return -1;
+}
+
+CFS_API int cfs_path_replace_extension(cfs_path *p,
+                                       const cfs_char_t *replacement) {
+  (void)p;
+  (void)replacement;
+  return -1;
+}
+
+CFS_API void cfs_path_remove_filename(cfs_path *p) { (void)p; }
+
+CFS_API int cfs_path_has_root_path(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_has_root_name(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_has_filename(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_has_stem(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_has_extension(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_is_relative(const cfs_path *p, cfs_bool *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs) {
+  (void)lhs;
+  (void)rhs;
+  return -1;
+}
+
+CFS_API int cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
+  (void)p;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_status(const cfs_path *p, cfs_file_status *out,
+                       cfs_error_code *ec) {
+  (void)p;
+  (void)out;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
+                               cfs_error_code *ec) {
+  (void)p;
+  (void)out;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_exists(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_exists_path(const cfs_path *p, cfs_bool *out,
+                            cfs_error_code *ec) {
+  (void)p;
+  (void)out;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_is_block_file(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_is_character_file(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_is_directory(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_is_fifo(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_is_other(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_is_regular_file(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_is_socket(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_is_symlink(cfs_file_status s, cfs_bool *out) {
+  (void)s;
+  (void)out;
+  return -1;
+}
+
+CFS_API int cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
+                              cfs_error_code *ec) {
+  (void)p;
+  (void)out;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_create_directory(const cfs_path *p, cfs_error_code *ec) {
+  (void)p;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_create_directories(const cfs_path *p, cfs_error_code *ec) {
+  (void)p;
+  (void)ec;
+  return -1;
+}
+
+CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
+                                  cfs_error_code *ec) {
+  (void)target;
+  (void)link;
+  (void)ec;
+}
+
+CFS_API void cfs_create_directory_symlink(const cfs_path *target,
+                                          const cfs_path *link,
+                                          cfs_error_code *ec) {
+  (void)target;
+  (void)link;
+  (void)ec;
+}
+
+CFS_API int cfs_remove_all(const cfs_path *p, cfs_size_t *out,
+                           cfs_error_code *ec) {
+  (void)p;
+  (void)out;
+  (void)ec;
+  return -1;
+}
+
+CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
+                        cfs_error_code *ec) {
+  (void)old_p;
+  (void)new_p;
+  (void)ec;
+}
+
+CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
+                             cfs_error_code *ec) {
+  (void)p;
+  (void)size;
+  (void)ec;
+}
+
+CFS_API int cfs_space(const cfs_path *p, cfs_space_info *out,
+                      cfs_error_code *ec) {
+  (void)p;
+  (void)out;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
+                                cfs_error_code *ec) {
+  (void)p;
+  (void)out;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec) {
+  (void)out;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
+                             cfs_error_code *ec) {
+  (void)p;
+  (void)out_it;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_dir_itr_next(cfs_directory_iterator *it,
+                             const cfs_directory_entry **out_entry,
+                             cfs_error_code *ec) {
+  (void)it;
+  (void)out_entry;
+  (void)ec;
+  return -1;
+}
+
+CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) { (void)it; }
+
+CFS_API int cfs_rec_dir_itr_init(const cfs_path *p,
+                                 cfs_recursive_directory_iterator **out_it,
+                                 cfs_error_code *ec) {
+  (void)p;
+  (void)out_it;
+  (void)ec;
+  return -1;
+}
+
+CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
+                                 const cfs_directory_entry **out_entry,
+                                 cfs_error_code *ec) {
+  (void)it;
+  (void)out_entry;
+  (void)ec;
+  return -1;
+}
+
+CFS_API void cfs_rec_dir_itr_disable_recursion_pending(
+    cfs_recursive_directory_iterator *it) {
+  (void)it;
+}
+
+CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
+                                 cfs_error_code *ec) {
+  (void)it;
+  (void)ec;
+}
+
+CFS_API void cfs_rec_dir_itr_close(cfs_recursive_directory_iterator *it) {
+  (void)it;
 }

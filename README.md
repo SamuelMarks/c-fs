@@ -26,7 +26,7 @@ Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling
 The library relies heavily on platform detection macros to switch between backend implementations natively.
 
 *   **Compilers:** GCC, Clang, MSVC (2005 through 2026), MinGW.
-*   **Operating Systems:** DOS; Windows, macOS, Linux, FreeBSD/OpenBSD.
+*   **Operating Systems:** DOS, Windows, macOS, Linux, FreeBSD/OpenBSD.
 *   **Environments:** Native, Cygwin, Alpine (Musl), Debian (Glibc).
 
 ## Integration

@@ -5,9 +5,9 @@
 #include <stddef.h>
 /* clang-format on */
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 /* Phase 3: Platform & Compiler Detection Macros */
 
@@ -802,7 +802,7 @@ CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
 #if defined(CFS_HEADER_ONLY_MODE)
 #include "cfs.c"
