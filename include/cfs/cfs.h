@@ -7,7 +7,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
 
 /* Phase 3: Platform & Compiler Detection Macros */
 
@@ -321,8 +321,12 @@ CFS_API int cfs_get_last_error(cfs_error_code *out);
 /* 76. Define platform-specific path separator macros */
 #if defined(CFS_OS_WINDOWS)
 #define CFS_PREFERRED_SEPARATOR CFS_CHAR('\\')
+#define PATH_SEP_CHAR CFS_CHAR('\\')
+#define PATH_SEP_STR CFS_STR("\\")
 #else
 #define CFS_PREFERRED_SEPARATOR CFS_CHAR('/')
+#define PATH_SEP_CHAR CFS_CHAR('/')
+#define PATH_SEP_STR CFS_STR("/")
 #endif
 
 /* 71. Define opaque cfs_path struct */

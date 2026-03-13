@@ -21,7 +21,7 @@ TEST path_initialization() {
     ASSERT_EQ(1, empty);
   }
 
-  cfs_path_init_str(&p, CFS_STR("test/path"));
+  cfs_path_init_str(&p, CFS_STR("test") PATH_SEP_STR CFS_STR("path"));
   {
     cfs_bool empty;
     cfs_path_is_empty(&p, &empty);
@@ -30,7 +30,8 @@ TEST path_initialization() {
   {
     const cfs_char_t *c_str;
     cfs_path_c_str(&p, &c_str);
-    ASSERT_EQ(0, cfs_strcmp(CFS_STR("test/path"), c_str));
+    ASSERT_EQ(0,
+              cfs_strcmp(CFS_STR("test") PATH_SEP_STR CFS_STR("path"), c_str));
   }
 
   cfs_path_destroy(&p);
@@ -47,19 +48,12 @@ TEST path_appending() {
   cfs_path_init_str(&p, CFS_STR("dir"));
   cfs_path_append(&p, CFS_STR("file.txt"));
 
-#if defined(CFS_OS_WINDOWS)
   {
     const cfs_char_t *c_str;
     cfs_path_c_str(&p, &c_str);
-    ASSERT_EQ(0, cfs_strcmp(CFS_STR("dir\\file.txt"), c_str));
+    ASSERT_EQ(
+        0, cfs_strcmp(CFS_STR("dir") PATH_SEP_STR CFS_STR("file.txt"), c_str));
   }
-#else
-  {
-    const cfs_char_t *c_str;
-    cfs_path_c_str(&p, &c_str);
-    ASSERT_EQ(0, cfs_strcmp(CFS_STR("dir/file.txt"), c_str));
-  }
-#endif
 
   cfs_path_destroy(&p);
   PASS();
@@ -67,7 +61,8 @@ TEST path_appending() {
 
 TEST path_decomposition() {
   cfs_path p, res;
-  cfs_path_init_str(&p, CFS_STR("dir/subdir/file.txt"));
+  cfs_path_init_str(&p, CFS_STR("dir") PATH_SEP_STR CFS_STR("subdir")
+                            PATH_SEP_STR CFS_STR("file.txt"));
 
   cfs_path_filename(&p, &res);
   {

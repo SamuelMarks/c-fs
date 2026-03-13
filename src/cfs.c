@@ -10,6 +10,7 @@
 #include <winsock2.h>
 #elif !defined(__WATCOMC__) && !defined(__MSDOS__) && !defined(CFS_OS_DOS)
 #include <pthread.h>
+#include <sys/types.h>
 #include <unistd.h>
 #endif
 /* clang-format on */
@@ -617,6 +618,9 @@ CFS_API int cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
 #if defined(CFS_OS_WINDOWS)
   return cfs_utf8_to_utf16(mb_str, dest, dest_len, out_req);
 #else
+  (void)mb_str;
+  (void)dest;
+  (void)dest_len;
   if (out_req) {
     *out_req = 0; /* Fallback not used on POSIX where cfs_char_t is char */
   }
@@ -629,6 +633,9 @@ CFS_API int cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
 #if defined(CFS_OS_WINDOWS)
   return cfs_utf16_to_utf8(wide_str, dest, dest_len, out_req);
 #else
+  (void)wide_str;
+  (void)dest;
+  (void)dest_len;
   if (out_req) {
     *out_req = 0; /* Fallback not used on POSIX */
   }
@@ -723,13 +730,8 @@ CFS_API int cfs_path_make_preferred(cfs_path *p) {
   if (!p || !p->str)
     return -1;
   for (i = 0; i < p->length; i++) {
-#if defined(CFS_OS_WINDOWS)
-    if (p->str[i] == CFS_CHAR('/'))
-      p->str[i] = CFS_CHAR('\\');
-#else
-    if (p->str[i] == CFS_CHAR('\\'))
-      p->str[i] = CFS_CHAR('/');
-#endif
+    if (p->str[i] == CFS_CHAR('/') || p->str[i] == CFS_CHAR('\\'))
+      p->str[i] = PATH_SEP_CHAR;
   }
   return 0;
 }
@@ -839,7 +841,7 @@ CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
     return -1;
 
   if (!p_has_sep && !src_has_sep) {
-    p->str[p->length] = CFS_PREFERRED_SEPARATOR;
+    p->str[p->length] = PATH_SEP_CHAR;
     p->str[p->length + 1] = 0;
     p->length++;
   } else if (p_has_sep && src_has_sep) {
@@ -1335,6 +1337,7 @@ CFS_API int cfs_named_semaphore_create(const cfs_char_t *name,
     return -1;
   }
 #else
+  (void)initial_count;
   /* sem_open stub */
   (*out_sem)->sem = NULL;
 #endif
@@ -1795,6 +1798,7 @@ CFS_API int cfs_copy_file(const cfs_path *from, const cfs_path *to,
 #endif
     return 0;
 #else
+  (void)options;
   /* stub */
 #endif
   if (ec)
