@@ -5,7 +5,7 @@
 #include <stddef.h>
 /* clang-format on */
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -802,7 +802,7 @@ CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
 #if defined(CFS_HEADER_ONLY_MODE)
 #include "cfs.c"
