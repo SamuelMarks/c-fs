@@ -1,8 +1,8 @@
 # c-fs Usage Examples
 
-This document outlines how to use the core features of `c-fs`. 
+This document outlines how to use the core features of `c-fs`. The library supports a flexible set of build modes including purely header-only integration, linking as a static library, or compiling as a shared DLL/SO library depending on your project needs.
 
-Always ensure exactly one source file in your project has defined `CFS_IMPLEMENTATION` before including `cfs.h` to instantiate the implementation logic.
+For header-only usage, always ensure exactly one source file in your project has defined `CFS_IMPLEMENTATION` before including `cfs.h` to instantiate the implementation logic.
 
 ## 1. Path Construction and Manipulation
 
@@ -63,9 +63,9 @@ void check_file(const cfs_char_t* path_str) {
 }
 ```
 
-## 3. Asynchronous Thread-Pool Operations
+## 3. Asynchronous, Multithreaded Operations
 
-`c-fs` includes a built-in event loop and thread pool for deferring file system blocking operations off your main thread. 
+`c-fs` natively supports advanced asynchronous scheduling, allowing you to defer execution via configurable modalities. This includes built-in thread-pooling to push blocking operations off your main thread seamlessly. 
 
 ```c
 #include "cfs/cfs.h"

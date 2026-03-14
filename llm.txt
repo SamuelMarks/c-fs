@@ -28,3 +28,8 @@ This file contains absolute directives for LLMs, autonomous agents, and codebase
 5. GIT & CI
    - Never `git push` autonomously.
    - Test changes locally using the `/c-ci/` runner scripts provided in the parent ecosystem directories before concluding a task.
+
+6. ARCHITECTURE & BUILD MODES
+   - Maintain compatibility with `c-fs`'s flexible distribution models: static builds, shared/dynamic library builds (`.dll`/`.so`), and pure header-only integrations.
+   - Acknowledge and support the configurable execution modalities. The library is not just synchronous; it natively supports advanced asynchronous scheduling, multithreading (thread pools), multiprocessing, green threads, and message passing.
+   - Ensure that any new filesystem operations or structural changes respect these execution contexts and do not introduce thread-safety issues or break the header-only inclusion mechanism.

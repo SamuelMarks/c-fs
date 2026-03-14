@@ -6,13 +6,13 @@ The `c-fs` project marries the ergonomics of C++17 `<filesystem>` with the rigor
 
 The `cfs.h` header is organized into strictly defined logical phases, wrapped in a single monolithic header file via the `CFS_IMPLEMENTATION` macro pattern.
 
-1. **Phase 3: Platform & Compiler Detection:** Maps operating systems (`CFS_OS_WINDOWS`, `CFS_OS_LINUX`), compilers (`CFS_COMPILER_MSVC`, `CFS_COMPILER_GCC`), and build distribution settings (DLL Export/Import, Inline rules, LTO).
+1. **Phase 3: Platform & Compiler Detection:** Maps operating systems (`CFS_OS_WINDOWS`, `CFS_OS_LINUX`), compilers (`CFS_COMPILER_MSVC`, `CFS_COMPILER_GCC`), and build distribution settings (DLL Export/Import, Inline rules, LTO). This handles the flexible library distributions supporting static libraries, shared `.dll`/`.so` builds, and pure header-only inclusion.
 2. **Phase 5: Memory & Core Types:** Core abstractions (`cfs_char_t`, `cfs_bool`, custom memory allocator hooks `cfs_malloc`, etc.).
 3. **Phase 6: String Handling:** Safe text parsing routines bridging the gap between C standard strings and Safe CRT (`CFS_STRCPY_SAFE`).
 4. **Phase 7: Error Handling:** A unified error bridging system. Converts raw OS error codes (`GetLastError()` or `errno`) into POSIX-standardized `cfs_errc` equivalents matching `std::errc`.
 5. **Phase 8-14: Path Construction & Lexical operations:** The workhorse of the library. Manages `cfs_path`, ensuring dynamic resizing to accommodate variable path lengths, parsing separators accurately, and decomposing components (stem, filename, extension).
 6. **Phase 15-19: Filesystem Operations:** Maps C API functions directly to OS-specific syscalls (`_wstat64`, `stat`, `remove`, `RemoveDirectoryW`). Includes cross-platform iterators for directory trees.
-7. **Phase 5.5-5.7: Execution Modalities (Async/Runtime):** Implements thread pools, sync structures, and deferred task dispatching via an Opcode abstraction.
+7. **Phase 5.5-5.7: Execution Modalities (Async/Runtime):** Implements thread pools, sync structures, and deferred task dispatching via an Opcode abstraction to enable robust multithreaded, async, multiprocess, and message-passing file system access.
 
 ## Core Data Structures
 

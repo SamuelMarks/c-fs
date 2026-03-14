@@ -15,9 +15,11 @@ The library guarantees compilation on exceptionally old toolchains.
 
 ## 3. CMake & Cross-Compilation
 *   Understanding how to structure cross-platform CMake builds.
-*   Knowing how to toggle `INTERFACE` libraries, `FetchContent`, and MSVC runtime permutations (`/MT`, `/MD`, `/RTCs`).
+*   Knowing how to configure static builds, shared/dynamic (`.dll`/`.so`) library builds, and pure header-only distributions.
+*   Toggling `INTERFACE` libraries, `FetchContent`, and MSVC runtime permutations (`/MT`, `/MD`, `/RTCs`).
 
-## 4. Systems Concurrency
+## 4. Systems Concurrency & Asynchronous Design
+*   **Asynchronous Modalities:** Deep understanding of deferred execution, event loops, green threads, and multiprocess actor patterns.
 *   **POSIX pthreads:** Designing abstractions that cleanly wrap `pthread_mutex_t`, `pthread_cond_t`, and `pthread_t`.
 *   **Thread-Safety:** Writing lock-free or mutex-guarded thread-safe FIFO queues, handling shutdown cascade signals to wake waiting worker threads safely.
 *   **Memory Management:** Thread-safe reference counting methodologies (e.g., using `InterlockedIncrement` on Win32, and `__atomic_fetch_add` on GCC).

@@ -2,7 +2,7 @@
 =============================================
 
 [![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![CI](https://github.com/SamuelMarks/c-orm/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuelMarks/c-orm/actions/workflows/ci.yml)
+[![CI](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml)
 [![Doc Coverage](https://img.shields.io/badge/docs-100%25-brightgreen.svg)](#)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](#)
 ![C Standard](https://img.shields.io/badge/C-89-blue.svg)
@@ -19,7 +19,8 @@ Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling
 - **Single-Header Native:** Distribute strictly as `include/cfs/cfs.h` for easy, drop-in integration.
 - **C++17 Behavioral Mapping:** Functions meticulously map to the expected behavioral quirks and boundary cases of C++'s `<filesystem>`.
 - **Wide Character Support:** Native toggleable integration seamlessly utilizing wide character API layers strictly on Windows, bypassing legacy ANSI codepage conversion loss.
-- **Asynchronous Modalities:** First-class support for deferred execution via configurable runtimes (Thread pools, Green threads, Multiprocessing, Message Passing).
+- **Flexible Build Options:** Choose between a static library, a shared library (.dll/.so), or a completely header-only integration to suit your project's architecture.
+- **Asynchronous & Multithreaded Modalities:** First-class support for deferred execution via configurable runtimes (Thread pools, Green threads, Multiprocessing, Message Passing), enabling fully non-blocking and async filesystem operations.
 
 ## `std::filesystem` Compliance Table
 
@@ -102,6 +103,54 @@ The library relies heavily on platform detection macros to switch between backen
 In all other files, just include the header:
 ```c
 #include "cfs/cfs.h"
+```
+
+## Quick Examples
+
+### Path Manipulation
+```c
+#include "cfs/cfs.h"
+#include <stdio.h>
+
+int main() {
+    cfs_path p;
+    cfs_path_init_str(&p, CFS_STR("var/log"));
+    cfs_path_append(&p, CFS_STR("application.log"));
+    
+    printf("Full Path: %s\n", cfs_path_c_str(&p));
+    
+    cfs_path_destroy(&p);
+    return 0;
+}
+```
+
+### Asynchronous Operations (Thread Pool)
+```c
+#include "cfs/cfs.h"
+#include <stdio.h>
+
+void on_size(cfs_request_t* req, void* user_data) {
+    if (req->error.value == 0) {
+        printf("Size: %llu\n", *(cfs_uintmax_t*)req->result_buffer);
+    }
+}
+
+int main() {
+    cfs_runtime_config cfg = { .mode = cfs_modality_async, .thread_pool_size = 4 };
+    cfs_error_code ec;
+    cfs_runtime_t* rt = cfs_runtime_init(&cfg, &ec);
+    
+    cfs_path p;
+    cfs_path_init_str(&p, CFS_STR("file.bin"));
+    
+    cfs_file_size_async(rt, &p, on_size, NULL);
+    
+    while (cfs_runtime_poll(rt) == 0) { /* event loop */ }
+    
+    cfs_path_destroy(&p);
+    cfs_runtime_destroy(rt);
+    return 0;
+}
 ```
 
 ## CMake Support
