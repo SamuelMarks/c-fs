@@ -174,10 +174,10 @@ CFS_API int cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src, cfs_size_t n,
 CFS_API int cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
                        cfs_char_t **out);
 /** \brief cfs_strcmp */
-CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs);
+CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs, int *out);
 /** \brief cfs_strncmp */
 CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
-                        cfs_size_t count);
+                        cfs_size_t count, int *out);
 
 /* 55-59. Charset & Conversion logic */
 #if defined(_MSC_VER)

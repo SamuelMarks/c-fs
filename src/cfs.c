@@ -563,33 +563,51 @@ CFS_API int cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
   return 0;
 }
 
-CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs) {
-  if (!lhs && !rhs)
-    return 0;
-  if (!lhs)
+CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs, int *out) {
+  if (!out)
     return -1;
-  if (!rhs)
-    return 1;
+  if (!lhs && !rhs) {
+    *out = 0;
+    return 0;
+  }
+  if (!lhs) {
+    *out = -1;
+    return 0;
+  }
+  if (!rhs) {
+    *out = 1;
+    return 0;
+  }
 #if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
-  return wcscmp(lhs, rhs);
+  *out = wcscmp(lhs, rhs);
 #else
-  return strcmp(lhs, rhs);
+  *out = strcmp(lhs, rhs);
 #endif
+  return 0;
 }
 
 CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
-                        cfs_size_t count) {
-  if (!lhs && !rhs)
-    return 0;
-  if (!lhs)
+                        cfs_size_t count, int *out) {
+  if (!out)
     return -1;
-  if (!rhs)
-    return 1;
+  if (!lhs && !rhs) {
+    *out = 0;
+    return 0;
+  }
+  if (!lhs) {
+    *out = -1;
+    return 0;
+  }
+  if (!rhs) {
+    *out = 1;
+    return 0;
+  }
 #if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
-  return wcsncmp(lhs, rhs, count);
+  *out = wcsncmp(lhs, rhs, count);
 #else
-  return strncmp(lhs, rhs, count);
+  *out = strncmp(lhs, rhs, count);
 #endif
+  return 0;
 }
 
 #if defined(CFS_OS_WINDOWS)

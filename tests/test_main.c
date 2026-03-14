@@ -29,9 +29,10 @@ TEST path_initialization() {
   }
   {
     const cfs_char_t *c_str;
+    int cmp;
     cfs_path_c_str(&p, &c_str);
-    ASSERT_EQ(0,
-              cfs_strcmp(CFS_STR("test") PATH_SEP_STR CFS_STR("path"), c_str));
+    cfs_strcmp(CFS_STR("test") PATH_SEP_STR CFS_STR("path"), c_str, &cmp);
+    ASSERT_EQ(0, cmp);
   }
 
   cfs_path_destroy(&p);
@@ -50,9 +51,10 @@ TEST path_appending() {
 
   {
     const cfs_char_t *c_str;
+    int cmp;
     cfs_path_c_str(&p, &c_str);
-    ASSERT_EQ(
-        0, cfs_strcmp(CFS_STR("dir") PATH_SEP_STR CFS_STR("file.txt"), c_str));
+    cfs_strcmp(CFS_STR("dir") PATH_SEP_STR CFS_STR("file.txt"), c_str, &cmp);
+    ASSERT_EQ(0, cmp);
   }
 
   cfs_path_destroy(&p);
@@ -67,24 +69,30 @@ TEST path_decomposition() {
   cfs_path_filename(&p, &res);
   {
     const cfs_char_t *c_str;
+    int cmp;
     cfs_path_c_str(&res, &c_str);
-    ASSERT_EQ(0, cfs_strcmp(CFS_STR("file.txt"), c_str));
+    cfs_strcmp(CFS_STR("file.txt"), c_str, &cmp);
+    ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
 
   cfs_path_extension(&p, &res);
   {
     const cfs_char_t *c_str;
+    int cmp;
     cfs_path_c_str(&res, &c_str);
-    ASSERT_EQ(0, cfs_strcmp(CFS_STR(".txt"), c_str));
+    cfs_strcmp(CFS_STR(".txt"), c_str, &cmp);
+    ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
 
   cfs_path_stem(&p, &res);
   {
     const cfs_char_t *c_str;
+    int cmp;
     cfs_path_c_str(&res, &c_str);
-    ASSERT_EQ(0, cfs_strcmp(CFS_STR("file"), c_str));
+    cfs_strcmp(CFS_STR("file"), c_str, &cmp);
+    ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
 
@@ -182,8 +190,13 @@ TEST string_handling() {
   cfs_strlen(buf, &len);
   ASSERT_EQ(11, len);
 
-  ASSERT_EQ(0, cfs_strcmp(buf, CFS_STR("Hello World")));
-  ASSERT_EQ(0, cfs_strncmp(buf, CFS_STR("Hello W"), 7));
+  {
+    int cmp;
+    cfs_strcmp(buf, CFS_STR("Hello World"), &cmp);
+    ASSERT_EQ(0, cmp);
+    cfs_strncmp(buf, CFS_STR("Hello W"), 7, &cmp);
+    ASSERT_EQ(0, cmp);
+  }
   PASS();
 }
 
