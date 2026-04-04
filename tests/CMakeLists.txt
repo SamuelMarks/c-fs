@@ -6,8 +6,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(greatest)
 
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 add_executable(cfs_test test_main.c)
 target_link_libraries(cfs_test PRIVATE cfs)
+endif()
+
 
 # Since we don't extract the file to a directory, we include the directory it was downloaded to.
 target_include_directories(cfs_test PRIVATE ${greatest_SOURCE_DIR})
