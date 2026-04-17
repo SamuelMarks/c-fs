@@ -7,6 +7,7 @@
 
 /* clang-format off */
 #include <stddef.h>
+#include "cfs/log.h"
 
 #ifdef CFS_IMPLEMENTATION
 #include <stdio.h>
@@ -1817,15 +1818,25 @@ CFS_API int cfs_path_is_empty(const cfs_path *p, cfs_bool *out) {
 
 CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
   cfs_size_t len;
-  if (!p)
+  int rc;
+  if (!p) {
+    LOG_DEBUG("cfs_path_assign: p is NULL");
     return -1;
+  }
   if (!source) {
     cfs_path_clear(p);
     return 0;
   }
-  cfs_strlen(source, &len);
-  if (cfs_path_reserve(p, len + 1) != 0)
-    return -1;
+  rc = cfs_strlen(source, &len);
+  if (rc != 0) {
+    LOG_DEBUG("cfs_path_assign: cfs_strlen failed with %d", rc);
+    return rc;
+  }
+  rc = cfs_path_reserve(p, len + 1);
+  if (rc != 0) {
+    LOG_DEBUG("cfs_path_assign: cfs_path_reserve failed with %d", rc);
+    return rc;
+  }
   CFS_STRCPY_SAFE(p->str, p->capacity, source);
   p->length = len;
   return 0;
