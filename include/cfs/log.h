@@ -1,4 +1,3 @@
-/* clang-format off */
 #ifndef CFS_LOG_H
 #define CFS_LOG_H
 
@@ -21,4 +20,3 @@ void cfs_log_debug(const char *fmt, ...);
 #endif /* __cplusplus */
 
 #endif /* CFS_LOG_H */
-/* clang-format on */
