@@ -176,12 +176,12 @@ install(EXPORT cfs-targets
 
 # Testing
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    option(CFS_BUILD_TESTING "Build tests" ON)
+    option(BUILD_TESTING_${PROJECT_NAME} "Build tests" ON)
 else()
-    option(CFS_BUILD_TESTING "Build tests" OFF)
+    option(BUILD_TESTING_${PROJECT_NAME} "Build tests" OFF)
 endif()
 
-if(CFS_BUILD_TESTING)
+if(BUILD_TESTING_${PROJECT_NAME})
     include(CTest)
     if(BUILD_TESTING)
         add_subdirectory(tests)

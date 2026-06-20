@@ -7,6 +7,12 @@ repos:
         types_or: [c, c++]
   - repo: local
     hooks:
+      - id: cppcheck
+        name: cppcheck
+        entry: cppcheck --force --error-exitcode=1 -I include src/ tests/
+        language: system
+        types_or: [c, c++]
+        pass_filenames: false
       - id: build
         name: Build Project
         entry: bash -c "mkdir -p build_precommit && cd build_precommit && if [[ \"$OSTYPE\" == \"msys\" || \"$OSTYPE\" == \"win32\" ]]; then cmake .. -DCFS_BUILD_TESTING=ON; else cmake .. -DCFS_BUILD_TESTING=ON -DCMAKE_C_FLAGS=\"--coverage\" -DCMAKE_EXE_LINKER_FLAGS=\"--coverage\"; fi && cmake --build ."
@@ -15,6 +21,11 @@ repos:
       - id: test
         name: Run Tests
         entry: bash -c "cd build_precommit && ctest --output-on-failure"
+        language: system
+        pass_filenames: false
+      - id: valgrind
+        name: Run Valgrind
+        entry: bash -c "if [[ \"$OSTYPE\" == \"linux-gnu\"* ]]; then cd build_precommit && valgrind --error-exitcode=1 ./cfs_test; fi"
         language: system
         pass_filenames: false
       - id: update-shields

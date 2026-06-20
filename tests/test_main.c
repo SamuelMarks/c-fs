@@ -279,19 +279,19 @@ TEST path_decomposition_more() {
   cfs_path p, out;
   cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
 
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_root_name(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_root_directory(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_root_path(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_relative_path(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_parent_path(&p, &out);
   cfs_path_destroy(&out);
 
@@ -357,13 +357,13 @@ TEST path_lexical() {
   cfs_path_init_str(&base, CFS_STR("/usr/local/"));
 
   cfs_path_compare(&p, &base);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_lexically_normal(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_lexically_relative(&p, &base, &out);
   cfs_path_destroy(&out);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_lexically_proximate(&p, &base, &out);
   cfs_path_destroy(&out);
 
@@ -449,7 +449,7 @@ TEST file_queries() {
   cfs_space_info spc;
   cfs_file_time_type ft;
   cfs_uintmax_t count;
-  cfs_perms perms;
+  cfs_perms perms = 0;
 
   cfs_path_init_str(&p, CFS_STR("dummy"));
   cfs_path_init_str(&p2, CFS_STR("dummy2"));
@@ -677,7 +677,7 @@ TEST exhaustive_nulls() {
   cfs_space_info out_spc;
   cfs_file_time_type out_ft;
   cfs_bool b;
-  cfs_char_t buf[10];
+  cfs_char_t buf[10] = {0};
   cfs_char_t *out_str;
   cfs_runtime_t *rt = NULL;
   cfs_error_code ec;
@@ -791,7 +791,7 @@ TEST real_file_operations() {
   cfs_space_info spc;
   cfs_file_time_type ft;
   cfs_uintmax_t links;
-  cfs_perms perms;
+  cfs_perms perms = 0;
   cfs_size_t count;
   cfs_bool is_empty;
 
@@ -853,20 +853,20 @@ TEST more_coverage() {
   /* cfs_read_symlink success branch */
   cfs_path_init_str(&p3, CFS_STR("test_eq_sym.txt"));
   cfs_create_symlink(&p2, &p3, &ec);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_read_symlink(&p3, &out, &ec);
   cfs_path_destroy(&out);
 
   /* cfs_absolute already absolute */
   cfs_path_init_str(&p4, CFS_STR("/absolute/path"));
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_absolute(&p4, &out, &ec);
   cfs_path_destroy(&out);
   cfs_path_destroy(&p4);
 
   /* Canonical on absolute path */
   cfs_path_init_str(&p4, CFS_STR("/dev/null"));
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_canonical(&p4, &out, &ec);
   cfs_path_destroy(&out);
   cfs_path_destroy(&p4);
@@ -901,12 +901,12 @@ TEST final_coverage() {
   /* cfs_copy_symlink success branch */
   cfs_path_init_str(&p2, CFS_STR("test_perms_sym.txt"));
   cfs_create_symlink(&p, &p2, &ec);
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_copy_symlink(&p2, &out, &ec);
   cfs_path_destroy(&out);
 
   /* cfs_path_lexically_relative */
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_lexically_relative(&p, &p2, &out);
   cfs_path_destroy(&out);
 
@@ -1003,7 +1003,7 @@ TEST extreme_edge_cases() {
 
   /* cfs_current_path getcwd failure */
   g_cfs_getcwd_fail = 1;
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_current_path(&out, &ec);
   cfs_path_destroy(&out);
   g_cfs_getcwd_fail = 0;
@@ -1011,7 +1011,7 @@ TEST extreme_edge_cases() {
   /* cfs_read_symlink readlink failure */
   g_cfs_readlink_fail = 1;
   cfs_path_init_str(&p, CFS_STR("dummy_symlink_path"));
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_read_symlink(&p, &out, &ec);
   cfs_path_destroy(&out);
   g_cfs_readlink_fail = 0;
@@ -1038,7 +1038,7 @@ TEST last_mile() {
 
   /* 2635-2636: cfs_absolute where getcwd fails */
   g_cfs_getcwd_fail = 1;
-  cfs_path_init(&out);
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_absolute(&p, &out, &ec);
   cfs_path_destroy(&out);
   g_cfs_getcwd_fail = 0;

@@ -32,10 +32,8 @@ def get_doc_coverage():
 
 def get_test_coverage():
     try:
-        # Check if we are on Windows, gcovr might not work easily without gcc
         if os.name == 'nt':
             return None
-        # Run gcovr in build_precommit
         cmd = ["gcovr", "-r", "..", ".", "-f", r".*/cfs\.h$", "-f", r".*/cfs\.c$", 
                "--gcov-ignore-parse-errors=negative_hits.warn", "--print-summary"]
         res = subprocess.run(cmd, cwd="build_precommit", capture_output=True, text=True)
@@ -62,20 +60,30 @@ def main():
         print("Test Coverage: N/A")
         test_cov = 0.0 # Default for failure or missing
 
-    # Update README.md
     try:
         with open("README.md", "r") as f:
             readme = f.read()
 
-        # Regex to replace Doc Coverage shield
+        # Remove existing shields and any trailing newlines from them
+        readme = re.sub(r"\[!\[Doc Coverage\]\(.*?\)\]\(.*?\)\n?", "", readme)
+        readme = re.sub(r"\[!\[Test Coverage\]\(.*?\)\]\(.*?\)\n?", "", readme)
+
         doc_color = get_color(doc_cov)
         doc_shield = f"[![Doc Coverage](https://img.shields.io/badge/docs-{doc_cov:.0f}%25-{doc_color}.svg)](#)"
-        readme = re.sub(r"\[!\[Doc Coverage\]\(.*?\)\]\(.*?\)", doc_shield, readme)
-
+        
+        test_shield = ""
         if test_cov is not None:
             test_color = get_color(test_cov)
             test_shield = f"[![Test Coverage](https://img.shields.io/badge/coverage-{test_cov:.0f}%25-{test_color}.svg)](#)"
-            readme = re.sub(r"\[!\[Test Coverage\]\(.*?\)\]\(.*?\)", test_shield, readme)
+
+        # Find license shield and insert right after it
+        license_regex = r"(\[!\[License\].*?\]\(.*?\)\n?)"
+        
+        insert_str = r"\1" + doc_shield + "\n"
+        if test_shield:
+            insert_str += test_shield + "\n"
+            
+        readme = re.sub(license_regex, insert_str, readme, count=1)
 
         with open("README.md", "w") as f:
             f.write(readme)
