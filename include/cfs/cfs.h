@@ -4054,16 +4054,30 @@ CFS_API int cfs_process_spawn(const cfs_char_t *executable,
   {
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
+    cfs_char_t *exec_copy;
+    cfs_size_t len;
+
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    if (!CreateProcessW(NULL, (LPWSTR)executable, NULL, NULL, FALSE, 0, NULL,
-                        NULL, &si, &pi)) {
+    cfs_strlen(executable, &len);
+    cfs_malloc((len + 1) * sizeof(cfs_char_t), (void **)&exec_copy);
+    if (!exec_copy) {
       cfs_free(*out_proc);
       *out_proc = NULL;
       return -1;
     }
+    CFS_STRCPY_SAFE(exec_copy, len + 1, executable);
+
+    if (!CreateProcessW(NULL, (LPWSTR)exec_copy, NULL, NULL, FALSE, 0, NULL,
+                        NULL, &si, &pi)) {
+      cfs_free(exec_copy);
+      cfs_free(*out_proc);
+      *out_proc = NULL;
+      return -1;
+    }
+    cfs_free(exec_copy);
     (*out_proc)->process_handle = pi.hProcess;
     (*out_proc)->thread_handle = pi.hThread;
   }

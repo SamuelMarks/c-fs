@@ -5,7 +5,11 @@
 /* clang-format off */
 #define CFS_IMPLEMENTATION
 #include <stdlib.h>
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
+#else
+#include <direct.h>
+#endif
 
 extern int g_cfs_malloc_fail;
 extern int g_cfs_realloc_fail;
@@ -19,6 +23,10 @@ extern int g_cfs_readlink_fail;
 #define getcwd(b, s) (g_cfs_getcwd_fail ? NULL : getcwd(b, s))
 #define readlink(p, b, s) (g_cfs_readlink_fail ? -1 : readlink(p, b, s))
 
+#if defined(_WIN32) || defined(_WIN64)
+#define _getcwd(b, s) (g_cfs_getcwd_fail ? NULL : _getcwd(b, s))
+#endif
+
 #include "cfs/cfs.h"
 #include "cfs/log.h"
 #include <stdarg.h>
@@ -26,15 +34,15 @@ extern int g_cfs_readlink_fail;
 /* clang-format on */
 
 /** \brief Global flag to simulate cfs_malloc failure in tests. */
-int g_cfs_malloc_fail = 0;
+CFS_API int g_cfs_malloc_fail = 0;
 /** \brief Global flag to simulate cfs_realloc failure in tests. */
-int g_cfs_realloc_fail = 0;
+CFS_API int g_cfs_realloc_fail = 0;
 /** \brief Global flag to simulate cfs_calloc failure in tests. */
-int g_cfs_calloc_fail = 0;
+CFS_API int g_cfs_calloc_fail = 0;
 /** \brief Global flag to simulate getcwd failure in tests. */
-int g_cfs_getcwd_fail = 0;
+CFS_API int g_cfs_getcwd_fail = 0;
 /** \brief Global flag to simulate readlink failure in tests. */
-int g_cfs_readlink_fail = 0;
+CFS_API int g_cfs_readlink_fail = 0;
 
 /**
  * \brief Submits a formatted message to the internal debug log.
@@ -42,7 +50,7 @@ int g_cfs_readlink_fail = 0;
  * \param fmt Printf-style format string for the log message.
  * \param ... Variadic arguments.
  */
-void cfs_log_debug(const char *fmt, ...) {
+CFS_API void cfs_log_debug(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   vfprintf(stderr, fmt, args);

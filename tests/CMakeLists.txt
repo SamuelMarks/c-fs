@@ -1,9 +1,10 @@
 # File: tests/CMakeLists.txt
 # Brief: CMake build configuration for c-fs tests.
+
 include(FetchContent)
 FetchContent_Declare(
   greatest
-  URL https://raw.githubusercontent.com/SamuelMarks/greatest/refs/heads/cmake-and-msvc/greatest.h
+  URL https://raw.githubusercontent.com/SamuelMarks/greatest/refs/heads/master/greatest.h
   DOWNLOAD_NO_EXTRACT TRUE
 )
 FetchContent_MakeAvailable(greatest)

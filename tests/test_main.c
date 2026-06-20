@@ -938,11 +938,11 @@ TEST final_coverage() {
   PASS();
 }
 
-extern int g_cfs_malloc_fail;
-extern int g_cfs_realloc_fail;
-extern int g_cfs_calloc_fail;
-extern int g_cfs_getcwd_fail;
-extern int g_cfs_readlink_fail;
+CFS_API extern int g_cfs_malloc_fail;
+CFS_API extern int g_cfs_realloc_fail;
+CFS_API extern int g_cfs_calloc_fail;
+CFS_API extern int g_cfs_getcwd_fail;
+CFS_API extern int g_cfs_readlink_fail;
 
 /**
  * \brief Test case for out_of_memory.
