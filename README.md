@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CI](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml)
 [![Doc Coverage](https://img.shields.io/badge/docs-100%25-brightgreen.svg)](#)
-[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](#)
+[![Test Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#)
 ![C Standard](https://img.shields.io/badge/C-89-blue.svg)
 
 A highly robust, strictly ISO C90 (C89) compliant port of the C++17 `std::filesystem` library. `c-fs` is designed for embedding directly into legacy systems, deep embedded environments, and modern workflows needing high-performance, cross-platform path manipulation and OS stream controls. 

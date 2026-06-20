@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.8
+    hooks:
+      - id: clang-format
+        args: ['-style=LLVM']
+        types_or: [c, c++]
+  - repo: local
+    hooks:
+      - id: build
+        name: Build Project
+        entry: bash -c "mkdir -p build_precommit && cd build_precommit && if [[ \"$OSTYPE\" == \"msys\" || \"$OSTYPE\" == \"win32\" ]]; then cmake .. -DCFS_BUILD_TESTING=ON; else cmake .. -DCFS_BUILD_TESTING=ON -DCMAKE_C_FLAGS=\"--coverage\" -DCMAKE_EXE_LINKER_FLAGS=\"--coverage\"; fi && cmake --build ."
+        language: system
+        pass_filenames: false
+      - id: test
+        name: Run Tests
+        entry: bash -c "cd build_precommit && ctest --output-on-failure"
+        language: system
+        pass_filenames: false
+      - id: update-shields
+        name: Update Shields
+        entry: python3 scripts/update_shields.py
+        language: python
+        additional_dependencies: [gcovr]
+        pass_filenames: false

@@ -1,3 +1,7 @@
+/**
+ * \file cfs.h
+ * \brief Unified cross-platform filesystem API definitions and data structures.
+ */
 #ifndef CFS_H
 #define CFS_H
 
@@ -171,32 +175,117 @@ typedef size_t cfs_size_t;
 typedef void (*cfs_oom_handler_t)(void);
 
 /** \brief 44-48. Memory Allocation Wrappers */
+/**
+ * \brief Registers a global callback hook to trigger when dynamic memory
+ * allocation fails.
+ *
+ * \param handler Pointer to the handler function, or NULL to clear.
+ */
 CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler);
 /** \brief cfs_malloc */
+/**
+ * \brief Allocates memory using the internal allocator or fallback OS
+ * mechanism.
+ *
+ * \param size Number of bytes to allocate.
+ * \param out Pointer to store the result of the malloc operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_malloc(cfs_size_t size, void **out);
 /** \brief cfs_free */
+/**
+ * \brief Frees previously allocated memory.
+ *
+ * \param ptr Pointer to the memory block to deallocate.
+ */
 CFS_API void cfs_free(void *ptr);
 /** \brief cfs_realloc */
+/**
+ * \brief Reallocates an existing memory block to a new size.
+ *
+ * \param ptr Argument representing the target resource.
+ * \param new_size The new requested size in bytes.
+ * \param out Pointer to store the result of the realloc operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_realloc(void *ptr, cfs_size_t new_size, void **out);
 /** \brief cfs_calloc */
+/**
+ * \brief Allocates zero-initialized memory for an array of elements.
+ *
+ * \param num Number of elements to allocate.
+ * \param size Argument representing the target resource.
+ * \param out Pointer to store the result of the calloc operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_calloc(cfs_size_t num, cfs_size_t size, void **out);
 
 /* Phase 6: String Handling & Charsets */
 
 /** \brief 51-54. Native string handling abstractions */
+/**
+ * \brief Computes the length of a string safely.
+ *
+ * \param str The null-terminated string to evaluate.
+ * \param out Pointer to store the result of the strlen operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strlen(const cfs_char_t *str, cfs_size_t *out);
 /** \brief cfs_strcpy */
+/**
+ * \brief Copies a string into a destination buffer safely.
+ *
+ * \param dest Pointer to the destination buffer or path.
+ * \param src Pointer to the source buffer or path.
+ * \param out Pointer to store the result of the strcpy operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
                        cfs_char_t **out);
 /** \brief cfs_strncpy */
+/**
+ * \brief Copies up to n characters of a string into a destination buffer.
+ *
+ * \param dest Pointer to the destination buffer or path.
+ * \param src Pointer to the source buffer or path.
+ * \param n The maximum number of characters to copy.
+ * \param out Pointer to store the result of the strncpy operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src, cfs_size_t n,
                         cfs_char_t **out);
 /** \brief cfs_strcat */
+/**
+ * \brief Concatenates two strings safely.
+ *
+ * \param dest Pointer to the destination buffer or path.
+ * \param src Pointer to the source buffer or path.
+ * \param out Pointer to store the result of the strcat operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
                        cfs_char_t **out);
 /** \brief cfs_strcmp */
+/**
+ * \brief Compares two strings lexicographically.
+ *
+ * \param lhs The left-hand side string for comparison.
+ * \param rhs The right-hand side string for comparison.
+ * \param out Pointer to store the result of the strcmp operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs, int *out);
 /** \brief cfs_strncmp */
+/**
+ * \brief Compares up to a specified count of characters of two strings
+ * lexicographically.
+ *
+ * \param lhs Argument representing the target resource.
+ * \param rhs Argument representing the target resource.
+ * \param count The maximum number of characters to compare.
+ * \param out Pointer to store the result of the strncmp operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
                         cfs_size_t count, int *out);
 
@@ -219,123 +308,336 @@ CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
 #if defined(CFS_OS_WINDOWS)
 /* UTF-8 to UTF-16 conversion (Returns required buffer size in chars if dest is
  * NULL) */
+/**
+ * \brief Converts a UTF-8 string to a UTF-16 wide string.
+ *
+ * \param utf8_str Null-terminated UTF-8 source string.
+ * \param dest Pointer to the wide character destination buffer.
+ * \param dest_len Capacity of the destination buffer in wide characters.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
                               cfs_size_t dest_len, cfs_size_t *out_req);
 /* UTF-16 to UTF-8 conversion (Returns required buffer size in bytes if dest is
  * NULL) */
+/**
+ * \brief Converts a UTF-16 wide string to a UTF-8 string.
+ *
+ * \param utf16_str Null-terminated UTF-16 source wide string.
+ * \param dest Pointer to the UTF-8 destination buffer.
+ * \param dest_len Capacity of the destination buffer in bytes.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
                               cfs_size_t dest_len, cfs_size_t *out_req);
 #endif
 
 /** \brief ANSI to Wide character conversion (Generic Fallbacks) */
+/**
+ * \brief Converts a multi-byte string to a wide character string.
+ *
+ * \param mb_str Null-terminated multi-byte source string.
+ * \param dest Pointer to the destination buffer or path.
+ * \param dest_len Capacity of the destination buffer.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
                            cfs_size_t dest_len, cfs_size_t *out_req);
 /** \brief cfs_wide_to_mb */
+/**
+ * \brief Converts a wide character string to a multi-byte string.
+ *
+ * \param wide_str Null-terminated wide source string.
+ * \param dest Pointer to the destination buffer or path.
+ * \param dest_len Capacity of the destination buffer.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
                            cfs_size_t dest_len, cfs_size_t *out_req);
 /* Phase 7: Error Handling & System Codes */
 
 /* 62. Define cfs_errc mapping to std::errc (POSIX states) */
+/**
+ * \brief Standard POSIX error codes mirroring std::errc definitions.
+ */
 typedef enum cfs_errc {
+  /** \brief Represents the cfs_errc_success enumerator or field data. */
   cfs_errc_success = 0,
+  /** \brief Represents the cfs_errc_address_family_not_supported enumerator or
+     field data. */
   cfs_errc_address_family_not_supported,
+  /** \brief Represents the cfs_errc_address_in_use enumerator or field data. */
   cfs_errc_address_in_use,
+  /** \brief Represents the cfs_errc_address_not_available enumerator or field
+     data. */
   cfs_errc_address_not_available,
+  /** \brief Represents the cfs_errc_already_connected enumerator or field data.
+   */
   cfs_errc_already_connected,
+  /** \brief Represents the cfs_errc_argument_list_too_long enumerator or field
+     data. */
   cfs_errc_argument_list_too_long,
+  /** \brief Represents the cfs_errc_argument_out_of_domain enumerator or field
+     data. */
   cfs_errc_argument_out_of_domain,
+  /** \brief Represents the cfs_errc_bad_address enumerator or field data. */
   cfs_errc_bad_address,
+  /** \brief Represents the cfs_errc_bad_file_descriptor enumerator or field
+     data. */
   cfs_errc_bad_file_descriptor,
+  /** \brief Represents the cfs_errc_bad_message enumerator or field data. */
   cfs_errc_bad_message,
+  /** \brief Represents the cfs_errc_broken_pipe enumerator or field data. */
   cfs_errc_broken_pipe,
+  /** \brief Represents the cfs_errc_connection_aborted enumerator or field
+     data. */
   cfs_errc_connection_aborted,
+  /** \brief Represents the cfs_errc_connection_already_in_progress enumerator
+     or field data. */
   cfs_errc_connection_already_in_progress,
+  /** \brief Represents the cfs_errc_connection_refused enumerator or field
+     data. */
   cfs_errc_connection_refused,
+  /** \brief Represents the cfs_errc_connection_reset enumerator or field data.
+   */
   cfs_errc_connection_reset,
+  /** \brief Represents the cfs_errc_cross_device_link enumerator or field data.
+   */
   cfs_errc_cross_device_link,
+  /** \brief Represents the cfs_errc_destination_address_required enumerator or
+     field data. */
   cfs_errc_destination_address_required,
+  /** \brief Represents the cfs_errc_device_or_resource_busy enumerator or field
+     data. */
   cfs_errc_device_or_resource_busy,
+  /** \brief Represents the cfs_errc_directory_not_empty enumerator or field
+     data. */
   cfs_errc_directory_not_empty,
+  /** \brief Represents the cfs_errc_executable_format_error enumerator or field
+     data. */
   cfs_errc_executable_format_error,
+  /** \brief Represents the cfs_errc_file_exists enumerator or field data. */
   cfs_errc_file_exists,
+  /** \brief Represents the cfs_errc_file_too_large enumerator or field data. */
   cfs_errc_file_too_large,
+  /** \brief Represents the cfs_errc_filename_too_long enumerator or field data.
+   */
   cfs_errc_filename_too_long,
+  /** \brief Represents the cfs_errc_function_not_supported enumerator or field
+     data. */
   cfs_errc_function_not_supported,
+  /** \brief Represents the cfs_errc_host_unreachable enumerator or field data.
+   */
   cfs_errc_host_unreachable,
+  /** \brief Represents the cfs_errc_identifier_removed enumerator or field
+     data. */
   cfs_errc_identifier_removed,
+  /** \brief Represents the cfs_errc_illegal_byte_sequence enumerator or field
+     data. */
   cfs_errc_illegal_byte_sequence,
+  /** \brief Represents the cfs_errc_inappropriate_io_control_operation
+     enumerator or field data. */
   cfs_errc_inappropriate_io_control_operation,
+  /** \brief Represents the cfs_errc_interrupted enumerator or field data. */
   cfs_errc_interrupted,
+  /** \brief Represents the cfs_errc_invalid_argument enumerator or field data.
+   */
   cfs_errc_invalid_argument,
+  /** \brief Represents the cfs_errc_invalid_seek enumerator or field data. */
   cfs_errc_invalid_seek,
+  /** \brief Represents the cfs_errc_io_error enumerator or field data. */
   cfs_errc_io_error,
+  /** \brief Represents the cfs_errc_is_a_directory enumerator or field data. */
   cfs_errc_is_a_directory,
+  /** \brief Represents the cfs_errc_message_size enumerator or field data. */
   cfs_errc_message_size,
+  /** \brief Represents the cfs_errc_network_down enumerator or field data. */
   cfs_errc_network_down,
+  /** \brief Represents the cfs_errc_network_reset enumerator or field data. */
   cfs_errc_network_reset,
+  /** \brief Represents the cfs_errc_network_unreachable enumerator or field
+     data. */
   cfs_errc_network_unreachable,
+  /** \brief Represents the cfs_errc_no_buffer_space enumerator or field data.
+   */
   cfs_errc_no_buffer_space,
+  /** \brief Represents the cfs_errc_no_child_process enumerator or field data.
+   */
   cfs_errc_no_child_process,
+  /** \brief Represents the cfs_errc_no_link enumerator or field data. */
   cfs_errc_no_link,
+  /** \brief Represents the cfs_errc_no_lock_available enumerator or field data.
+   */
   cfs_errc_no_lock_available,
+  /** \brief Represents the cfs_errc_no_message_available enumerator or field
+     data. */
   cfs_errc_no_message_available,
+  /** \brief Represents the cfs_errc_no_message enumerator or field data. */
   cfs_errc_no_message,
+  /** \brief Represents the cfs_errc_no_protocol_option enumerator or field
+     data. */
   cfs_errc_no_protocol_option,
+  /** \brief Represents the cfs_errc_no_space_on_device enumerator or field
+     data. */
   cfs_errc_no_space_on_device,
+  /** \brief Represents the cfs_errc_no_stream_resources enumerator or field
+     data. */
   cfs_errc_no_stream_resources,
+  /** \brief Represents the cfs_errc_no_such_device_or_address enumerator or
+     field data. */
   cfs_errc_no_such_device_or_address,
+  /** \brief Represents the cfs_errc_no_such_device enumerator or field data. */
   cfs_errc_no_such_device,
+  /** \brief Represents the cfs_errc_no_such_file_or_directory enumerator or
+     field data. */
   cfs_errc_no_such_file_or_directory,
+  /** \brief Represents the cfs_errc_no_such_process enumerator or field data.
+   */
   cfs_errc_no_such_process,
+  /** \brief Represents the cfs_errc_not_a_directory enumerator or field data.
+   */
   cfs_errc_not_a_directory,
+  /** \brief Represents the cfs_errc_not_a_socket enumerator or field data. */
   cfs_errc_not_a_socket,
+  /** \brief Represents the cfs_errc_not_a_stream enumerator or field data. */
   cfs_errc_not_a_stream,
+  /** \brief Represents the cfs_errc_not_connected enumerator or field data. */
   cfs_errc_not_connected,
+  /** \brief Represents the cfs_errc_not_enough_memory enumerator or field data.
+   */
   cfs_errc_not_enough_memory,
+  /** \brief Represents the cfs_errc_not_supported enumerator or field data. */
   cfs_errc_not_supported,
+  /** \brief Represents the cfs_errc_operation_canceled enumerator or field
+     data. */
   cfs_errc_operation_canceled,
+  /** \brief Represents the cfs_errc_operation_in_progress enumerator or field
+     data. */
   cfs_errc_operation_in_progress,
+  /** \brief Represents the cfs_errc_operation_not_permitted enumerator or field
+     data. */
   cfs_errc_operation_not_permitted,
+  /** \brief Represents the cfs_errc_operation_not_supported enumerator or field
+     data. */
   cfs_errc_operation_not_supported,
+  /** \brief Represents the cfs_errc_operation_would_block enumerator or field
+     data. */
   cfs_errc_operation_would_block,
+  /** \brief Represents the cfs_errc_owner_dead enumerator or field data. */
   cfs_errc_owner_dead,
+  /** \brief Represents the cfs_errc_permission_denied enumerator or field data.
+   */
   cfs_errc_permission_denied,
+  /** \brief Represents the cfs_errc_protocol_error enumerator or field data. */
   cfs_errc_protocol_error,
+  /** \brief Represents the cfs_errc_protocol_not_supported enumerator or field
+     data. */
   cfs_errc_protocol_not_supported,
+  /** \brief Represents the cfs_errc_read_only_file_system enumerator or field
+     data. */
   cfs_errc_read_only_file_system,
+  /** \brief Represents the cfs_errc_resource_deadlock_would_occur enumerator or
+     field data. */
   cfs_errc_resource_deadlock_would_occur,
+  /** \brief Represents the cfs_errc_resource_unavailable_try_again enumerator
+     or field data. */
   cfs_errc_resource_unavailable_try_again,
+  /** \brief Represents the cfs_errc_result_out_of_range enumerator or field
+     data. */
   cfs_errc_result_out_of_range,
+  /** \brief Represents the cfs_errc_state_not_recoverable enumerator or field
+     data. */
   cfs_errc_state_not_recoverable,
+  /** \brief Represents the cfs_errc_stream_timeout enumerator or field data. */
   cfs_errc_stream_timeout,
+  /** \brief Represents the cfs_errc_text_file_busy enumerator or field data. */
   cfs_errc_text_file_busy,
+  /** \brief Represents the cfs_errc_timed_out enumerator or field data. */
   cfs_errc_timed_out,
+  /** \brief Represents the cfs_errc_too_many_files_open_in_system enumerator or
+     field data. */
   cfs_errc_too_many_files_open_in_system,
+  /** \brief Represents the cfs_errc_too_many_files_open enumerator or field
+     data. */
   cfs_errc_too_many_files_open,
+  /** \brief Represents the cfs_errc_too_many_links enumerator or field data. */
   cfs_errc_too_many_links,
+  /** \brief Represents the cfs_errc_too_many_symbolic_link_levels enumerator or
+     field data. */
   cfs_errc_too_many_symbolic_link_levels,
+  /** \brief Represents the cfs_errc_value_too_large enumerator or field data.
+   */
   cfs_errc_value_too_large,
+  /** \brief Represents the cfs_errc_wrong_protocol_type enumerator or field
+     data. */
   cfs_errc_wrong_protocol_type,
-  cfs_errc_unknown_error /* fallback */
+  /** \brief Unknown error. */ cfs_errc_unknown_error
 } cfs_errc;
 
 /* 61. Define cfs_error_code */
+/**
+ * \brief Represents a unified OS-agnostic error state with both raw and POSIX
+ * mappings.
+ */
 typedef struct cfs_error_code {
-  int value;     /* The raw OS specific error code (errno or GetLastError()) */
-  cfs_errc errc; /* The unified POSIX mapping */
+  /** \brief The raw OS specific error code (errno or GetLastError()). */
+  int value;
+  /** \brief The unified POSIX mapping. */
+  cfs_errc errc;
 } cfs_error_code;
 
 /** \brief 63-64, 68. Global / Thread-Local Error Interfacing */
+/**
+ * \brief Manually populates a `cfs_error_code` structure with an OS and POSIX
+ * error code.
+ *
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \param os_value The raw system error code (errno, GetLastError).
+ * \param standard_value The normalized POSIX cfs_errc mapping.
+ */
 CFS_API void cfs_set_error(cfs_error_code *ec, int os_value,
                            cfs_errc standard_value);
 /** \brief cfs_clear_error */
+/**
+ * \brief Resets a `cfs_error_code` structure to a success state.
+ *
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_clear_error(cfs_error_code *ec);
 /** \brief cfs_error_message */
+/**
+ * \brief Retrieves a human-readable string representation of a POSIX error
+ * code.
+ *
+ * \param err The POSIX standard error mapping to evaluate.
+ * \param out Pointer to store the result of the error_message operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_error_message(cfs_errc err, const char **out);
 
 /** \brief 65-67. OS Translation Hooks */
+/**
+ * \brief Populates an error structure based on a raw OS error code,
+ * automatically mapping to the POSIX enum.
+ *
+ * \param os_error The raw system error code.
+ * \param out Pointer to store the result of the make_error_code_from_os
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_make_error_code_from_os(int os_error, cfs_error_code *out);
 /** \brief cfs_get_last_error */
+/**
+ * \brief Retrieves the last thread-local system error (errno or GetLastError)
+ * and wraps it into a `cfs_error_code`.
+ *
+ * \param out Pointer to store the result of the get_last_error operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_get_last_error(cfs_error_code *out);
 /* Phase 8: Path Struct Basics */
 
@@ -351,240 +653,775 @@ CFS_API int cfs_get_last_error(cfs_error_code *out);
 #endif
 
 /* 71. Define opaque cfs_path struct */
+/**
+ * \brief Opaque representation of a filesystem path with dynamic allocation
+ * scaling.
+ */
 typedef struct cfs_path {
+  /** \brief Pointer to the dynamically allocated string buffer. */
   cfs_char_t *str;
+  /** \brief Number of meaningful characters stored in the buffer (excluding
+   * null-terminator). */
   cfs_size_t length;
+  /** \brief Total allocated byte capacity of the string buffer. */
   cfs_size_t capacity;
 } cfs_path;
 
 /** \brief 72-75, 77-79. Path Initialization, Mutation, and Destruction */
+/**
+ * \brief Initializes an empty `cfs_path` structure.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ */
 CFS_API void cfs_path_init(cfs_path *p);
 /** \brief cfs_path_init_str */
+/**
+ * \brief Initializes a `cfs_path` structure using a provided string source.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param source The null-terminated string to initialize the path with.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_init_str(cfs_path *p, const cfs_char_t *source);
 /** \brief cfs_path_destroy */
+/**
+ * \brief Destroys a `cfs_path` structure, releasing its allocated memory.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ */
 CFS_API void cfs_path_destroy(cfs_path *p);
 /** \brief cfs_path_clone */
+/**
+ * \brief Creates a deep copy of a `cfs_path` structure.
+ *
+ * \param dest Pointer to the destination buffer or path.
+ * \param src Pointer to the source buffer or path.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_clone(cfs_path *dest, const cfs_path *src);
 /** \brief cfs_path_make_preferred */
+/**
+ * \brief Mutates the path in-place, converting all directory separators to the
+ * native OS preferred separator.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_make_preferred(cfs_path *p);
 /** \brief cfs_path_c_str */
+/**
+ * \brief Retrieves the underlying null-terminated C string from a path.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_c_str operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_c_str(const cfs_path *p, const cfs_char_t **out);
 /* Returns dynamically allocated generic path string (e.g. forward slashes on
  * Windows). Caller must free. */
+/**
+ * \brief Returns a dynamically allocated string using generic (forward slash)
+ * directory separators.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_generic_string operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_generic_string(const cfs_path *p, cfs_char_t **out);
 /* Phase 9: Path Building */
 
 /** \brief 81-84, 88. Path assignment, concatenation, and manipulation */
+/**
+ * \brief Assigns a new string source to an existing `cfs_path` structure,
+ * clearing the previous contents.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param source The new string to assign to the path.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source);
 /** \brief cfs_path_append */
+/**
+ * \brief Appends a source string to the path, resolving directory separators
+ * intelligently.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param source The string to append to the path.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source);
 /** \brief cfs_path_concat */
+/**
+ * \brief Concatenates a string directly to the end of the path without
+ * inserting separators.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param source The string to concatenate.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_concat(cfs_path *p, const cfs_char_t *source);
 /** \brief cfs_path_clear */
+/**
+ * \brief Clears the contents of the path, rendering it empty without freeing
+ * its capacity.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ */
 CFS_API void cfs_path_clear(cfs_path *p);
 /** \brief cfs_path_swap */
+/**
+ * \brief Swaps the contents and capacities of two `cfs_path` structures.
+ *
+ * \param lhs The left-hand side path to swap.
+ * \param rhs The right-hand side path to swap.
+ */
 CFS_API void cfs_path_swap(cfs_path *lhs, cfs_path *rhs);
 /* Phase 10: Path Decomposition - Root Analysis */
 
 /** \brief Extracts drive letters (Windows) or root nodes. Returns path
  * instance. */
+/**
+ * \brief Performs the cfs_path_root_name filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_root_name operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_root_name(const cfs_path *p, cfs_path *out);
 /** \brief Extracts base root separator. Returns path instance. */
+/**
+ * \brief Performs the cfs_path_root_directory filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_root_directory operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_root_directory(const cfs_path *p, cfs_path *out);
 /** \brief Combines root name and root directory. Returns path instance. */
+/**
+ * \brief Performs the cfs_path_root_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_root_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_root_path(const cfs_path *p, cfs_path *out);
 /* Phase 11: Path Decomposition - Elements */
 
 /** \brief 101. Returns path relative to the root path */
+/**
+ * \brief Performs the cfs_path_relative_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_relative_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_relative_path(const cfs_path *p, cfs_path *out);
 /** \brief 102. Returns path of the parent directory */
+/**
+ * \brief Performs the cfs_path_parent_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_parent_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_parent_path(const cfs_path *p, cfs_path *out);
 /** \brief 103. Returns the filename component */
+/**
+ * \brief Performs the cfs_path_filename filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_filename operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_filename(const cfs_path *p, cfs_path *out);
 /** \brief 104. Returns the stem (filename without extension) */
+/**
+ * \brief Performs the cfs_path_stem filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_stem operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_stem(const cfs_path *p, cfs_path *out);
 /** \brief 105. Returns the file extension */
+/**
+ * \brief Performs the cfs_path_extension filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_extension operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_extension(const cfs_path *p, cfs_path *out);
 /* Phase 12: Path Modifiers */
 
 /** \brief 111. Replaces the terminal filename component */
+/**
+ * \brief Performs the cfs_path_replace_filename filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param replacement Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_replace_filename(cfs_path *p,
                                       const cfs_char_t *replacement);
 /** \brief 112. Replaces the extension of the terminal component */
+/**
+ * \brief Performs the cfs_path_replace_extension filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param replacement Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_replace_extension(cfs_path *p,
                                        const cfs_char_t *replacement);
 /** \brief 113. Removes the terminal filename component (truncates back to
  * parent) */
+/**
+ * \brief Performs the cfs_path_remove_filename filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ */
 CFS_API void cfs_path_remove_filename(cfs_path *p);
 /** \brief 114. Returns absolute path */
+/**
+ * \brief Performs the cfs_absolute filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the absolute operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec);
 
 /* Copy file options mirroring std::filesystem::copy_options */
+/**
+ * \brief Data structure for cfs_copy_options.
+ */
 typedef enum cfs_copy_options {
+  /** \brief Represents the cfs_copy_options_none enumerator or field data. */
   cfs_copy_options_none = 0,
+  /** \brief Represents the cfs_copy_options_skip_existing enumerator or field
+     data. */
   cfs_copy_options_skip_existing = 1,
+  /** \brief Represents the cfs_copy_options_overwrite_existing enumerator or
+     field data. */
   cfs_copy_options_overwrite_existing = 2,
-  cfs_copy_options_update_existing = 4
+  /** \brief Update existing files. */ cfs_copy_options_update_existing = 4
 } cfs_copy_options;
 
 /** \brief Phase 20: Missing std::filesystem functions */
+/**
+ * \brief Performs the cfs_canonical filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the canonical operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out, cfs_error_code *ec);
 /** \brief cfs_weakly_canonical */
+/**
+ * \brief Performs the cfs_weakly_canonical filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the weakly_canonical operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
                                  cfs_error_code *ec);
 /** \brief cfs_read_symlink */
+/**
+ * \brief Performs the cfs_read_symlink filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the read_symlink operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_read_symlink(const cfs_path *p, cfs_path *out,
                              cfs_error_code *ec);
 /** \brief cfs_relative */
+/**
+ * \brief Performs the cfs_relative filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param base Argument representing the target resource.
+ * \param out Pointer to store the result of the relative operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_relative(const cfs_path *p, const cfs_path *base, cfs_path *out,
                          cfs_error_code *ec);
 /** \brief cfs_proximate */
+/**
+ * \brief Performs the cfs_proximate filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param base Argument representing the target resource.
+ * \param out Pointer to store the result of the proximate operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
                           cfs_path *out, cfs_error_code *ec);
 /** \brief cfs_copy */
+/**
+ * \brief Performs the cfs_copy filesystem operation.
+ *
+ * \param from Argument representing the target resource.
+ * \param to Argument representing the target resource.
+ * \param options Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_copy(const cfs_path *from, const cfs_path *to,
                      cfs_copy_options options, cfs_error_code *ec);
 /** \brief cfs_copy_symlink */
+/**
+ * \brief Performs the cfs_copy_symlink filesystem operation.
+ *
+ * \param existing_symlink Argument representing the target resource.
+ * \param new_symlink Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
                              const cfs_path *new_symlink, cfs_error_code *ec);
 
 /* Phase 13: Path Observers & Comparisons */
 
 /** \brief Observers */
+/**
+ * \brief Checks if the path is entirely empty.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_is_empty operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_is_empty(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_has_root_path */
+/**
+ * \brief Performs the cfs_path_has_root_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_root_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_root_path(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_has_root_name */
+/**
+ * \brief Performs the cfs_path_has_root_name filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_root_name operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_root_name(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_has_root_directory */
+/**
+ * \brief Performs the cfs_path_has_root_directory filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_root_directory
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_has_relative_path */
+/**
+ * \brief Performs the cfs_path_has_relative_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_relative_path
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_has_parent_path */
+/**
+ * \brief Performs the cfs_path_has_parent_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_parent_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_has_filename */
+/**
+ * \brief Performs the cfs_path_has_filename filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_filename operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_filename(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_has_stem */
+/**
+ * \brief Performs the cfs_path_has_stem filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_stem operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_stem(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_has_extension */
+/**
+ * \brief Performs the cfs_path_has_extension filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_extension operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_extension(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_is_absolute */
+/**
+ * \brief Performs the cfs_path_is_absolute filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_is_absolute operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_is_absolute(const cfs_path *p, cfs_bool *out);
 /** \brief cfs_path_is_relative */
+/**
+ * \brief Performs the cfs_path_is_relative filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_is_relative operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_is_relative(const cfs_path *p, cfs_bool *out);
 
 /** \brief Lexicographical comparison */
+/**
+ * \brief Performs the cfs_path_compare filesystem operation.
+ *
+ * \param lhs Argument representing the target resource.
+ * \param rhs Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs);
 /* Phase 14: Lexical Path Operations */
 
 /** \brief 132. Lexically normalizes the path (resolves . and .. internally) */
+/**
+ * \brief Performs the cfs_path_lexically_normal filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_lexically_normal
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_lexically_normal(const cfs_path *p, cfs_path *out);
 /** \brief 134. Returns a path representing how to get from base to p */
+/**
+ * \brief Performs the cfs_path_lexically_relative filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param base Argument representing the target resource.
+ * \param out Pointer to store the result of the path_lexically_relative
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_lexically_relative(const cfs_path *p, const cfs_path *base,
                                         cfs_path *out);
 /* 135. Returns relative path if mathematically divergent, otherwise the
  * original path */
+/**
+ * \brief Performs the cfs_path_lexically_proximate filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param base Argument representing the target resource.
+ * \param out Pointer to store the result of the path_lexically_proximate
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_lexically_proximate(const cfs_path *p,
                                          const cfs_path *base, cfs_path *out);
 
 /* Internal path element iterator structure */
+/**
+ * \brief Data structure for cfs_path_element.
+ */
 typedef struct cfs_path_element {
+  /** \brief Pointer to the dynamically allocated string buffer. */
   const cfs_char_t *str;
+  /** \brief Number of meaningful characters stored in the buffer (excluding
+   * null-terminator). */
   cfs_size_t length;
 } cfs_path_element;
 
+/**
+ * \brief Data structure for cfs_path_iterator.
+ */
 typedef struct cfs_path_iterator {
+  /** \brief Represents the path_str enumerator or field data. */
   const cfs_char_t *path_str;
+  /** \brief Represents the path_len enumerator or field data. */
   cfs_size_t path_len;
+  /** \brief Represents the current_pos enumerator or field data. */
   cfs_size_t current_pos;
 } cfs_path_iterator;
 /* Phase 15 & 16: Filesystem Information & Status */
 
 /* 144. Define file types matching std::filesystem::file_type */
+/**
+ * \brief Represents the specific node type of a file (e.g. regular, directory,
+ * socket).
+ */
 typedef enum cfs_file_type {
+  /** \brief Represents the cfs_file_type_none enumerator or field data. */
   cfs_file_type_none = 0,
+  /** \brief Represents the cfs_file_type_not_found enumerator or field data. */
   cfs_file_type_not_found = -1,
+  /** \brief Represents the cfs_file_type_regular enumerator or field data. */
   cfs_file_type_regular = 1,
+  /** \brief Represents the cfs_file_type_directory enumerator or field data. */
   cfs_file_type_directory = 2,
+  /** \brief Represents the cfs_file_type_symlink enumerator or field data. */
   cfs_file_type_symlink = 3,
+  /** \brief Represents the cfs_file_type_block enumerator or field data. */
   cfs_file_type_block = 4,
+  /** \brief Represents the cfs_file_type_character enumerator or field data. */
   cfs_file_type_character = 5,
+  /** \brief Represents the cfs_file_type_fifo enumerator or field data. */
   cfs_file_type_fifo = 6,
+  /** \brief Represents the cfs_file_type_socket enumerator or field data. */
   cfs_file_type_socket = 7,
-  cfs_file_type_unknown = 8
+  /** \brief Unknown file type. */ cfs_file_type_unknown = 8
 } cfs_file_type;
 
 /* OS-agnostic permissions (matches std::filesystem::perms) */
 typedef unsigned int cfs_perms;
 
+/**
+ * \brief Data structure for cfs_perm_options.
+ */
 typedef enum cfs_perm_options {
+  /** \brief Represents the cfs_perm_options_replace enumerator or field data.
+   */
   cfs_perm_options_replace = 1,
+  /** \brief Represents the cfs_perm_options_add enumerator or field data. */
   cfs_perm_options_add = 2,
+  /** \brief Represents the cfs_perm_options_remove enumerator or field data. */
   cfs_perm_options_remove = 4,
-  cfs_perm_options_nofollow = 8
+  /** \brief Do not follow symlinks. */ cfs_perm_options_nofollow = 8
 } cfs_perm_options;
 
+/**
+ * \brief Data structure for cfs_directory_options.
+ */
 typedef enum cfs_directory_options {
+  /** \brief Represents the cfs_directory_options_none enumerator or field data.
+   */
   cfs_directory_options_none = 0,
+  /** \brief Represents the cfs_directory_options_follow_directory_symlink
+     enumerator or field data. */
   cfs_directory_options_follow_directory_symlink = 1,
+  /** \brief Skip directories if permission is denied. */
   cfs_directory_options_skip_permission_denied = 2
 } cfs_directory_options;
 
 /* Status struct holding retrieved OS attributes */
+/**
+ * \brief Data structure for cfs_file_status.
+ */
 typedef struct cfs_file_status {
+  /** \brief Represents the type enumerator or field data. */
   cfs_file_type type;
+  /** \brief Represents the permissions enumerator or field data. */
   cfs_perms permissions;
 } cfs_file_status;
 
 /** \brief 141-142. Core Status Queries */
+/**
+ * \brief Evaluates the file status and type of the given path, traversing
+ * symlinks.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the status operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_status(const cfs_path *p, cfs_file_status *out,
                        cfs_error_code *ec);
 /** \brief cfs_symlink_status */
+/**
+ * \brief Evaluates the file status and type of the given path without
+ * traversing symlinks.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the symlink_status operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
                                cfs_error_code *ec);
 /** \brief cfs_status_known */
+/**
+ * \brief Performs the cfs_status_known filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the status_known operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_status_known(cfs_file_status s, cfs_bool *out);
 
 /** \brief 145. Exists Observer */
+/**
+ * \brief Evaluates if a given file status indicates an existing filesystem
+ * node.
+ *
+ * \param s The file status struct to evaluate.
+ * \param out Pointer to store the result of the exists operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_exists(cfs_file_status s, cfs_bool *out);
 /** \brief cfs_exists_path */
+/**
+ * \brief Checks if a given path corresponds to an existing filesystem node.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the exists_path operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_exists_path(const cfs_path *p, cfs_bool *out,
                             cfs_error_code *ec);
 
 /** \brief 151-159. Filesystem Type Queries */
+/**
+ * \brief Performs the cfs_is_block_file filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_block_file operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_block_file(cfs_file_status s, cfs_bool *out);
 /** \brief cfs_is_character_file */
+/**
+ * \brief Performs the cfs_is_character_file filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_character_file operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_character_file(cfs_file_status s, cfs_bool *out);
 /** \brief cfs_is_directory */
+/**
+ * \brief Performs the cfs_is_directory filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_directory operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_directory(cfs_file_status s, cfs_bool *out);
 /** \brief cfs_is_fifo */
+/**
+ * \brief Performs the cfs_is_fifo filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_fifo operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_fifo(cfs_file_status s, cfs_bool *out);
 /** \brief cfs_is_other */
+/**
+ * \brief Performs the cfs_is_other filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_other operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_other(cfs_file_status s, cfs_bool *out);
 /** \brief cfs_is_regular_file */
+/**
+ * \brief Performs the cfs_is_regular_file filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_regular_file operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_regular_file(cfs_file_status s, cfs_bool *out);
 /** \brief cfs_is_socket */
+/**
+ * \brief Performs the cfs_is_socket filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_socket operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_socket(cfs_file_status s, cfs_bool *out);
 /** \brief cfs_is_symlink */
+/**
+ * \brief Performs the cfs_is_symlink filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_symlink operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_symlink(cfs_file_status s, cfs_bool *out);
 
 /** \brief 154. Is Empty Query (Directory or zero-byte file) */
+/**
+ * \brief Performs the cfs_is_empty_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the is_empty_path operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
                               cfs_error_code *ec);
 /* Phase 17: Filesystem Operations - Creation */
 
 /** \brief 161. Create a single directory node */
+/**
+ * \brief Creates a single new directory node at the given path.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_create_directory(const cfs_path *p, cfs_error_code *ec);
 /** \brief 162. Recursively create directory nodes */
+/**
+ * \brief Recursively creates a directory and any missing parent directories.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_create_directories(const cfs_path *p, cfs_error_code *ec);
 
 /** \brief 163-165. Create links */
+/**
+ * \brief Performs the cfs_create_hard_link filesystem operation.
+ *
+ * \param target Argument representing the target resource.
+ * \param link Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
                                   cfs_error_code *ec);
 /** \brief cfs_create_symlink */
+/**
+ * \brief Performs the cfs_create_symlink filesystem operation.
+ *
+ * \param target Argument representing the target resource.
+ * \param link Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
                                 cfs_error_code *ec);
 /** \brief cfs_create_directory_symlink */
+/**
+ * \brief Performs the cfs_create_directory_symlink filesystem operation.
+ *
+ * \param target Argument representing the target resource.
+ * \param link Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_create_directory_symlink(const cfs_path *target,
                                           const cfs_path *link,
                                           cfs_error_code *ec);
@@ -592,18 +1429,50 @@ CFS_API void cfs_create_directory_symlink(const cfs_path *target,
 /* Copy file options mirroring std::filesystem::copy_options */
 
 /** \brief 168. Copy files strictly */
+/**
+ * \brief Copies a single file from a source path to a destination path.
+ *
+ * \param from The source path pointing to the file to copy.
+ * \param to The destination path for the copied file.
+ * \param options Copy behavior flags mapping to `cfs_copy_options`.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_copy_file(const cfs_path *from, const cfs_path *to,
                           cfs_copy_options options, cfs_error_code *ec);
 /* Phase 18: Filesystem Operations - Modification */
 
 /** \brief 171. Remove single file or empty directory */
+/**
+ * \brief Deletes a specific file or empty directory node.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_remove(const cfs_path *p, cfs_error_code *ec);
 /** \brief 172. Remove all contents recursively. Returns number of removed
  * objects */
+/**
+ * \brief Recursively deletes a directory node and all of its nested contents.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the remove_all operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_remove_all(const cfs_path *p, cfs_size_t *out,
                            cfs_error_code *ec);
 
 /** \brief 173. Rename/Move node */
+/**
+ * \brief Performs the cfs_rename filesystem operation.
+ *
+ * \param old_p Argument representing the target resource.
+ * \param new_p Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
                         cfs_error_code *ec);
 
@@ -617,19 +1486,49 @@ typedef unsigned __int64 cfs_uintmax_t;
 typedef unsigned long cfs_uintmax_t;
 #endif
 /** \brief cfs_resize_file */
+/**
+ * \brief Performs the cfs_resize_file filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param size Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
                              cfs_error_code *ec);
 /** \brief cfs_file_size */
+/**
+ * \brief Retrieves the size of a given file in bytes.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the file_size operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
                           cfs_error_code *ec);
 
 /* 176. Space Information */
+/**
+ * \brief Data structure for cfs_space_info.
+ */
 typedef struct cfs_space_info {
+  /** \brief Total allocated byte capacity of the string buffer. */
   cfs_uintmax_t capacity;
+  /** \brief Represents the free enumerator or field data. */
   cfs_uintmax_t free;
+  /** \brief Represents the available enumerator or field data. */
   cfs_uintmax_t available;
 } cfs_space_info;
 /** \brief cfs_space */
+/**
+ * \brief Performs the cfs_space filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the space operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_space(const cfs_path *p, cfs_space_info *out,
                       cfs_error_code *ec);
 
@@ -643,55 +1542,153 @@ typedef __int64 cfs_file_time_type;
 typedef long cfs_file_time_type;
 #endif
 /** \brief cfs_last_write_time */
+/**
+ * \brief Performs the cfs_last_write_time filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the last_write_time operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
                                 cfs_error_code *ec);
 
 /** \brief 17X. Permissions and Links */
+/**
+ * \brief Performs the cfs_permissions filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param prms Argument representing the target resource.
+ * \param opts Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
                             cfs_perm_options opts, cfs_error_code *ec);
 /** \brief cfs_hard_link_count */
+/**
+ * \brief Performs the cfs_hard_link_count filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the hard_link_count operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
                                 cfs_error_code *ec);
 /** \brief cfs_equivalent */
+/**
+ * \brief Performs the cfs_equivalent filesystem operation.
+ *
+ * \param p1 Specific input argument required for the operation.
+ * \param p2 Specific input argument required for the operation.
+ * \param out Pointer to store the result of the equivalent operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
                            cfs_bool *out, cfs_error_code *ec);
 
 /** \brief 178-179. Environment paths */
+/**
+ * \brief Performs the cfs_current_path filesystem operation.
+ *
+ * \param out Pointer to store the result of the current_path operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_current_path(cfs_path *out, cfs_error_code *ec);
 /** \brief cfs_current_path_set */
+/**
+ * \brief Performs the cfs_current_path_set filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec);
 /** \brief cfs_temp_directory_path */
+/**
+ * \brief Performs the cfs_temp_directory_path filesystem operation.
+ *
+ * \param out Pointer to store the result of the temp_directory_path operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec);
 /* Phase 19: Directory Iteration */
 
 /* 181. Directory entry structure caching path and status */
+/**
+ * \brief Data structure for cfs_directory_entry.
+ */
 typedef struct cfs_directory_entry {
+  /** \brief Represents the path enumerator or field data. */
   cfs_path path;
+  /** \brief Represents the status enumerator or field data. */
   cfs_file_status status;
+  /** \brief Represents the symlink_status enumerator or field data. */
   cfs_file_status symlink_status;
 } cfs_directory_entry;
 
 /* 182-185. Standard Directory Iterator */
 typedef struct cfs_directory_iterator cfs_directory_iterator;
 /** \brief cfs_dir_itr_init */
+/**
+ * \brief Performs the cfs_dir_itr_init filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out_it Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
                              cfs_error_code *ec);
 /* Returns 0 on success, with a pointer to the internal entry, or 1 if iteration
  * complete, or -1 on error */
+/**
+ * \brief Performs the cfs_dir_itr_next filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ * \param out_entry Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_dir_itr_next(cfs_directory_iterator *it,
                              const cfs_directory_entry **out_entry,
                              cfs_error_code *ec);
 /** \brief cfs_dir_itr_close */
+/**
+ * \brief Performs the cfs_dir_itr_close filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ */
 CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it);
 
 /* 186-189. Recursive Directory Iterator */
 typedef struct cfs_recursive_directory_iterator
     cfs_recursive_directory_iterator;
 /** \brief cfs_rec_dir_itr_init */
+/**
+ * \brief Performs the cfs_rec_dir_itr_init filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out_it Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_rec_dir_itr_init(const cfs_path *p,
                                  cfs_recursive_directory_iterator **out_it,
                                  cfs_error_code *ec);
 /** \brief cfs_rec_dir_itr_next */
+/**
+ * \brief Performs the cfs_rec_dir_itr_next filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ * \param out_entry Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
                                  const cfs_directory_entry **out_entry,
                                  cfs_error_code *ec);
@@ -700,28 +1697,61 @@ CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
 CFS_API void
 cfs_rec_dir_itr_disable_recursion_pending(cfs_recursive_directory_iterator *it);
 /** \brief Moves the iterator one level up in the directory tree */
+/**
+ * \brief Performs the cfs_rec_dir_itr_pop filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
                                  cfs_error_code *ec);
 /** \brief cfs_rec_dir_itr_close */
+/**
+ * \brief Performs the cfs_rec_dir_itr_close filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ */
 CFS_API void cfs_rec_dir_itr_close(cfs_recursive_directory_iterator *it);
 
 /* Phase 5.5: Execution Context & Modality */
 
 /* 1. Define the cfs_modality enum */
+/**
+ * \brief Defines the execution strategy for asynchronous requests (e.g. sync,
+ * threadpool, multiprocess).
+ */
 typedef enum cfs_modality {
+  /** \brief Represents the cfs_modality_sync enumerator or field data. */
   cfs_modality_sync,
+  /** \brief Represents the cfs_modality_async enumerator or field data. */
   cfs_modality_async,
+  /** \brief Represents the cfs_modality_multithread enumerator or field data.
+   */
   cfs_modality_multithread,
+  /** \brief Represents the cfs_modality_singlethread enumerator or field data.
+   */
   cfs_modality_singlethread,
+  /** \brief Represents the cfs_modality_multiprocess enumerator or field data.
+   */
   cfs_modality_multiprocess,
+  /** \brief Represents the cfs_modality_greenthread enumerator or field data.
+   */
   cfs_modality_greenthread,
-  cfs_modality_message_passing
+  /** \brief Message passing modality. */ cfs_modality_message_passing
 } cfs_modality;
 
 /* 2. Define cfs_runtime_config struct */
+/**
+ * \brief Configuration payload defining the modality and thread constraints of
+ * the runtime.
+ */
 typedef struct cfs_runtime_config {
+  /** \brief Represents the mode enumerator or field data. */
   cfs_modality mode;
+  /** \brief Represents the thread_pool_size enumerator or field data. */
   cfs_size_t thread_pool_size;
+  /** \brief Represents the ipc_path enumerator or field data. */
   const cfs_char_t *ipc_path;
 } cfs_runtime_config;
 
@@ -735,28 +1765,65 @@ typedef struct cfs_request_t cfs_request_t;
 typedef void (*cfs_callback_t)(cfs_request_t *req, void *user_data);
 
 /* The cfs_request_t struct represents an abstract file system operation */
+/**
+ * \brief Abstract payload representing a deferred filesystem operation.
+ */
 struct cfs_request_t {
+  /** \brief Identifier indicating the specific file operation to perform. */
   int opcode;
+  /** \brief Primary path parameter for the operation. */
   cfs_path target_path;
+  /** \brief Secondary path parameter for copy or rename operations. */
   cfs_path dest_path;
+  /** \brief Dynamically allocated buffer to hold operation results. */
   void *result_buffer;
+  /** \brief Byte size of the allocated result buffer. */
   cfs_size_t result_size;
+  /** \brief Structure to capture any error generated during the operation. */
   cfs_error_code error;
+  /** \brief User-defined function pointer triggered upon operation completion.
+   */
   cfs_callback_t callback;
+  /** \brief Opaque context pointer passed to the callback function. */
   void *user_data;
+  /** \brief Pointer to the next request object in a linked list or queue. */
   struct cfs_request_t *next;
+  /** \brief Thread-safe counter tracking active references to this request. */
   int ref_count;
+  /** \brief Boolean flag marking the request for early termination. */
   cfs_bool cancelled;
 };
 
 /** \brief 4. Implement cfs_runtime_init() */
+/**
+ * \brief Performs the cfs_runtime_init filesystem operation.
+ *
+ * \param config Argument representing the target resource.
+ * \param out_rt Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
                              cfs_runtime_t **out_rt, cfs_error_code *ec);
 
 /** \brief 5. Implement cfs_runtime_destroy() */
+/**
+ * \brief Performs the cfs_runtime_destroy filesystem operation.
+ *
+ * \param runtime Argument representing the target resource.
+ */
 CFS_API void cfs_runtime_destroy(cfs_runtime_t *runtime);
 
 /** \brief 9. Create generic request dispatcher internal function */
+/**
+ * \brief Performs the cfs_dispatch_request filesystem operation.
+ *
+ * \param runtime Argument representing the target resource.
+ * \param req Argument representing the target resource.
+ * \param cb Callback function to execute upon completion of the asynchronous
+ * request. \param user_data Opaque pointer passed back to the user-provided
+ * callback.
+ */
 CFS_API void cfs_dispatch_request(cfs_runtime_t *runtime, cfs_request_t *req,
                                   cfs_callback_t cb, void *user_data);
 
@@ -766,21 +1833,41 @@ CFS_API void cfs_dispatch_request(cfs_runtime_t *runtime, cfs_request_t *req,
 /* Phase 5.6: Deferred Execution and Asynchronous Base */
 
 /* 11. Opcodes */
+/**
+ * \brief Internal identifiers dictating the specific asynchronous operation to
+ * execute.
+ */
 typedef enum cfs_opcode {
+  /** \brief Represents the cfs_opcode_none enumerator or field data. */
   cfs_opcode_none = 0,
+  /** \brief Represents the cfs_opcode_remove enumerator or field data. */
   cfs_opcode_remove,
+  /** \brief Represents the cfs_opcode_remove_all enumerator or field data. */
   cfs_opcode_remove_all,
+  /** \brief Represents the cfs_opcode_create_directory enumerator or field
+     data. */
   cfs_opcode_create_directory,
+  /** \brief Represents the cfs_opcode_create_directories enumerator or field
+     data. */
   cfs_opcode_create_directories,
+  /** \brief Represents the cfs_opcode_copy_file enumerator or field data. */
   cfs_opcode_copy_file,
+  /** \brief Represents the cfs_opcode_rename enumerator or field data. */
   cfs_opcode_rename,
+  /** \brief Represents the cfs_opcode_file_size enumerator or field data. */
   cfs_opcode_file_size,
+  /** \brief Represents the cfs_opcode_status enumerator or field data. */
   cfs_opcode_status,
+  /** \brief Represents the cfs_opcode_symlink_status enumerator or field data.
+   */
   cfs_opcode_symlink_status,
+  /** \brief Represents the cfs_opcode_exists enumerator or field data. */
   cfs_opcode_exists,
+  /** \brief Represents the cfs_opcode_is_empty enumerator or field data. */
   cfs_opcode_is_empty,
+  /** \brief Represents the cfs_opcode_space enumerator or field data. */
   cfs_opcode_space,
-  cfs_opcode_last_write_time
+  /** \brief Last write time operation. */ cfs_opcode_last_write_time
 } cfs_opcode;
 
 /* Forward declarations for internal sync structures */
@@ -795,23 +1882,66 @@ typedef struct cfs_queue_t cfs_queue_t;
 typedef struct cfs_thread_pool_t cfs_thread_pool_t;
 
 /** \brief 13. Non-blocking API variants */
+/**
+ * \brief Schedules an asynchronous operation to remove a file or empty
+ * directory.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param cb Callback function to execute upon completion of the asynchronous
+ * request. \param user_data Opaque pointer passed back to the user-provided
+ * callback. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
                              cfs_callback_t cb, void *user_data);
 /** \brief cfs_file_size_async */
+/**
+ * \brief Schedules an asynchronous operation to retrieve a file\'s size.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param cb Callback function to execute upon completion of the asynchronous
+ * request. \param user_data Opaque pointer passed back to the user-provided
+ * callback. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
                                 cfs_callback_t cb, void *user_data);
 
 /** \brief 19. cfs_runtime_poll() */
+/**
+ * \brief Processes completed asynchronous requests and executes their
+ * callbacks.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_runtime_poll(cfs_runtime_t *rt);
 
 /* Phase 3: Platform-Specific Async & Message Passing */
 
 /** \brief 29. Reference counting to cfs_request_t */
+/**
+ * \brief Performs the cfs_request_retain filesystem operation.
+ *
+ * \param req Argument representing the target resource.
+ */
 CFS_API void cfs_request_retain(cfs_request_t *req);
 /** \brief cfs_request_release */
+/**
+ * \brief Performs the cfs_request_release filesystem operation.
+ *
+ * \param req Argument representing the target resource.
+ */
 CFS_API void cfs_request_release(cfs_request_t *req);
 
 /** \brief 30. Implement cancellation logic */
+/**
+ * \brief Performs the cfs_cancel_request filesystem operation.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param req Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_cancel_request(cfs_runtime_t *rt, cfs_request_t *req);
 
 /* Platform Specific Async Backend Configurations */
@@ -821,14 +1951,42 @@ typedef struct cfs_iocp_context cfs_iocp_context;
 /* 24-26. Message Passing Actors */
 typedef struct cfs_message_pipe cfs_message_pipe;
 /** \brief cfs_message_pipe_create */
+/**
+ * \brief Performs the cfs_message_pipe_create filesystem operation.
+ *
+ * \param path Argument representing the target resource.
+ * \param out_pipe Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_message_pipe_create(const cfs_char_t *path,
                                     cfs_message_pipe **out_pipe);
 /** \brief cfs_message_pipe_destroy */
+/**
+ * \brief Performs the cfs_message_pipe_destroy filesystem operation.
+ *
+ * \param pipe Argument representing the target resource.
+ */
 CFS_API void cfs_message_pipe_destroy(cfs_message_pipe *pipe);
 /** \brief cfs_serialize_request */
+/**
+ * \brief Performs the cfs_serialize_request filesystem operation.
+ *
+ * \param req Argument representing the target resource.
+ * \param buffer Argument representing the target resource.
+ * \param size Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_serialize_request(const cfs_request_t *req, void **buffer,
                                   cfs_size_t *size);
 /** \brief cfs_deserialize_request */
+/**
+ * \brief Performs the cfs_deserialize_request filesystem operation.
+ *
+ * \param buffer Argument representing the target resource.
+ * \param size Argument representing the target resource.
+ * \param req Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_deserialize_request(const void *buffer, cfs_size_t size,
                                     cfs_request_t **req);
 
@@ -837,36 +1995,105 @@ CFS_API int cfs_deserialize_request(const void *buffer, cfs_size_t size,
 /* 31. Multiprocess modality backend (Process Handles) */
 typedef struct cfs_process_t cfs_process_t;
 /** \brief cfs_process_spawn */
+/**
+ * \brief Performs the cfs_process_spawn filesystem operation.
+ *
+ * \param executable Argument representing the target resource.
+ * \param out_proc Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_process_spawn(const cfs_char_t *executable,
                               cfs_process_t **out_proc);
 /** \brief cfs_process_wait */
+/**
+ * \brief Performs the cfs_process_wait filesystem operation.
+ *
+ * \param proc Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_process_wait(cfs_process_t *proc);
 /** \brief cfs_process_destroy */
+/**
+ * \brief Performs the cfs_process_destroy filesystem operation.
+ *
+ * \param proc Argument representing the target resource.
+ */
 CFS_API void cfs_process_destroy(cfs_process_t *proc);
 
 /* 32. Shared Memory (shm) segments */
 typedef struct cfs_shm_segment cfs_shm_segment;
 /** \brief cfs_shm_create */
+/**
+ * \brief Performs the cfs_shm_create filesystem operation.
+ *
+ * \param size Argument representing the target resource.
+ * \param name Argument representing the target resource.
+ * \param out_shm Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
                            cfs_shm_segment **out_shm);
 /** \brief cfs_shm_map */
+/**
+ * \brief Performs the cfs_shm_map filesystem operation.
+ *
+ * \param shm Argument representing the target resource.
+ * \param out Pointer to store the result of the shm_map operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_shm_map(cfs_shm_segment *shm, void **out);
 /** \brief cfs_shm_unmap */
+/**
+ * \brief Performs the cfs_shm_unmap filesystem operation.
+ *
+ * \param shm Argument representing the target resource.
+ * \param addr Argument representing the target resource.
+ */
 CFS_API void cfs_shm_unmap(cfs_shm_segment *shm, void *addr);
 /** \brief cfs_shm_destroy */
+/**
+ * \brief Performs the cfs_shm_destroy filesystem operation.
+ *
+ * \param shm Argument representing the target resource.
+ */
 CFS_API void cfs_shm_destroy(cfs_shm_segment *shm);
 
 /* 33. Multiprocess semaphore */
 typedef struct cfs_named_semaphore cfs_named_semaphore;
 /** \brief cfs_named_semaphore_create */
+/**
+ * \brief Performs the cfs_named_semaphore_create filesystem operation.
+ *
+ * \param name Argument representing the target resource.
+ * \param initial_count Argument representing the target resource.
+ * \param out_sem Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_named_semaphore_create(const cfs_char_t *name,
                                        int initial_count,
                                        cfs_named_semaphore **out_sem);
 /** \brief cfs_named_semaphore_wait */
+/**
+ * \brief Performs the cfs_named_semaphore_wait filesystem operation.
+ *
+ * \param sem Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_named_semaphore_wait(cfs_named_semaphore *sem);
 /** \brief cfs_named_semaphore_post */
+/**
+ * \brief Performs the cfs_named_semaphore_post filesystem operation.
+ *
+ * \param sem Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_named_semaphore_post(cfs_named_semaphore *sem);
 /** \brief cfs_named_semaphore_destroy */
+/**
+ * \brief Performs the cfs_named_semaphore_destroy filesystem operation.
+ *
+ * \param sem Argument representing the target resource.
+ */
 CFS_API void cfs_named_semaphore_destroy(cfs_named_semaphore *sem);
 
 /* 35-37. Greenthread modality (ucontext / setjmp) */
@@ -874,11 +2101,29 @@ typedef struct cfs_greenthread_t cfs_greenthread_t;
 typedef void (*cfs_greenthread_func)(void *);
 
 /** \brief cfs_greenthread_spawn */
+/**
+ * \brief Performs the cfs_greenthread_spawn filesystem operation.
+ *
+ * \param func Argument representing the target resource.
+ * \param arg Argument representing the target resource.
+ * \param out_gt Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_greenthread_spawn(cfs_greenthread_func func, void *arg,
                                   cfs_greenthread_t **out_gt);
 /** \brief cfs_greenthread_yield */
+/**
+ * \brief Performs the cfs_greenthread_yield filesystem operation.
+ *
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_greenthread_yield(void);
 /** \brief cfs_greenthread_destroy */
+/**
+ * \brief Performs the cfs_greenthread_destroy filesystem operation.
+ *
+ * \param gt Argument representing the target resource.
+ */
 CFS_API void cfs_greenthread_destroy(cfs_greenthread_t *gt);
 
 /* 36. Greenthread scheduler */
@@ -887,6 +2132,12 @@ typedef struct cfs_greenthread_scheduler cfs_greenthread_scheduler;
 CFS_API int
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched);
 /** \brief cfs_greenthread_scheduler_run */
+/**
+ * \brief Performs the cfs_greenthread_scheduler_run filesystem operation.
+ *
+ * \param sched Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_greenthread_scheduler_run(cfs_greenthread_scheduler *sched);
 /** \brief stub */
 CFS_API void
@@ -906,16 +2157,37 @@ cfs_greenthread_scheduler_destroy(cfs_greenthread_scheduler *sched);
 /* 42. Integrate new context parameter into directory iterators */
 typedef struct cfs_directory_iterator_async cfs_directory_iterator_async;
 /** \brief cfs_dir_itr_init_async */
+/**
+ * \brief Performs the cfs_dir_itr_init_async filesystem operation.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param cb Callback function to execute upon completion of the asynchronous
+ * request. \param user_data Opaque pointer passed back to the user-provided
+ * callback. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_dir_itr_init_async(cfs_runtime_t *rt, const cfs_path *p,
                                    cfs_callback_t cb, void *user_data);
 
 /* 43. Multi-process sandbox config */
+/**
+ * \brief Data structure for cfs_sandbox_config.
+ */
 typedef struct cfs_sandbox_config {
+  /** \brief Represents the root_chroot enumerator or field data. */
   cfs_path root_chroot;
+  /** \brief Represents the restrict_symlinks enumerator or field data. */
   cfs_bool restrict_symlinks;
 } cfs_sandbox_config;
 
 /** \brief cfs_runtime_set_sandbox */
+/**
+ * \brief Performs the cfs_runtime_set_sandbox filesystem operation.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param config Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
                                     const cfs_sandbox_config *config);
 
@@ -939,21 +2211,48 @@ CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
 
 /* Implementation details */
 
+/**
+ * \brief Performs the cfs_is_separator filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ * \param out Pointer to store the result of the is_separator operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 static int cfs_is_separator(cfs_char_t c, cfs_bool *out);
+/**
+ * \brief Performs the cfs_path_reserve filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param new_cap Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap);
 
 /* Phase 5.5: Execution Context & Modality Implementations */
 
+/**
+ * \brief The primary execution context handling thread pools, message passing,
+ * and work queues.
+ */
 struct cfs_runtime_t {
+  /** \brief Represents the config enumerator or field data. */
   cfs_runtime_config config;
+  /** \brief Represents the work_queue enumerator or field data. */
   cfs_queue_t *work_queue;
+  /** \brief Represents the completion_queue enumerator or field data. */
   cfs_queue_t *completion_queue;
+  /** \brief Represents the thread_pool enumerator or field data. */
   cfs_thread_pool_t *thread_pool;
 };
 
 /* Phase 5.6: Deferred Execution and Asynchronous Base Implementations */
 
 /* 12. Generic Opcode Execution */
+/**
+ * \brief Performs the cfs_execute_op_inline filesystem operation.
+ *
+ * \param req Argument representing the target resource.
+ */
 static void cfs_execute_op_inline(cfs_request_t *req) {
   if (!req)
     return;
@@ -979,110 +2278,329 @@ static void cfs_execute_op_inline(cfs_request_t *req) {
 /* Platform specific Mutex/Cond/Thread wrappers for C89 */
 #if defined(CFS_OS_WINDOWS)
 /* Defined via winsock2.h earlier */
+/**
+ * \brief Data structure for cfs_mutex_t.
+ */
 struct cfs_mutex_t {
+  /** \brief Represents the cs enumerator or field data. */
   CRITICAL_SECTION cs;
 };
+/**
+ * \brief Data structure for cfs_thread_t.
+ */
 struct cfs_thread_t {
+  /** \brief Represents the h enumerator or field data. */
   HANDLE h;
 };
 
 #if defined(_MSC_VER) && _MSC_VER < 1500
 /* MSVC 2005 fallback */
+/**
+ * \brief Data structure for cfs_cond_t.
+ */
 struct cfs_cond_t {
+  /** \brief Represents the event enumerator or field data. */
   HANDLE event;
 };
+/**
+ * \brief Performs the cfs_cond_init filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ */
 static void cfs_cond_init(cfs_cond_t *c) {
   c->event = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
+/**
+ * \brief Performs the cfs_cond_destroy filesystem operation.
+ *
+ * \param event Argument representing the target resource.
+ */
 static void cfs_cond_destroy(cfs_cond_t *c) { CloseHandle(c->event); }
+/**
+ * \brief Performs the cfs_cond_wait filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ * \param m Argument representing the target resource.
+ */
 static void cfs_cond_wait(cfs_cond_t *c, cfs_mutex_t *m) {
   LeaveCriticalSection(&m->cs);
   WaitForSingleObject(c->event, INFINITE);
   EnterCriticalSection(&m->cs);
 }
+/**
+ * \brief Performs the cfs_cond_signal filesystem operation.
+ *
+ * \param event Argument representing the target resource.
+ */
 static void cfs_cond_signal(cfs_cond_t *c) { SetEvent(c->event); }
+/**
+ * \brief Performs the cfs_cond_broadcast filesystem operation.
+ *
+ * \param event Argument representing the target resource.
+ */
 static void cfs_cond_broadcast(cfs_cond_t *c) { SetEvent(c->event); }
 #else
+/**
+ * \brief Data structure for cfs_cond_t.
+ */
 struct cfs_cond_t {
+  /** \brief Represents the cv enumerator or field data. */
   CONDITION_VARIABLE cv;
 };
+/**
+ * \brief Performs the cfs_cond_init filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ */
 static void cfs_cond_init(cfs_cond_t *c) {
   InitializeConditionVariable(&c->cv);
 }
+/**
+ * \brief Performs the cfs_cond_destroy filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_cond_destroy(cfs_cond_t *c) { (void)c; } /* No-op on Windows */
+/**
+ * \brief Performs the cfs_cond_wait filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ * \param m Argument representing the target resource.
+ */
 static void cfs_cond_wait(cfs_cond_t *c, cfs_mutex_t *m) {
   SleepConditionVariableCS(&c->cv, &m->cs, INFINITE);
 }
+/**
+ * \brief Performs the cfs_cond_signal filesystem operation.
+ *
+ * \param cv Argument representing the target resource.
+ */
 static void cfs_cond_signal(cfs_cond_t *c) { WakeConditionVariable(&c->cv); }
+/**
+ * \brief Performs the cfs_cond_broadcast filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ */
 static void cfs_cond_broadcast(cfs_cond_t *c) {
   WakeAllConditionVariable(&c->cv);
 }
 #endif
 
+/**
+ * \brief Performs the cfs_mutex_init filesystem operation.
+ *
+ * \param m Argument representing the target resource.
+ */
 static void cfs_mutex_init(cfs_mutex_t *m) {
   InitializeCriticalSection(&m->cs);
 }
+/**
+ * \brief Performs the cfs_mutex_destroy filesystem operation.
+ *
+ * \param cs Argument representing the target resource.
+ */
 static void cfs_mutex_destroy(cfs_mutex_t *m) { DeleteCriticalSection(&m->cs); }
+/**
+ * \brief Performs the cfs_mutex_lock filesystem operation.
+ *
+ * \param cs Argument representing the target resource.
+ */
 static void cfs_mutex_lock(cfs_mutex_t *m) { EnterCriticalSection(&m->cs); }
+/**
+ * \brief Performs the cfs_mutex_unlock filesystem operation.
+ *
+ * \param cs Argument representing the target resource.
+ */
 static void cfs_mutex_unlock(cfs_mutex_t *m) { LeaveCriticalSection(&m->cs); }
 #elif defined(CFS_OS_DOS)
+/**
+ * \brief Data structure for cfs_mutex_t.
+ */
 struct cfs_mutex_t {
+  /** \brief Represents the dummy enumerator or field data. */
   int dummy;
 };
+/**
+ * \brief Data structure for cfs_cond_t.
+ */
 struct cfs_cond_t {
+  /** \brief Represents the dummy enumerator or field data. */
   int dummy;
 };
+/**
+ * \brief Data structure for cfs_thread_t.
+ */
 struct cfs_thread_t {
+  /** \brief Represents the dummy enumerator or field data. */
   int dummy;
 };
 
+/**
+ * \brief Performs the cfs_mutex_init filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_mutex_init(cfs_mutex_t *m) { (void)m; }
+/**
+ * \brief Performs the cfs_mutex_destroy filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_mutex_destroy(cfs_mutex_t *m) { (void)m; }
+/**
+ * \brief Performs the cfs_mutex_lock filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_mutex_lock(cfs_mutex_t *m) { (void)m; }
+/**
+ * \brief Performs the cfs_mutex_unlock filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_mutex_unlock(cfs_mutex_t *m) { (void)m; }
 
+/**
+ * \brief Performs the cfs_cond_init filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_cond_init(cfs_cond_t *c) { (void)c; }
+/**
+ * \brief Performs the cfs_cond_destroy filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_cond_destroy(cfs_cond_t *c) { (void)c; }
+/**
+ * \brief Performs the cfs_cond_wait filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ * \param m Argument representing the target resource.
+ */
 static void cfs_cond_wait(cfs_cond_t *c, cfs_mutex_t *m) {
   (void)c;
   (void)m;
 }
+/**
+ * \brief Performs the cfs_cond_signal filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_cond_signal(cfs_cond_t *c) { (void)c; }
+/**
+ * \brief Performs the cfs_cond_broadcast filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 static void cfs_cond_broadcast(cfs_cond_t *c) { (void)c; }
 #else
+/**
+ * \brief Data structure for cfs_mutex_t.
+ */
 struct cfs_mutex_t {
+  /** \brief Represents the m enumerator or field data. */
   pthread_mutex_t m;
 };
+/**
+ * \brief Data structure for cfs_cond_t.
+ */
 struct cfs_cond_t {
+  /** \brief Represents the c enumerator or field data. */
   pthread_cond_t c;
 };
+/**
+ * \brief Data structure for cfs_thread_t.
+ */
 struct cfs_thread_t {
+  /** \brief Represents the t enumerator or field data. */
   pthread_t t;
 };
 
+/**
+ * \brief Performs the cfs_mutex_init filesystem operation.
+ *
+ * \param m Argument representing the target resource.
+ * \param NULL Argument representing the target resource.
+ */
 static void cfs_mutex_init(cfs_mutex_t *m) { pthread_mutex_init(&m->m, NULL); }
+/**
+ * \brief Performs the cfs_mutex_destroy filesystem operation.
+ *
+ * \param m Argument representing the target resource.
+ */
 static void cfs_mutex_destroy(cfs_mutex_t *m) { pthread_mutex_destroy(&m->m); }
+/**
+ * \brief Performs the cfs_mutex_lock filesystem operation.
+ *
+ * \param m Argument representing the target resource.
+ */
 static void cfs_mutex_lock(cfs_mutex_t *m) { pthread_mutex_lock(&m->m); }
+/**
+ * \brief Performs the cfs_mutex_unlock filesystem operation.
+ *
+ * \param m Argument representing the target resource.
+ */
 static void cfs_mutex_unlock(cfs_mutex_t *m) { pthread_mutex_unlock(&m->m); }
 
+/**
+ * \brief Performs the cfs_cond_init filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ * \param NULL Argument representing the target resource.
+ */
 static void cfs_cond_init(cfs_cond_t *c) { pthread_cond_init(&c->c, NULL); }
+/**
+ * \brief Performs the cfs_cond_destroy filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ */
 static void cfs_cond_destroy(cfs_cond_t *c) { pthread_cond_destroy(&c->c); }
+/**
+ * \brief Performs the cfs_cond_wait filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ * \param m Argument representing the target resource.
+ */
 static void cfs_cond_wait(cfs_cond_t *c, cfs_mutex_t *m) {
   pthread_cond_wait(&c->c, &m->m);
 }
+/**
+ * \brief Performs the cfs_cond_signal filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ */
 static void cfs_cond_signal(cfs_cond_t *c) { pthread_cond_signal(&c->c); }
+/**
+ * \brief Performs the cfs_cond_broadcast filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ */
 static void cfs_cond_broadcast(cfs_cond_t *c) { pthread_cond_broadcast(&c->c); }
 #endif
 
 /* 15, 18. Thread-Safe FIFO Queue */
+/**
+ * \brief Data structure for cfs_queue_t.
+ */
 struct cfs_queue_t {
+  /** \brief Represents the head enumerator or field data. */
   cfs_request_t *head;
+  /** \brief Represents the tail enumerator or field data. */
   cfs_request_t *tail;
+  /** \brief Represents the lock enumerator or field data. */
   cfs_mutex_t lock;
+  /** \brief Represents the cond enumerator or field data. */
   cfs_cond_t cond;
+  /** \brief Represents the shutdown enumerator or field data. */
   cfs_bool shutdown;
 };
 
+/**
+ * \brief Performs the cfs_queue_init filesystem operation.
+ *
+ * \param q Argument representing the target resource.
+ */
 static void cfs_queue_init(cfs_queue_t *q) {
   q->head = NULL;
   q->tail = NULL;
@@ -1091,11 +2609,22 @@ static void cfs_queue_init(cfs_queue_t *q) {
   cfs_cond_init(&q->cond);
 }
 
+/**
+ * \brief Performs the cfs_queue_destroy filesystem operation.
+ *
+ * \param q Argument representing the target resource.
+ */
 static void cfs_queue_destroy(cfs_queue_t *q) {
   cfs_mutex_destroy(&q->lock);
   cfs_cond_destroy(&q->cond);
 }
 
+/**
+ * \brief Performs the cfs_queue_push filesystem operation.
+ *
+ * \param q Argument representing the target resource.
+ * \param req Argument representing the target resource.
+ */
 static void cfs_queue_push(cfs_queue_t *q, cfs_request_t *req) {
   cfs_mutex_lock(&q->lock);
   req->next = NULL;
@@ -1111,6 +2640,14 @@ static void cfs_queue_push(cfs_queue_t *q, cfs_request_t *req) {
   cfs_mutex_unlock(&q->lock);
 }
 
+/**
+ * \brief Performs the cfs_queue_pop filesystem operation.
+ *
+ * \param q Argument representing the target resource.
+ * \param wait_for_data Argument representing the target resource.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 static int cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data,
                          cfs_request_t **out_req) {
   cfs_request_t *req = NULL;
@@ -1136,6 +2673,11 @@ static int cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data,
   return req ? 0 : -1;
 }
 
+/**
+ * \brief Performs the cfs_queue_shutdown filesystem operation.
+ *
+ * \param q Argument representing the target resource.
+ */
 static void cfs_queue_shutdown(cfs_queue_t *q) {
   cfs_mutex_lock(&q->lock);
   q->shutdown = cfs_true;
@@ -1144,19 +2686,42 @@ static void cfs_queue_shutdown(cfs_queue_t *q) {
 }
 
 /* 16. Thread Pool */
+/**
+ * \brief Data structure for cfs_thread_pool_t.
+ */
 struct cfs_thread_pool_t {
+  /** \brief Represents the threads enumerator or field data. */
   cfs_thread_t *threads;
+  /** \brief Represents the num_threads enumerator or field data. */
   cfs_size_t num_threads;
+  /** \brief Represents the work_queue enumerator or field data. */
   cfs_queue_t *work_queue;
+  /** \brief Represents the completion_queue enumerator or field data. */
   cfs_queue_t *completion_queue;
 };
 
 /* 17. Worker Thread Loop */
 #if defined(CFS_OS_WINDOWS)
+/**
+ * \brief Performs the cfs_worker_thread filesystem operation.
+ *
+ * \param arg Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 static DWORD WINAPI cfs_worker_thread(LPVOID arg) {
 #elif defined(CFS_OS_DOS)
+/**
+ * \brief Performs the cfs_worker_thread filesystem operation.
+ *
+ * \param arg Argument representing the target resource.
+ */
 static void *cfs_worker_thread(void *arg) {
 #else
+/**
+ * \brief Performs the cfs_worker_thread filesystem operation.
+ *
+ * \param arg Argument representing the target resource.
+ */
 static void *cfs_worker_thread(void *arg) {
 #endif
   cfs_thread_pool_t *pool = (cfs_thread_pool_t *)arg;
@@ -1186,6 +2751,15 @@ static void *cfs_worker_thread(void *arg) {
 #endif
 }
 
+/**
+ * \brief Performs the cfs_thread_pool_create filesystem operation.
+ *
+ * \param num_threads Argument representing the target resource.
+ * \param work Argument representing the target resource.
+ * \param comp Argument representing the target resource.
+ * \param out_pool Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 static int cfs_thread_pool_create(cfs_size_t num_threads, cfs_queue_t *work,
                                   cfs_queue_t *comp,
                                   cfs_thread_pool_t **out_pool) {
@@ -1226,6 +2800,11 @@ static int cfs_thread_pool_create(cfs_size_t num_threads, cfs_queue_t *work,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_thread_pool_destroy filesystem operation.
+ *
+ * \param pool Argument representing the target resource.
+ */
 static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
   cfs_size_t i;
   if (!pool)
@@ -1252,6 +2831,16 @@ static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
 }
 
 /* 13. Non-blocking API variants */
+/**
+ * \brief Schedules an asynchronous operation to remove a file or empty
+ * directory.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param cb Callback function to execute upon completion of the asynchronous
+ * request. \param user_data Opaque pointer passed back to the user-provided
+ * callback. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
                              cfs_callback_t cb, void *user_data) {
   cfs_request_t *req;
@@ -1280,6 +2869,15 @@ CFS_API int cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
   return 0;
 }
 
+/**
+ * \brief Schedules an asynchronous operation to retrieve a file\'s size.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param cb Callback function to execute upon completion of the asynchronous
+ * request. \param user_data Opaque pointer passed back to the user-provided
+ * callback. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
                                 cfs_callback_t cb, void *user_data) {
   cfs_request_t *req;
@@ -1309,6 +2907,14 @@ CFS_API int cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_runtime_init filesystem operation.
+ *
+ * \param config Argument representing the target resource.
+ * \param out_rt Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
                              cfs_runtime_t **out_rt, cfs_error_code *ec) {
   cfs_runtime_t *rt;
@@ -1344,6 +2950,14 @@ CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
       rt->config.mode == cfs_modality_multithread) {
     cfs_malloc(sizeof(cfs_queue_t), (void **)&(rt->work_queue));
     cfs_malloc(sizeof(cfs_queue_t), (void **)&(rt->completion_queue));
+    if (!rt->work_queue || !rt->completion_queue) {
+      if (rt->work_queue)
+        cfs_free(rt->work_queue);
+      if (rt->completion_queue)
+        cfs_free(rt->completion_queue);
+      cfs_free(rt);
+      return -1;
+    }
     cfs_queue_init(rt->work_queue);
     cfs_queue_init(rt->completion_queue);
 
@@ -1356,6 +2970,11 @@ CFS_API int cfs_runtime_init(const cfs_runtime_config *config,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_runtime_destroy filesystem operation.
+ *
+ * \param runtime Argument representing the target resource.
+ */
 CFS_API void cfs_runtime_destroy(cfs_runtime_t *runtime) {
   if (!runtime)
     return;
@@ -1375,6 +2994,15 @@ CFS_API void cfs_runtime_destroy(cfs_runtime_t *runtime) {
   cfs_free(runtime);
 }
 
+/**
+ * \brief Performs the cfs_dispatch_request filesystem operation.
+ *
+ * \param runtime Argument representing the target resource.
+ * \param req Argument representing the target resource.
+ * \param cb Callback function to execute upon completion of the asynchronous
+ * request. \param user_data Opaque pointer passed back to the user-provided
+ * callback.
+ */
 CFS_API void cfs_dispatch_request(cfs_runtime_t *runtime, cfs_request_t *req,
                                   cfs_callback_t cb, void *user_data) {
   if (!runtime || !req)
@@ -1400,6 +3028,13 @@ CFS_API void cfs_dispatch_request(cfs_runtime_t *runtime, cfs_request_t *req,
 }
 
 /* 19. cfs_runtime_poll() */
+/**
+ * \brief Processes completed asynchronous requests and executes their
+ * callbacks.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_runtime_poll(cfs_runtime_t *rt) {
   int processed = 0;
   cfs_request_t *req = NULL;
@@ -1420,6 +3055,13 @@ CFS_API int cfs_runtime_poll(cfs_runtime_t *rt) {
 /* Re-implementing lost Phase 6, 7, 8, 9 functions */
 
 /* Phase 6: String Handling */
+/**
+ * \brief Computes the length of a string safely.
+ *
+ * \param str The null-terminated string to evaluate.
+ * \param out Pointer to store the result of the strlen operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strlen(const cfs_char_t *str, cfs_size_t *out) {
   cfs_size_t len = 0;
   if (!out)
@@ -1433,6 +3075,14 @@ CFS_API int cfs_strlen(const cfs_char_t *str, cfs_size_t *out) {
   return 0;
 }
 
+/**
+ * \brief Copies a string into a destination buffer safely.
+ *
+ * \param dest Pointer to the destination buffer or path.
+ * \param src Pointer to the source buffer or path.
+ * \param out Pointer to store the result of the strcpy operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
                        cfs_char_t **out) {
   cfs_size_t i = 0;
@@ -1445,6 +3095,15 @@ CFS_API int cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
   return 0;
 }
 
+/**
+ * \brief Copies up to n characters of a string into a destination buffer.
+ *
+ * \param dest Pointer to the destination buffer or path.
+ * \param src Pointer to the source buffer or path.
+ * \param n The maximum number of characters to copy.
+ * \param out Pointer to store the result of the strncpy operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src, cfs_size_t n,
                         cfs_char_t **out) {
   cfs_size_t i;
@@ -1459,6 +3118,14 @@ CFS_API int cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src, cfs_size_t n,
   return 0;
 }
 
+/**
+ * \brief Concatenates two strings safely.
+ *
+ * \param dest Pointer to the destination buffer or path.
+ * \param src Pointer to the source buffer or path.
+ * \param out Pointer to store the result of the strcat operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
                        cfs_char_t **out) {
   cfs_size_t dest_len = 0;
@@ -1473,6 +3140,14 @@ CFS_API int cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
   return 0;
 }
 
+/**
+ * \brief Compares two strings lexicographically.
+ *
+ * \param lhs The left-hand side string for comparison.
+ * \param rhs The right-hand side string for comparison.
+ * \param out Pointer to store the result of the strcmp operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs, int *out) {
   if (!out)
     return -1;
@@ -1496,6 +3171,16 @@ CFS_API int cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs, int *out) {
   return 0;
 }
 
+/**
+ * \brief Compares up to a specified count of characters of two strings
+ * lexicographically.
+ *
+ * \param lhs Argument representing the target resource.
+ * \param rhs Argument representing the target resource.
+ * \param count The maximum number of characters to compare.
+ * \param out Pointer to store the result of the strncmp operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
                         cfs_size_t count, int *out) {
   if (!out)
@@ -1521,6 +3206,15 @@ CFS_API int cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
 }
 
 #if defined(CFS_OS_WINDOWS)
+/**
+ * \brief Converts a UTF-8 string to a UTF-16 wide string.
+ *
+ * \param utf8_str Null-terminated UTF-8 source string.
+ * \param dest Pointer to the wide character destination buffer.
+ * \param dest_len Capacity of the destination buffer in wide characters.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
                               cfs_size_t dest_len, cfs_size_t *out_req) {
   int req = MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, dest, (int)dest_len);
@@ -1530,6 +3224,15 @@ CFS_API int cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
   return (req > 0) ? 0 : -1;
 }
 
+/**
+ * \brief Converts a UTF-16 wide string to a UTF-8 string.
+ *
+ * \param utf16_str Null-terminated UTF-16 source wide string.
+ * \param dest Pointer to the UTF-8 destination buffer.
+ * \param dest_len Capacity of the destination buffer in bytes.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
                               cfs_size_t dest_len, cfs_size_t *out_req) {
   int req = WideCharToMultiByte(CP_UTF8, 0, utf16_str, -1, dest, (int)dest_len,
@@ -1541,6 +3244,15 @@ CFS_API int cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
 }
 #endif
 
+/**
+ * \brief Converts a multi-byte string to a wide character string.
+ *
+ * \param mb_str Null-terminated multi-byte source string.
+ * \param dest Pointer to the destination buffer or path.
+ * \param dest_len Capacity of the destination buffer.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
                            cfs_size_t dest_len, cfs_size_t *out_req) {
 #if defined(CFS_OS_WINDOWS)
@@ -1556,6 +3268,15 @@ CFS_API int cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
 #endif
 }
 
+/**
+ * \brief Converts a wide character string to a multi-byte string.
+ *
+ * \param wide_str Null-terminated wide source string.
+ * \param dest Pointer to the destination buffer or path.
+ * \param dest_len Capacity of the destination buffer.
+ * \param out_req Pointer to store the required buffer size.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
                            cfs_size_t dest_len, cfs_size_t *out_req) {
 #if defined(CFS_OS_WINDOWS)
@@ -1572,6 +3293,14 @@ CFS_API int cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
 }
 
 /* Phase 7: Error Handling */
+/**
+ * \brief Manually populates a `cfs_error_code` structure with an OS and POSIX
+ * error code.
+ *
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \param os_value The raw system error code (errno, GetLastError).
+ * \param standard_value The normalized POSIX cfs_errc mapping.
+ */
 CFS_API void cfs_set_error(cfs_error_code *ec, int os_value,
                            cfs_errc standard_value) {
   if (ec) {
@@ -1580,10 +3309,24 @@ CFS_API void cfs_set_error(cfs_error_code *ec, int os_value,
   }
 }
 
+/**
+ * \brief Resets a `cfs_error_code` structure to a success state.
+ *
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_clear_error(cfs_error_code *ec) {
   cfs_set_error(ec, 0, cfs_errc_success);
 }
 
+/**
+ * \brief Populates an error structure based on a raw OS error code,
+ * automatically mapping to the POSIX enum.
+ *
+ * \param os_error The raw system error code.
+ * \param out Pointer to store the result of the make_error_code_from_os
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_make_error_code_from_os(int os_error, cfs_error_code *out) {
   if (out) {
     out->value = os_error;
@@ -1592,6 +3335,13 @@ CFS_API int cfs_make_error_code_from_os(int os_error, cfs_error_code *out) {
   return 0;
 }
 
+/**
+ * \brief Retrieves the last thread-local system error (errno or GetLastError)
+ * and wraps it into a `cfs_error_code`.
+ *
+ * \param out Pointer to store the result of the get_last_error operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_get_last_error(cfs_error_code *out) {
 #if defined(CFS_OS_WINDOWS)
   return cfs_make_error_code_from_os(GetLastError(), out);
@@ -1601,6 +3351,14 @@ CFS_API int cfs_get_last_error(cfs_error_code *out) {
 #endif
 }
 
+/**
+ * \brief Retrieves a human-readable string representation of a POSIX error
+ * code.
+ *
+ * \param err The POSIX standard error mapping to evaluate.
+ * \param out Pointer to store the result of the error_message operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_error_message(cfs_errc err, const char **out) {
   (void)err;
   if (!out)
@@ -1610,6 +3368,11 @@ CFS_API int cfs_error_message(cfs_errc err, const char **out) {
 }
 
 /* Phase 8 & 9: Path Struct Basics */
+/**
+ * \brief Initializes an empty `cfs_path` structure.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ */
 CFS_API void cfs_path_init(cfs_path *p) {
   if (!p)
     return;
@@ -1618,6 +3381,13 @@ CFS_API void cfs_path_init(cfs_path *p) {
   p->capacity = 0;
 }
 
+/**
+ * \brief Initializes a `cfs_path` structure using a provided string source.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param source The null-terminated string to initialize the path with.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_init_str(cfs_path *p, const cfs_char_t *source) {
   cfs_path_init(p);
   if (source) {
@@ -1626,6 +3396,11 @@ CFS_API int cfs_path_init_str(cfs_path *p, const cfs_char_t *source) {
   return 0;
 }
 
+/**
+ * \brief Destroys a `cfs_path` structure, releasing its allocated memory.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ */
 CFS_API void cfs_path_destroy(cfs_path *p) {
   if (!p)
     return;
@@ -1636,6 +3411,13 @@ CFS_API void cfs_path_destroy(cfs_path *p) {
   p->capacity = 0;
 }
 
+/**
+ * \brief Creates a deep copy of a `cfs_path` structure.
+ *
+ * \param dest Pointer to the destination buffer or path.
+ * \param src Pointer to the source buffer or path.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_clone(cfs_path *dest, const cfs_path *src) {
   if (!dest || !src)
     return -1;
@@ -1646,6 +3428,13 @@ CFS_API int cfs_path_clone(cfs_path *dest, const cfs_path *src) {
   return 0;
 }
 
+/**
+ * \brief Retrieves the underlying null-terminated C string from a path.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_c_str operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_c_str(const cfs_path *p, const cfs_char_t **out) {
   if (!out)
     return -1;
@@ -1653,6 +3442,13 @@ CFS_API int cfs_path_c_str(const cfs_path *p, const cfs_char_t **out) {
   return 0;
 }
 
+/**
+ * \brief Mutates the path in-place, converting all directory separators to the
+ * native OS preferred separator.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_make_preferred(cfs_path *p) {
   cfs_size_t i;
   if (!p || !p->str)
@@ -1664,6 +3460,14 @@ CFS_API int cfs_path_make_preferred(cfs_path *p) {
   return 0;
 }
 
+/**
+ * \brief Returns a dynamically allocated string using generic (forward slash)
+ * directory separators.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_generic_string operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_generic_string(const cfs_path *p, cfs_char_t **out) {
   cfs_char_t *res;
   cfs_size_t i;
@@ -1686,6 +3490,12 @@ CFS_API int cfs_path_generic_string(const cfs_path *p, cfs_char_t **out) {
   return 0;
 }
 
+/**
+ * \brief Clears the contents of the path, rendering it empty without freeing
+ * its capacity.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ */
 CFS_API void cfs_path_clear(cfs_path *p) {
   if (!p)
     return;
@@ -1694,6 +3504,12 @@ CFS_API void cfs_path_clear(cfs_path *p) {
   p->length = 0;
 }
 
+/**
+ * \brief Swaps the contents and capacities of two `cfs_path` structures.
+ *
+ * \param lhs The left-hand side path to swap.
+ * \param rhs The right-hand side path to swap.
+ */
 CFS_API void cfs_path_swap(cfs_path *lhs, cfs_path *rhs) {
   cfs_path temp;
   if (!lhs || !rhs)
@@ -1703,6 +3519,14 @@ CFS_API void cfs_path_swap(cfs_path *lhs, cfs_path *rhs) {
   *rhs = temp;
 }
 
+/**
+ * \brief Concatenates a string directly to the end of the path without
+ * inserting separators.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param source The string to concatenate.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_concat(cfs_path *p, const cfs_char_t *source) {
   cfs_size_t src_len;
   cfs_size_t new_len;
@@ -1720,6 +3544,14 @@ CFS_API int cfs_path_concat(cfs_path *p, const cfs_char_t *source) {
 }
 
 /* cfs_path_append implementation from recovered file ending */
+/**
+ * \brief Appends a source string to the path, resolving directory separators
+ * intelligently.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param source The string to append to the path.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
   cfs_size_t src_len;
   cfs_bool p_has_sep = cfs_false;
@@ -1781,6 +3613,13 @@ CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_is_separator filesystem operation.
+ *
+ * \param c Argument representing the target resource.
+ * \param out Pointer to store the result of the is_separator operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 static int cfs_is_separator(cfs_char_t c, cfs_bool *out) {
   if (!out)
     return -1;
@@ -1788,6 +3627,13 @@ static int cfs_is_separator(cfs_char_t c, cfs_bool *out) {
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_path_reserve filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param new_cap Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
   cfs_char_t *new_str;
   if (!p)
@@ -1809,6 +3655,13 @@ static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
   return 0;
 }
 
+/**
+ * \brief Checks if the path is entirely empty.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_is_empty operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_is_empty(const cfs_path *p, cfs_bool *out) {
   if (!out)
     return -1;
@@ -1816,6 +3669,14 @@ CFS_API int cfs_path_is_empty(const cfs_path *p, cfs_bool *out) {
   return 0;
 }
 
+/**
+ * \brief Assigns a new string source to an existing `cfs_path` structure,
+ * clearing the previous contents.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param source The new string to assign to the path.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
   cfs_size_t len;
   int rc;
@@ -1842,23 +3703,59 @@ CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
   return 0;
 }
 
+/**
+ * \brief Allocates memory using the internal allocator or fallback OS
+ * mechanism.
+ *
+ * \param size Number of bytes to allocate.
+ * \param out Pointer to store the result of the malloc operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_malloc(cfs_size_t size, void **out) {
   if (out)
     *out = malloc(size);
   return (out && *out) ? 0 : -1;
 }
+/**
+ * \brief Frees previously allocated memory.
+ *
+ * \param ptr Pointer to the memory block to deallocate.
+ */
 CFS_API void cfs_free(void *ptr) { free(ptr); }
+/**
+ * \brief Reallocates an existing memory block to a new size.
+ *
+ * \param ptr Argument representing the target resource.
+ * \param size Argument representing the target resource.
+ * \param out Pointer to store the result of the realloc operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_realloc(void *ptr, cfs_size_t size, void **out) {
   if (out)
     *out = realloc(ptr, size);
   return (out && *out) ? 0 : -1;
 }
+/**
+ * \brief Allocates zero-initialized memory for an array of elements.
+ *
+ * \param num Number of elements to allocate.
+ * \param size Argument representing the target resource.
+ * \param out Pointer to store the result of the calloc operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_calloc(cfs_size_t num, cfs_size_t size, void **out) {
   if (out)
     *out = calloc(num, size);
   return (out && *out) ? 0 : -1;
 }
 
+/**
+ * \brief Performs the cfs_path_filename filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_filename operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_filename(const cfs_path *p, cfs_path *out) {
   cfs_size_t i;
   if (!out)
@@ -1880,6 +3777,13 @@ CFS_API int cfs_path_filename(const cfs_path *p, cfs_path *out) {
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_path_extension filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_extension operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_extension(const cfs_path *p, cfs_path *out) {
   cfs_size_t i;
   if (!out)
@@ -1909,6 +3813,13 @@ CFS_API int cfs_path_extension(const cfs_path *p, cfs_path *out) {
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_path_stem filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_stem operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_stem(const cfs_path *p, cfs_path *out) {
   cfs_path fn;
   cfs_size_t i;
@@ -1940,6 +3851,13 @@ CFS_API int cfs_path_stem(const cfs_path *p, cfs_path *out) {
   return 0;
 }
 
+/**
+ * \brief Deletes a specific file or empty directory node.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_remove(const cfs_path *p, cfs_error_code *ec) {
   if (ec)
     cfs_clear_error(ec);
@@ -1966,6 +3884,14 @@ CFS_API int cfs_remove(const cfs_path *p, cfs_error_code *ec) {
   return -1;
 }
 
+/**
+ * \brief Retrieves the size of a given file in bytes.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the file_size operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
                           cfs_error_code *ec) {
   if (ec)
@@ -2006,6 +3932,11 @@ CFS_API int cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
 
 /* Phase 3: Platform-Specific Async & Message Passing Implementations */
 
+/**
+ * \brief Performs the cfs_request_retain filesystem operation.
+ *
+ * \param req Argument representing the target resource.
+ */
 CFS_API void cfs_request_retain(cfs_request_t *req) {
   if (req) {
 #if defined(CFS_OS_WINDOWS)
@@ -2018,6 +3949,11 @@ CFS_API void cfs_request_retain(cfs_request_t *req) {
   }
 }
 
+/**
+ * \brief Performs the cfs_request_destroy_internal filesystem operation.
+ *
+ * \param req Argument representing the target resource.
+ */
 static void cfs_request_destroy_internal(cfs_request_t *req) {
   if (!req)
     return;
@@ -2028,6 +3964,11 @@ static void cfs_request_destroy_internal(cfs_request_t *req) {
   cfs_free(req);
 }
 
+/**
+ * \brief Performs the cfs_request_release filesystem operation.
+ *
+ * \param req Argument representing the target resource.
+ */
 CFS_API void cfs_request_release(cfs_request_t *req) {
   int new_val;
   if (!req)
@@ -2046,6 +3987,13 @@ CFS_API void cfs_request_release(cfs_request_t *req) {
   }
 }
 
+/**
+ * \brief Performs the cfs_cancel_request filesystem operation.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param req Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_cancel_request(cfs_runtime_t *rt, cfs_request_t *req) {
   if (!rt || !req)
     return -1;
@@ -2059,10 +4007,21 @@ CFS_API int cfs_cancel_request(cfs_runtime_t *rt, cfs_request_t *req) {
 
 /* Phase 3: Message Passing and Async Backend Stubs */
 
+/**
+ * \brief Data structure for cfs_message_pipe.
+ */
 struct cfs_message_pipe {
+  /** \brief Represents the handle enumerator or field data. */
   void *handle;
 };
 
+/**
+ * \brief Performs the cfs_message_pipe_create filesystem operation.
+ *
+ * \param path Argument representing the target resource.
+ * \param out_pipe Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_message_pipe_create(const cfs_char_t *path,
                                     cfs_message_pipe **out_pipe) {
   if (!path || !out_pipe)
@@ -2073,11 +4032,24 @@ CFS_API int cfs_message_pipe_create(const cfs_char_t *path,
   return (*out_pipe) ? 0 : -1;
 }
 
+/**
+ * \brief Performs the cfs_message_pipe_destroy filesystem operation.
+ *
+ * \param pipe Argument representing the target resource.
+ */
 CFS_API void cfs_message_pipe_destroy(cfs_message_pipe *pipe) {
   if (pipe)
     cfs_free(pipe);
 }
 
+/**
+ * \brief Performs the cfs_serialize_request filesystem operation.
+ *
+ * \param req Argument representing the target resource.
+ * \param buffer Argument representing the target resource.
+ * \param size Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_serialize_request(const cfs_request_t *req, void **buffer,
                                   cfs_size_t *size) {
   if (!req || !buffer || !size)
@@ -2091,6 +4063,14 @@ CFS_API int cfs_serialize_request(const cfs_request_t *req, void **buffer,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_deserialize_request filesystem operation.
+ *
+ * \param buffer Argument representing the target resource.
+ * \param size Argument representing the target resource.
+ * \param req Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_deserialize_request(const void *buffer, cfs_size_t size,
                                     cfs_request_t **req) {
   if (!buffer || !req || size < sizeof(int))
@@ -2112,15 +4092,28 @@ CFS_API int cfs_deserialize_request(const void *buffer, cfs_size_t size,
 
 /* Phase 4: Multiprocessing and Greenthreads Implementations */
 
+/**
+ * \brief Data structure for cfs_process_t.
+ */
 struct cfs_process_t {
 #if defined(CFS_OS_WINDOWS)
+  /** \brief Represents the process_handle enumerator or field data. */
   HANDLE process_handle;
+  /** \brief Represents the thread_handle enumerator or field data. */
   HANDLE thread_handle;
 #else
+  /** \brief Represents the pid enumerator or field data. */
   pid_t pid;
 #endif
 };
 
+/**
+ * \brief Performs the cfs_process_spawn filesystem operation.
+ *
+ * \param executable Argument representing the target resource.
+ * \param out_proc Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_process_spawn(const cfs_char_t *executable,
                               cfs_process_t **out_proc) {
   if (!executable || !out_proc)
@@ -2153,6 +4146,12 @@ CFS_API int cfs_process_spawn(const cfs_char_t *executable,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_process_wait filesystem operation.
+ *
+ * \param proc Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_process_wait(cfs_process_t *proc) {
   if (!proc)
     return -1;
@@ -2165,6 +4164,11 @@ CFS_API int cfs_process_wait(cfs_process_t *proc) {
 #endif
 }
 
+/**
+ * \brief Performs the cfs_process_destroy filesystem operation.
+ *
+ * \param proc Argument representing the target resource.
+ */
 CFS_API void cfs_process_destroy(cfs_process_t *proc) {
   if (!proc)
     return;
@@ -2175,15 +4179,29 @@ CFS_API void cfs_process_destroy(cfs_process_t *proc) {
   cfs_free(proc);
 }
 
+/**
+ * \brief Data structure for cfs_shm_segment.
+ */
 struct cfs_shm_segment {
 #if defined(CFS_OS_WINDOWS)
+  /** \brief Represents the map_handle enumerator or field data. */
   HANDLE map_handle;
 #else
+  /** \brief Represents the fd enumerator or field data. */
   int fd;
 #endif
+  /** \brief Represents the size enumerator or field data. */
   cfs_size_t size;
 };
 
+/**
+ * \brief Performs the cfs_shm_create filesystem operation.
+ *
+ * \param size Argument representing the target resource.
+ * \param name Argument representing the target resource.
+ * \param out_shm Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
                            cfs_shm_segment **out_shm) {
   if (!name || !out_shm || size == 0)
@@ -2214,6 +4232,13 @@ CFS_API int cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_shm_map filesystem operation.
+ *
+ * \param shm Argument representing the target resource.
+ * \param out Pointer to store the result of the shm_map operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_shm_map(cfs_shm_segment *shm, void **out) {
   if (!shm || !out)
     return -1;
@@ -2226,35 +4251,59 @@ CFS_API int cfs_shm_map(cfs_shm_segment *shm, void **out) {
 #endif
 }
 
+/**
+ * \brief Performs the cfs_shm_unmap filesystem operation.
+ *
+ * \param shm Argument representing the target resource.
+ * \param addr Argument representing the target resource.
+ */
 CFS_API void cfs_shm_unmap(cfs_shm_segment *shm, void *addr) {
   if (!shm || !addr)
     return;
 #if defined(CFS_OS_WINDOWS)
   UnmapViewOfFile(addr);
 #else
-  /* munmap stub */
+    /* munmap stub */
 #endif
 }
 
+/**
+ * \brief Performs the cfs_shm_destroy filesystem operation.
+ *
+ * \param shm Argument representing the target resource.
+ */
 CFS_API void cfs_shm_destroy(cfs_shm_segment *shm) {
   if (!shm)
     return;
 #if defined(CFS_OS_WINDOWS)
   CloseHandle(shm->map_handle);
 #else
-  /* close stub */
+    /* close stub */
 #endif
   cfs_free(shm);
 }
 
+/**
+ * \brief Data structure for cfs_named_semaphore.
+ */
 struct cfs_named_semaphore {
 #if defined(CFS_OS_WINDOWS)
+  /** \brief Represents the handle enumerator or field data. */
   HANDLE handle;
 #else
-  void *sem; /* sem_t* */
+  /** \brief POSIX semaphore pointer. */
+  void *sem;
 #endif
 };
 
+/**
+ * \brief Performs the cfs_named_semaphore_create filesystem operation.
+ *
+ * \param name Argument representing the target resource.
+ * \param initial_count Argument representing the target resource.
+ * \param out_sem Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_named_semaphore_create(const cfs_char_t *name,
                                        int initial_count,
                                        cfs_named_semaphore **out_sem) {
@@ -2282,6 +4331,12 @@ CFS_API int cfs_named_semaphore_create(const cfs_char_t *name,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_named_semaphore_wait filesystem operation.
+ *
+ * \param sem Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_named_semaphore_wait(cfs_named_semaphore *sem) {
   if (!sem)
     return -1;
@@ -2292,6 +4347,12 @@ CFS_API int cfs_named_semaphore_wait(cfs_named_semaphore *sem) {
 #endif
 }
 
+/**
+ * \brief Performs the cfs_named_semaphore_post filesystem operation.
+ *
+ * \param sem Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_named_semaphore_post(cfs_named_semaphore *sem) {
   if (!sem)
     return -1;
@@ -2302,27 +4363,48 @@ CFS_API int cfs_named_semaphore_post(cfs_named_semaphore *sem) {
 #endif
 }
 
+/**
+ * \brief Performs the cfs_named_semaphore_destroy filesystem operation.
+ *
+ * \param sem Argument representing the target resource.
+ */
 CFS_API void cfs_named_semaphore_destroy(cfs_named_semaphore *sem) {
   if (!sem)
     return;
 #if defined(CFS_OS_WINDOWS)
   CloseHandle(sem->handle);
 #else
-  /* sem_close stub */
+    /* sem_close stub */
 #endif
   cfs_free(sem);
 }
 
 /* Greenthread basic stubs (Platform implementation requires assembly/ucontext
  * or setjmp logic) */
+/**
+ * \brief Data structure for cfs_greenthread_t.
+ */
 struct cfs_greenthread_t {
+  /** \brief Represents the context enumerator or field data. */
   void *context;
 };
 
+/**
+ * \brief Data structure for cfs_greenthread_scheduler.
+ */
 struct cfs_greenthread_scheduler {
+  /** \brief Represents the current enumerator or field data. */
   cfs_greenthread_t *current;
 };
 
+/**
+ * \brief Performs the cfs_greenthread_spawn filesystem operation.
+ *
+ * \param func Argument representing the target resource.
+ * \param arg Argument representing the target resource.
+ * \param out_gt Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_greenthread_spawn(cfs_greenthread_func func, void *arg,
                                   cfs_greenthread_t **out_gt) {
   (void)func;
@@ -2335,13 +4417,29 @@ CFS_API int cfs_greenthread_spawn(cfs_greenthread_func func, void *arg,
   return (*out_gt) ? 0 : -1;
 }
 
+/**
+ * \brief Performs the cfs_greenthread_yield filesystem operation.
+ *
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_greenthread_yield(void) { return 0; /* stub */ }
 
+/**
+ * \brief Performs the cfs_greenthread_destroy filesystem operation.
+ *
+ * \param gt Argument representing the target resource.
+ */
 CFS_API void cfs_greenthread_destroy(cfs_greenthread_t *gt) {
   if (gt)
     cfs_free(gt);
 }
 
+/**
+ * \brief Initializes a greenthread scheduler.
+ *
+ * \param out_sched Pointer to store the initialized scheduler.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched) {
   if (!out_sched)
@@ -2352,10 +4450,21 @@ cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched) {
   return (*out_sched) ? 0 : -1;
 }
 
+/**
+ * \brief Performs the cfs_greenthread_scheduler_run filesystem operation.
+ *
+ * \param sched Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_greenthread_scheduler_run(cfs_greenthread_scheduler *sched) {
   return sched ? 0 : -1;
 }
 
+/**
+ * \brief Destroys a greenthread scheduler.
+ *
+ * \param sched Argument representing the target resource to destroy.
+ */
 CFS_API void
 cfs_greenthread_scheduler_destroy(cfs_greenthread_scheduler *sched) {
   if (sched)
@@ -2364,6 +4473,15 @@ cfs_greenthread_scheduler_destroy(cfs_greenthread_scheduler *sched) {
 
 /* Phase 5.7: Integration Implementations */
 
+/**
+ * \brief Performs the cfs_dir_itr_init_async filesystem operation.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param cb Callback function to execute upon completion of the asynchronous
+ * request. \param user_data Opaque pointer passed back to the user-provided
+ * callback. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_dir_itr_init_async(cfs_runtime_t *rt, const cfs_path *p,
                                    cfs_callback_t cb, void *user_data) {
   cfs_request_t *req;
@@ -2393,6 +4511,13 @@ CFS_API int cfs_dir_itr_init_async(cfs_runtime_t *rt, const cfs_path *p,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_runtime_set_sandbox filesystem operation.
+ *
+ * \param rt Pointer to the active `cfs_runtime_t` execution context.
+ * \param config Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
                                     const cfs_sandbox_config *config) {
   /* 43. Set internal sandbox bounds. This just stubs out the validation
@@ -2401,6 +4526,13 @@ CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
     return -1;
   return 0;
 }
+/**
+ * \brief Performs the cfs_status_known filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the status_known operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_status_known(cfs_file_status s, cfs_bool *out) {
   if (!out)
     return -1;
@@ -2408,6 +4540,14 @@ CFS_API int cfs_status_known(cfs_file_status s, cfs_bool *out) {
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_hard_link_count filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the hard_link_count operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
                                 cfs_error_code *ec) {
   if (ec)
@@ -2443,6 +4583,15 @@ CFS_API int cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_permissions filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param prms Argument representing the target resource.
+ * \param opts Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
                             cfs_perm_options opts, cfs_error_code *ec) {
   if (ec)
@@ -2471,6 +4620,15 @@ CFS_API int cfs_permissions(const cfs_path *p, cfs_perms prms,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_equivalent filesystem operation.
+ *
+ * \param p1 Specific input argument required for the operation.
+ * \param p2 Specific input argument required for the operation.
+ * \param out Pointer to store the result of the equivalent operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
                            cfs_bool *out, cfs_error_code *ec) {
   if (ec)
@@ -2536,6 +4694,14 @@ CFS_API int cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
 #endif
 }
 
+/**
+ * \brief Performs the cfs_read_symlink filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the read_symlink operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_read_symlink(const cfs_path *p, cfs_path *out,
                              cfs_error_code *ec) {
   if (ec)
@@ -2576,6 +4742,14 @@ CFS_API int cfs_read_symlink(const cfs_path *p, cfs_path *out,
 #endif
 }
 
+/**
+ * \brief Performs the cfs_absolute filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the absolute operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec) {
   if (ec)
     cfs_clear_error(ec);
@@ -2628,6 +4802,14 @@ CFS_API int cfs_absolute(const cfs_path *p, cfs_path *out, cfs_error_code *ec) {
 #endif
 }
 
+/**
+ * \brief Performs the cfs_canonical filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the canonical operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out,
                           cfs_error_code *ec) {
   if (ec)
@@ -2674,23 +4856,49 @@ CFS_API int cfs_canonical(const cfs_path *p, cfs_path *out,
 #endif
 }
 
+/**
+ * \brief Performs the cfs_weakly_canonical filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the weakly_canonical operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
                                  cfs_error_code *ec) {
   return cfs_canonical(p, out, ec); /* Simplified stub */
 }
 
+/**
+ * \brief Performs the cfs_copy filesystem operation.
+ *
+ * \param from Argument representing the target resource.
+ * \param to Argument representing the target resource.
+ * \param options Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_copy(const cfs_path *from, const cfs_path *to,
                      cfs_copy_options options, cfs_error_code *ec) {
   /* Basic wrapper mapping to copy_file for now */
-  if (cfs_copy_file(from, to, options, ec))
+  if (cfs_copy_file(from, to, options, ec) == 0)
     return 0;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_copy_symlink filesystem operation.
+ *
+ * \param existing_symlink Argument representing the target resource.
+ * \param new_symlink Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
                              const cfs_path *new_symlink, cfs_error_code *ec) {
   cfs_path out;
   int res;
+  cfs_path_init(&out);
   res = cfs_read_symlink(existing_symlink, &out, ec);
   if (res == 0) {
     cfs_create_symlink(&out, new_symlink, ec);
@@ -2700,6 +4908,15 @@ CFS_API int cfs_copy_symlink(const cfs_path *existing_symlink,
   return res;
 }
 
+/**
+ * \brief Performs the cfs_proximate filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param base Argument representing the target resource.
+ * \param out Pointer to store the result of the proximate operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
                           cfs_path *out, cfs_error_code *ec) {
   cfs_path tmp;
@@ -2710,6 +4927,15 @@ CFS_API int cfs_proximate(const cfs_path *p, const cfs_path *base,
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_relative filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param base Argument representing the target resource.
+ * \param out Pointer to store the result of the relative operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_relative(const cfs_path *p, const cfs_path *base, cfs_path *out,
                          cfs_error_code *ec) {
   cfs_path tmp;
@@ -2720,6 +4946,15 @@ CFS_API int cfs_relative(const cfs_path *p, const cfs_path *base, cfs_path *out,
   return 0;
 }
 
+/**
+ * \brief Copies a single file from a source path to a destination path.
+ *
+ * \param from The source path pointing to the file to copy.
+ * \param to The destination path for the copied file.
+ * \param options Copy behavior flags mapping to `cfs_copy_options`.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_copy_file(const cfs_path *from, const cfs_path *to,
                           cfs_copy_options options, cfs_error_code *ec) {
   if (ec)
@@ -2738,12 +4973,21 @@ CFS_API int cfs_copy_file(const cfs_path *from, const cfs_path *to,
 #else
   (void)options;
   /* stub */
+  return 0;
 #endif
   if (ec)
     cfs_get_last_error(ec);
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_create_symlink filesystem operation.
+ *
+ * \param target Argument representing the target resource.
+ * \param link Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
                                 cfs_error_code *ec) {
   if (ec)
@@ -2767,6 +5011,14 @@ CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
 #endif
 }
 
+/**
+ * \brief Performs the cfs_path_lexically_relative filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param base Argument representing the target resource.
+ * \param out Pointer to store the result of the path_lexically_relative
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_lexically_relative(const cfs_path *p, const cfs_path *base,
                                         cfs_path *out) {
   if (!out)
@@ -2778,11 +5030,26 @@ CFS_API int cfs_path_lexically_relative(const cfs_path *p, const cfs_path *base,
   return 0; /* simplified stub */
 }
 
+/**
+ * \brief Performs the cfs_path_lexically_proximate filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param base Argument representing the target resource.
+ * \param out Pointer to store the result of the path_lexically_proximate
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_lexically_proximate(const cfs_path *p,
                                          const cfs_path *base, cfs_path *out) {
   return cfs_path_lexically_relative(p, base, out); /* simplified stub */
 }
 
+/**
+ * \brief Performs the cfs_path_is_absolute filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_is_absolute operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_is_absolute(const cfs_path *p, cfs_bool *out) {
   if (!out)
     return -1;
@@ -2812,6 +5079,13 @@ CFS_API int cfs_path_is_absolute(const cfs_path *p, cfs_bool *out) {
   return 0;
 }
 
+/**
+ * \brief Performs the cfs_current_path filesystem operation.
+ *
+ * \param out Pointer to store the result of the current_path operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_current_path(cfs_path *out, cfs_error_code *ec) {
   if (ec)
     cfs_clear_error(ec);
@@ -2857,6 +5131,13 @@ CFS_API int cfs_current_path(cfs_path *out, cfs_error_code *ec) {
 #endif
 }
 
+/**
+ * \brief Performs the cfs_current_path_set filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec) {
   if (ec)
     cfs_clear_error(ec);
@@ -2886,38 +5167,86 @@ CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec) {
 }
 
 /* --- Auto-generated stubs for missing functions --- */
+/**
+ * \brief Registers a global callback hook to trigger when dynamic memory
+ * allocation fails.
+ *
+ * \param void Argument representing the target resource.
+ */
 CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler) { (void)handler; }
 
+/**
+ * \brief Performs the cfs_path_root_name filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_root_name operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_root_name(const cfs_path *p, cfs_path *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_root_directory filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_root_directory operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_root_directory(const cfs_path *p, cfs_path *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_root_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_root_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_root_path(const cfs_path *p, cfs_path *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_relative_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_relative_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_relative_path(const cfs_path *p, cfs_path *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_parent_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_parent_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_parent_path(const cfs_path *p, cfs_path *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_replace_filename filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param replacement Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_replace_filename(cfs_path *p,
                                       const cfs_char_t *replacement) {
   (void)p;
@@ -2925,6 +5254,13 @@ CFS_API int cfs_path_replace_filename(cfs_path *p,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_replace_extension filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param replacement Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_replace_extension(cfs_path *p,
                                        const cfs_char_t *replacement) {
   (void)p;
@@ -2932,74 +5268,165 @@ CFS_API int cfs_path_replace_extension(cfs_path *p,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_remove_filename filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 CFS_API void cfs_path_remove_filename(cfs_path *p) { (void)p; }
 
+/**
+ * \brief Performs the cfs_path_has_root_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_root_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_root_path(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_has_root_name filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_root_name operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_root_name(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_has_root_directory filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_root_directory
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_has_relative_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_relative_path
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_has_parent_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_parent_path operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_has_filename filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_filename operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_filename(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_has_stem filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_stem operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_stem(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_has_extension filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_has_extension operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_has_extension(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_is_relative filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_is_relative operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_is_relative(const cfs_path *p, cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_compare filesystem operation.
+ *
+ * \param lhs Argument representing the target resource.
+ * \param rhs Argument representing the target resource.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs) {
   (void)lhs;
   (void)rhs;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_path_lexically_normal filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the path_lexically_normal
+ * operation. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
   (void)p;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Evaluates the file status and type of the given path, traversing
+ * symlinks.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the status operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_status(const cfs_path *p, cfs_file_status *out,
                        cfs_error_code *ec) {
   (void)p;
@@ -3008,6 +5435,15 @@ CFS_API int cfs_status(const cfs_path *p, cfs_file_status *out,
   return -1;
 }
 
+/**
+ * \brief Evaluates the file status and type of the given path without
+ * traversing symlinks.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the symlink_status operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
                                cfs_error_code *ec) {
   (void)p;
@@ -3016,12 +5452,28 @@ CFS_API int cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
   return -1;
 }
 
+/**
+ * \brief Evaluates if a given file status indicates an existing filesystem
+ * node.
+ *
+ * \param s The file status struct to evaluate.
+ * \param out Pointer to store the result of the exists operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_exists(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Checks if a given path corresponds to an existing filesystem node.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the exists_path operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_exists_path(const cfs_path *p, cfs_bool *out,
                             cfs_error_code *ec) {
   (void)p;
@@ -3030,54 +5482,118 @@ CFS_API int cfs_exists_path(const cfs_path *p, cfs_bool *out,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_block_file filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_block_file operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_block_file(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_character_file filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_character_file operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_character_file(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_directory filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_directory operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_directory(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_fifo filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_fifo operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_fifo(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_other filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_other operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_other(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_regular_file filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_regular_file operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_regular_file(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_socket filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_socket operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_socket(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_symlink filesystem operation.
+ *
+ * \param s Argument representing the target resource.
+ * \param out Pointer to store the result of the is_symlink operation.
+ * \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_symlink(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_is_empty_path filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the is_empty_path operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
                               cfs_error_code *ec) {
   (void)p;
@@ -3086,18 +5602,40 @@ CFS_API int cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
   return -1;
 }
 
+/**
+ * \brief Creates a single new directory node at the given path.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_create_directory(const cfs_path *p, cfs_error_code *ec) {
   (void)p;
   (void)ec;
   return -1;
 }
 
+/**
+ * \brief Recursively creates a directory and any missing parent directories.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_create_directories(const cfs_path *p, cfs_error_code *ec) {
   (void)p;
   (void)ec;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_create_hard_link filesystem operation.
+ *
+ * \param target Argument representing the target resource.
+ * \param link Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
                                   cfs_error_code *ec) {
   (void)target;
@@ -3105,6 +5643,14 @@ CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
   (void)ec;
 }
 
+/**
+ * \brief Performs the cfs_create_directory_symlink filesystem operation.
+ *
+ * \param target Argument representing the target resource.
+ * \param link Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_create_directory_symlink(const cfs_path *target,
                                           const cfs_path *link,
                                           cfs_error_code *ec) {
@@ -3113,6 +5659,14 @@ CFS_API void cfs_create_directory_symlink(const cfs_path *target,
   (void)ec;
 }
 
+/**
+ * \brief Recursively deletes a directory node and all of its nested contents.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the remove_all operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_remove_all(const cfs_path *p, cfs_size_t *out,
                            cfs_error_code *ec) {
   (void)p;
@@ -3121,6 +5675,14 @@ CFS_API int cfs_remove_all(const cfs_path *p, cfs_size_t *out,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_rename filesystem operation.
+ *
+ * \param old_p Argument representing the target resource.
+ * \param new_p Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
                         cfs_error_code *ec) {
   (void)old_p;
@@ -3128,6 +5690,14 @@ CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
   (void)ec;
 }
 
+/**
+ * \brief Performs the cfs_resize_file filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param size Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
                              cfs_error_code *ec) {
   (void)p;
@@ -3135,6 +5705,14 @@ CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
   (void)ec;
 }
 
+/**
+ * \brief Performs the cfs_space filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the space operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_space(const cfs_path *p, cfs_space_info *out,
                       cfs_error_code *ec) {
   (void)p;
@@ -3143,6 +5721,14 @@ CFS_API int cfs_space(const cfs_path *p, cfs_space_info *out,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_last_write_time filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out Pointer to store the result of the last_write_time operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
                                 cfs_error_code *ec) {
   (void)p;
@@ -3151,12 +5737,27 @@ CFS_API int cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_temp_directory_path filesystem operation.
+ *
+ * \param out Pointer to store the result of the temp_directory_path operation.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec) {
   (void)out;
   (void)ec;
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_dir_itr_init filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out_it Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
                              cfs_error_code *ec) {
   (void)p;
@@ -3165,6 +5766,14 @@ CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_dir_itr_next filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ * \param out_entry Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_dir_itr_next(cfs_directory_iterator *it,
                              const cfs_directory_entry **out_entry,
                              cfs_error_code *ec) {
@@ -3174,8 +5783,21 @@ CFS_API int cfs_dir_itr_next(cfs_directory_iterator *it,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_dir_itr_close filesystem operation.
+ *
+ * \param void Argument representing the target resource.
+ */
 CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) { (void)it; }
 
+/**
+ * \brief Performs the cfs_rec_dir_itr_init filesystem operation.
+ *
+ * \param p Pointer to the `cfs_path` object to evaluate or modify.
+ * \param out_it Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_rec_dir_itr_init(const cfs_path *p,
                                  cfs_recursive_directory_iterator **out_it,
                                  cfs_error_code *ec) {
@@ -3185,6 +5807,14 @@ CFS_API int cfs_rec_dir_itr_init(const cfs_path *p,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_rec_dir_itr_next filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ * \param out_entry Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors. \return 0 on success, or a non-zero system error code on failure.
+ */
 CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
                                  const cfs_directory_entry **out_entry,
                                  cfs_error_code *ec) {
@@ -3194,17 +5824,35 @@ CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
   return -1;
 }
 
+/**
+ * \brief Performs the cfs_rec_dir_itr_disable_recursion_pending filesystem
+ * operation.
+ *
+ * \param it Argument representing the target resource.
+ */
 CFS_API void cfs_rec_dir_itr_disable_recursion_pending(
     cfs_recursive_directory_iterator *it) {
   (void)it;
 }
 
+/**
+ * \brief Performs the cfs_rec_dir_itr_pop filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ * \param ec Pointer to a `cfs_error_code` structure to store any operational
+ * errors.
+ */
 CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
                                  cfs_error_code *ec) {
   (void)it;
   (void)ec;
 }
 
+/**
+ * \brief Performs the cfs_rec_dir_itr_close filesystem operation.
+ *
+ * \param it Argument representing the target resource.
+ */
 CFS_API void cfs_rec_dir_itr_close(cfs_recursive_directory_iterator *it) {
   (void)it;
 }

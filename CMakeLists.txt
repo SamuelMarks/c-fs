@@ -1,3 +1,5 @@
+# File: CMakeLists.txt
+# Brief: CMake build configuration for c-fs project.
 cmake_minimum_required(VERSION 3.1...3.28)
 project(c-fs LANGUAGES C)
 
@@ -174,12 +176,14 @@ install(EXPORT cfs-targets
 
 # Testing
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    option(CFS_BUILD_TESTS "Build tests" ON)
+    option(CFS_BUILD_TESTING "Build tests" ON)
 else()
-    option(CFS_BUILD_TESTS "Build tests" OFF)
+    option(CFS_BUILD_TESTING "Build tests" OFF)
 endif()
 
-if(CFS_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
+if(CFS_BUILD_TESTING)
+    include(CTest)
+    if(BUILD_TESTING)
+        add_subdirectory(tests)
+    endif()
 endif()
