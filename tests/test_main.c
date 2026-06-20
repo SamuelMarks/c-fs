@@ -3,6 +3,9 @@
  * \brief Main test suite for the c-fs library.
  */
 /* clang-format off */
+#if !defined(_XOPEN_SOURCE) && !defined(_WIN32)
+#define _XOPEN_SOURCE 500
+#endif
 #if !defined(__STDC_WANT_LIB_EXT1__)
 #define __STDC_WANT_LIB_EXT1__ 1
 #endif
@@ -13,8 +16,19 @@
 #if defined(CFS_OS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
+#include <windows.h>
+#else
+#include <unistd.h>
 #endif
 /* clang-format on */
+
+static void test_sleep_ms(int ms) {
+#if defined(CFS_OS_WINDOWS)
+  Sleep(ms);
+#else
+  usleep(ms * 1000);
+#endif
+}
 
 /**
  * \brief Test case for path_initialization.
@@ -670,7 +684,6 @@ TEST greenthreads_and_utils() {
  */
 TEST exhaustive_nulls() {
   cfs_path p;
-  cfs_path_init_str(&p, CFS_STR("dummy"));
   int out_int;
   cfs_size_t out_sz;
   cfs_uintmax_t out_u;
@@ -681,6 +694,8 @@ TEST exhaustive_nulls() {
   cfs_char_t *out_str;
   cfs_runtime_t *rt = NULL;
   cfs_error_code ec;
+
+  cfs_path_init_str(&p, CFS_STR("dummy"));
 
   /* cfs_path nulls */
   cfs_path_init(NULL);
@@ -776,15 +791,8 @@ TEST exhaustive_nulls() {
  * \return The test result.
  */
 TEST real_file_operations() {
-  FILE *f = fopen("test_real.txt", "w");
-  if (f) {
-    fprintf(f, "test data");
-    fclose(f);
-  }
-
+  FILE *f;
   cfs_path p;
-  cfs_path_init_str(&p, CFS_STR("test_real.txt"));
-
   cfs_file_status st;
   cfs_error_code ec;
   cfs_uintmax_t size;
@@ -794,6 +802,15 @@ TEST real_file_operations() {
   cfs_perms perms = 0;
   cfs_size_t count;
   cfs_bool is_empty;
+  cfs_path p_renamed;
+
+  f = fopen("test_real.txt", "w");
+  if (f) {
+    fprintf(f, "test data");
+    fclose(f);
+  }
+
+  cfs_path_init_str(&p, CFS_STR("test_real.txt"));
 
   cfs_status(&p, &st, &ec);
   cfs_file_size(&p, &size, &ec);
@@ -803,7 +820,6 @@ TEST real_file_operations() {
   cfs_permissions(&p, perms, 0, &ec);
   cfs_is_empty_path(&p, &is_empty, &ec);
 
-  cfs_path p_renamed;
   cfs_path_init_str(&p_renamed, CFS_STR("test_real_renamed.txt"));
   cfs_rename(&p, &p_renamed, &ec);
 
@@ -824,6 +840,7 @@ TEST more_coverage() {
   cfs_error_code ec;
   cfs_bool b;
   cfs_perms perms = 0777;
+  FILE *f;
 
   memset(&s, 0, sizeof(s));
 
@@ -843,7 +860,7 @@ TEST more_coverage() {
   cfs_permissions(&p, perms, cfs_perm_options_replace, &ec);
 
   /* cfs_equivalent success branch */
-  FILE *f = fopen("test_eq.txt", "w");
+  f = fopen("test_eq.txt", "w");
   if (f) {
     fclose(f);
   }
@@ -937,7 +954,6 @@ TEST out_of_memory() {
   cfs_error_code ec;
   cfs_request_t *req = NULL;
   cfs_path p;
-  cfs_path_init_str(&p, CFS_STR("dummy"));
   void *buf;
   cfs_size_t sz;
   cfs_message_pipe *pipe;
@@ -946,6 +962,9 @@ TEST out_of_memory() {
   cfs_named_semaphore *sem;
   cfs_greenthread_t *gt;
   cfs_greenthread_scheduler *sched;
+  cfs_request_t req_dummy;
+
+  cfs_path_init_str(&p, CFS_STR("dummy"));
 
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
@@ -968,7 +987,6 @@ TEST out_of_memory() {
   cfs_greenthread_scheduler_init(&sched);
   cfs_dir_itr_init_async(rt, &p, NULL, NULL);
 
-  cfs_request_t req_dummy;
   req_dummy.opcode = 0;
   cfs_serialize_request(&req_dummy, &buf, &sz);
   cfs_deserialize_request(buf, sz, &req);
@@ -1030,6 +1048,9 @@ TEST last_mile() {
   cfs_error_code ec;
   cfs_path p;
   cfs_path out;
+  cfs_request_t req;
+  cfs_request_t *req1 = NULL, *req2 = NULL;
+
   cfs_path_init_str(&p, CFS_STR("dummy"));
 
   cfg.mode = cfs_modality_multithread;
@@ -1044,7 +1065,6 @@ TEST last_mile() {
   g_cfs_getcwd_fail = 0;
 
   /* 959: invalid opcode execution */
-  cfs_request_t req;
   memset(&req, 0, sizeof(req));
   req.opcode = 9999;
   cfs_dispatch_request(NULL, &req, NULL, NULL);
@@ -1060,7 +1080,6 @@ TEST last_mile() {
 
   /* Add cancelled requests and normal requests to queue, then destroy runtime
    */
-  cfs_request_t *req1, *req2;
   cfs_malloc(sizeof(cfs_request_t), (void **)&req1);
   cfs_malloc(sizeof(cfs_request_t), (void **)&req2);
   if (req1 && req2) {
@@ -1090,6 +1109,7 @@ TEST cover_everything() {
   cfs_runtime_config cfg;
   cfs_error_code ec;
   cfs_path p;
+  cfs_request_t req;
 
   cfs_log_debug("testing logger");
 
@@ -1099,7 +1119,6 @@ TEST cover_everything() {
   cfs_runtime_init(&cfg, &rt, &ec);
 
   /* Force 959 */
-  cfs_request_t req;
   memset(&req, 0, sizeof(req));
   req.opcode = 9999;
   cfs_dispatch_request(rt, &req, NULL, NULL);
@@ -1175,6 +1194,8 @@ TEST fix_last_missing() {
   cfs_error_code ec;
   cfs_path p;
   cfs_path out;
+  cfs_request_t *req1;
+
   cfs_path_init_str(&p, CFS_STR("dummy"));
 
   cfg.mode = cfs_modality_multithread;
@@ -1193,7 +1214,6 @@ TEST fix_last_missing() {
   g_cfs_malloc_fail = 0;
 
   /* Hit 1171 specifically */
-  cfs_request_t *req1;
   cfs_malloc(sizeof(cfs_request_t), (void **)&req1);
   if (req1) {
     memset(req1, 0, sizeof(*req1));
@@ -1202,7 +1222,7 @@ TEST fix_last_missing() {
     cfs_dispatch_request(rt, req1, NULL, NULL);
 
     /* Give thread time to pop it BEFORE shutdown */
-    usleep(100000);
+    test_sleep_ms(100);
   }
 
   cfs_runtime_destroy(rt);
