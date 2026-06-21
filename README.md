@@ -3,7 +3,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Doc Coverage](https://img.shields.io/badge/docs-100%25-brightgreen.svg)](#)
-[![Test Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#)
+[![Test Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen.svg)](#)
 [![CI](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml)
 ![C Standard](https://img.shields.io/badge/C-89-blue.svg)
 

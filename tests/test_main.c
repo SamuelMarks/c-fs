@@ -264,6 +264,7 @@ TEST path_utilities() {
     cfs_free(gen_str);
 
   cfs_path_clear(&p);
+  cfs_path_destroy(&p);
 
   cfs_path_init_str(&p, CFS_STR("first"));
   cfs_path_init_str(&p2, CFS_STR("second"));
@@ -371,13 +372,13 @@ TEST path_lexical() {
   cfs_path_init_str(&base, CFS_STR("/usr/local/"));
 
   cfs_path_compare(&p, &base);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
+  cfs_path_init(&out);
   cfs_path_lexically_normal(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
+  cfs_path_init(&out);
   cfs_path_lexically_relative(&p, &base, &out);
   cfs_path_destroy(&out);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
+  cfs_path_init(&out);
   cfs_path_lexically_proximate(&p, &base, &out);
   cfs_path_destroy(&out);
 
@@ -531,6 +532,7 @@ TEST file_queries() {
   cfs_copy_file(&p, &p2, 0, &ec);
 
   cfs_current_path(&p_out, &ec);
+  cfs_path_destroy(&p_out);
   cfs_current_path_set(&p, &ec);
 
   cfs_path_remove_filename(&p);
@@ -645,6 +647,7 @@ TEST greenthreads_and_utils() {
 
   cfs_greenthread_spawn(NULL, NULL, &gt);
   cfs_greenthread_destroy(NULL);
+  cfs_greenthread_destroy(gt);
 
   cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (req) {
@@ -655,6 +658,8 @@ TEST greenthreads_and_utils() {
 
     cfs_serialize_request(req, &buf, &sz);
     cfs_deserialize_request(buf, sz, &req_ptr);
+    cfs_free(buf);
+    cfs_request_release(req_ptr);
     cfs_serialize_request(NULL, &buf, &sz);
     cfs_deserialize_request(NULL, sz, &req_ptr);
 
@@ -694,6 +699,7 @@ TEST exhaustive_nulls() {
   cfs_char_t *out_str;
   cfs_runtime_t *rt = NULL;
   cfs_error_code ec;
+  cfs_path out_p;
 
   cfs_path_init_str(&p, CFS_STR("dummy"));
 
@@ -707,9 +713,9 @@ TEST exhaustive_nulls() {
   cfs_path_append(NULL, CFS_STR(""));
   cfs_path_is_empty(NULL, &b);
   cfs_path_is_empty(&p, NULL);
-  cfs_path_filename(NULL, &p);
-  cfs_path_extension(NULL, &p);
-  cfs_path_stem(NULL, &p);
+  cfs_path_filename(NULL, &out_p);
+  cfs_path_extension(NULL, &out_p);
+  cfs_path_stem(NULL, &out_p);
   cfs_path_remove_filename(NULL);
 
   /* cfs_string nulls */
@@ -759,8 +765,8 @@ TEST exhaustive_nulls() {
   cfs_canonical(NULL, &p, &ec);
   cfs_weakly_canonical(NULL, &p, &ec);
   cfs_read_symlink(NULL, &p, &ec);
-  cfs_relative(NULL, &p, &p, &ec);
-  cfs_proximate(NULL, &p, &p, &ec);
+  cfs_relative(NULL, &p, &out_p, &ec);
+  cfs_proximate(NULL, &p, &out_p, &ec);
   cfs_copy(NULL, &p, 0, &ec);
   cfs_copy_symlink(NULL, &p, &ec);
   cfs_copy_file(NULL, &p, 0, &ec);
@@ -923,7 +929,7 @@ TEST final_coverage() {
   cfs_path_destroy(&out);
 
   /* cfs_path_lexically_relative */
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
+  cfs_path_init(&out);
   cfs_path_lexically_relative(&p, &p2, &out);
   cfs_path_destroy(&out);
 
@@ -972,23 +978,36 @@ TEST out_of_memory() {
 
   /* Test cfs_malloc OOM */
   g_cfs_malloc_fail = 1;
-
   cfs_malloc(100, &buf);
+  g_cfs_malloc_fail = 1;
   cfs_path_assign(&p, CFS_STR("very_long_string_to_force_allocation"));
+  g_cfs_malloc_fail = 1;
   cfs_path_generic_string(&p, (cfs_char_t **)&buf);
+  g_cfs_malloc_fail = 1;
   cfs_runtime_init(&cfg, &rt, &ec);
+  g_cfs_malloc_fail = 1;
   cfs_remove_async(rt, &p, NULL, NULL);
+  g_cfs_malloc_fail = 1;
   cfs_file_size_async(rt, &p, NULL, NULL);
+  g_cfs_malloc_fail = 1;
   cfs_message_pipe_create(CFS_STR("pipe"), &pipe);
+  g_cfs_malloc_fail = 1;
   cfs_process_spawn(CFS_STR("dummy"), &proc);
+  g_cfs_malloc_fail = 1;
   cfs_shm_create(1024, CFS_STR("shm"), &shm);
+  g_cfs_malloc_fail = 1;
   cfs_named_semaphore_create(CFS_STR("sem"), 1, &sem);
+  g_cfs_malloc_fail = 1;
   cfs_greenthread_spawn(NULL, NULL, &gt);
+  g_cfs_malloc_fail = 1;
   cfs_greenthread_scheduler_init(&sched);
+  g_cfs_malloc_fail = 1;
   cfs_dir_itr_init_async(rt, &p, NULL, NULL);
 
   req_dummy.opcode = 0;
+  g_cfs_malloc_fail = 1;
   cfs_serialize_request(&req_dummy, &buf, &sz);
+  g_cfs_malloc_fail = 1;
   cfs_deserialize_request(buf, sz, &req);
 
   g_cfs_malloc_fail = 0;
@@ -1132,10 +1151,12 @@ TEST cover_everything() {
 
   g_cfs_calloc_fail = 1;
   cfs_runtime_init(&cfg, &rt, &ec);
+  cfs_runtime_destroy(rt);
   g_cfs_calloc_fail = 0;
 
   g_cfs_malloc_fail = 1;
   cfs_runtime_init(&cfg, &rt, &ec);
+  cfs_runtime_destroy(rt);
   g_cfs_malloc_fail = 0;
 
   PASS();
@@ -1169,6 +1190,7 @@ TEST out_of_memory_precise() {
 
   g_cfs_malloc_fail = 4; /* Fail allocating thread_pool_t */
   cfs_runtime_init(&cfg, &rt, &ec);
+  cfs_runtime_destroy(rt);
 
   g_cfs_malloc_fail = 0;
 

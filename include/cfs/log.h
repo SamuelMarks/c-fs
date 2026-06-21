@@ -18,6 +18,7 @@ extern "C" {
  * \param ... Variadic arguments.
  */
 void cfs_log_debug(const char *fmt, ...);
+/** \brief Macro LOG_DEBUG */
 #define LOG_DEBUG cfs_log_debug
 #else
 /**
@@ -27,6 +28,7 @@ void cfs_log_debug(const char *fmt, ...);
  * \param ... Variadic arguments.
  */
 void cfs_log_debug(const char *fmt, ...);
+/** \brief Macro LOG_DEBUG */
 #define LOG_DEBUG 1 ? (void)0 : cfs_log_debug
 #endif /* DEBUG */
 #endif /* !LOG_DEBUG */

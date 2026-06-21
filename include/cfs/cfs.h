@@ -2182,8 +2182,6 @@ struct cfs_runtime_t {
  * \param req Argument representing the target resource.
  */
 static void cfs_execute_op_inline(cfs_request_t *req) {
-  if (!req)
-    return;
 
   switch (req->opcode) {
   case cfs_opcode_remove:
@@ -2543,6 +2541,12 @@ static void cfs_queue_init(cfs_queue_t *q) {
  * \param q Argument representing the target resource.
  */
 static void cfs_queue_destroy(cfs_queue_t *q) {
+  cfs_request_t *req;
+  while (q->head) {
+    req = q->head;
+    q->head = req->next;
+    cfs_request_release(req);
+  }
   cfs_mutex_destroy(&q->lock);
   cfs_cond_destroy(&q->cond);
 }
@@ -2579,8 +2583,6 @@ static void cfs_queue_push(cfs_queue_t *q, cfs_request_t *req) {
 static int cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data,
                          cfs_request_t **out_req) {
   cfs_request_t *req = NULL;
-  if (!out_req)
-    return -1;
   *out_req = NULL;
   cfs_mutex_lock(&q->lock);
 
@@ -2693,8 +2695,8 @@ static int cfs_thread_pool_create(cfs_size_t num_threads, cfs_queue_t *work,
                                   cfs_thread_pool_t **out_pool) {
   cfs_size_t i;
   cfs_thread_pool_t *pool = NULL;
-  if (!out_pool)
-    return -1;
+  /* if (!out_pool) */
+  /* return -1; */
   *out_pool = NULL;
 
   cfs_malloc(sizeof(cfs_thread_pool_t), (void **)&pool);
@@ -2735,8 +2737,6 @@ static int cfs_thread_pool_create(cfs_size_t num_threads, cfs_queue_t *work,
  */
 static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
   cfs_size_t i;
-  if (!pool)
-    return;
 
   cfs_queue_shutdown(pool->work_queue);
 
@@ -3549,8 +3549,6 @@ CFS_API int cfs_path_append(cfs_path *p, const cfs_char_t *source) {
  * \return 0 on success, or a non-zero system error code on failure.
  */
 static int cfs_is_separator(cfs_char_t c, cfs_bool *out) {
-  if (!out)
-    return -1;
   *out = (c == CFS_CHAR('/') || c == CFS_CHAR('\\')) ? cfs_true : cfs_false;
   return 0;
 }
@@ -3564,8 +3562,6 @@ static int cfs_is_separator(cfs_char_t c, cfs_bool *out) {
  */
 static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
   cfs_char_t *new_str;
-  if (!p)
-    return -1;
   if (new_cap <= p->capacity)
     return 0;
 
@@ -3616,11 +3612,7 @@ CFS_API int cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
     cfs_path_clear(p);
     return 0;
   }
-  rc = cfs_strlen(source, &len);
-  if (rc != 0) {
-    LOG_DEBUG("cfs_path_assign: cfs_strlen failed with %d", rc);
-    return rc;
-  }
+  cfs_strlen(source, &len);
   rc = cfs_path_reserve(p, len + 1);
   if (rc != 0) {
     LOG_DEBUG("cfs_path_assign: cfs_path_reserve failed with %d", rc);
@@ -3883,8 +3875,6 @@ CFS_API void cfs_request_retain(cfs_request_t *req) {
  * \param req Argument representing the target resource.
  */
 static void cfs_request_destroy_internal(cfs_request_t *req) {
-  if (!req)
-    return;
   cfs_path_destroy(&req->target_path);
   cfs_path_destroy(&req->dest_path);
   if (req->result_buffer)

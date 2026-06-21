@@ -3,6 +3,7 @@
  * \brief Core implementation of the c-fs filesystem abstraction library.
  */
 /* clang-format off */
+/** \brief Internal Macro CFS_IMPLEMENTATION */
 #define CFS_IMPLEMENTATION
 #include <stdlib.h>
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -17,13 +18,19 @@ extern int g_cfs_calloc_fail;
 extern int g_cfs_getcwd_fail;
 extern int g_cfs_readlink_fail;
 
+/** \brief Internal Macro malloc */
 #define malloc(s) ((g_cfs_malloc_fail > 0 && --g_cfs_malloc_fail == 0) ? NULL : malloc(s))
+/** \brief Internal Macro realloc */
 #define realloc(p, s) (g_cfs_realloc_fail ? NULL : realloc(p, s))
+/** \brief Internal Macro calloc */
 #define calloc(n, s) (g_cfs_calloc_fail ? NULL : calloc(n, s))
+/** \brief Internal Macro getcwd */
 #define getcwd(b, s) (g_cfs_getcwd_fail ? NULL : getcwd(b, s))
+/** \brief Internal Macro readlink */
 #define readlink(p, b, s) (g_cfs_readlink_fail ? -1 : readlink(p, b, s))
 
 #if defined(_WIN32) || defined(_WIN64)
+/** \brief Internal Macro _getcwd */
 #define _getcwd(b, s) (g_cfs_getcwd_fail ? NULL : _getcwd(b, s))
 #endif
 
