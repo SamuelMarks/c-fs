@@ -12,11 +12,30 @@
 #include <direct.h>
 #endif
 
-extern int g_cfs_malloc_fail;
-extern int g_cfs_realloc_fail;
-extern int g_cfs_calloc_fail;
-extern int g_cfs_getcwd_fail;
-extern int g_cfs_readlink_fail;
+/* Implement CFS_API for external declarations to match definitions */
+#if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+#if defined(CFS_BUILD_SHARED)
+#if defined(CFS_EXPORTS)
+#define CFS_API_FWD __declspec(dllexport)
+#else
+#define CFS_API_FWD __declspec(dllimport)
+#endif
+#else
+#define CFS_API_FWD
+#endif
+#else
+#if defined(CFS_BUILD_SHARED) && defined(__GNUC__) && __GNUC__ >= 4
+#define CFS_API_FWD __attribute__((visibility("default")))
+#else
+#define CFS_API_FWD
+#endif
+#endif
+
+extern CFS_API_FWD int g_cfs_malloc_fail;
+extern CFS_API_FWD int g_cfs_realloc_fail;
+extern CFS_API_FWD int g_cfs_calloc_fail;
+extern CFS_API_FWD int g_cfs_getcwd_fail;
+extern CFS_API_FWD int g_cfs_readlink_fail;
 
 /** \brief Internal Macro malloc */
 #define malloc(s) ((g_cfs_malloc_fail > 0 && --g_cfs_malloc_fail == 0) ? NULL : malloc(s))

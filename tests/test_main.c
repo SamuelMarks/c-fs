@@ -255,7 +255,6 @@ TEST path_utilities() {
   cfs_path p;
   cfs_path p2;
   cfs_char_t *gen_str = NULL;
-  int cmp;
 
   cfs_path_init_str(&p, CFS_STR("dir/subdir\\file.txt"));
   cfs_path_make_preferred(&p);
@@ -806,7 +805,6 @@ TEST real_file_operations() {
   cfs_file_time_type ft;
   cfs_uintmax_t links;
   cfs_perms perms = 0;
-  cfs_size_t count;
   cfs_bool is_empty;
   cfs_path p_renamed;
 
@@ -1035,7 +1033,6 @@ TEST extreme_edge_cases() {
   cfs_path p;
   cfs_path out;
   cfs_error_code ec;
-  cfs_bool b;
   cfs_path_init_str(&p, NULL);
 
   /* cfs_current_path getcwd failure */
@@ -1127,7 +1124,6 @@ TEST cover_everything() {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
-  cfs_path p;
   cfs_request_t req;
 
   cfs_log_debug("testing logger");
@@ -1215,7 +1211,6 @@ TEST fix_last_missing() {
   cfs_runtime_config cfg;
   cfs_error_code ec;
   cfs_path p;
-  cfs_path out;
   cfs_request_t *req1;
 
   cfs_path_init_str(&p, CFS_STR("dummy"));
