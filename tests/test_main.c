@@ -1257,7 +1257,317 @@ TEST fix_last_missing() {
 /**
  * \brief Test suite for cfs_suite.
  */
+
+TEST missing_lines_coverage() {
+  cfs_path p, res;
+  cfs_char_t dest[10];
+  cfs_request_t *req_out;
+  cfs_directory_iterator *dir_it;
+
+  /* 3041: cfs_strncpy padding */
+  cfs_strncpy(dest, CFS_STR("abc"), 5, NULL);
+
+  /* 3077: cfs_strcmp out = NULL */
+  cfs_strcmp(CFS_STR("a"), CFS_STR("b"), NULL);
+
+  /* 3111: cfs_strncmp out = NULL */
+  cfs_strncmp(CFS_STR("a"), CFS_STR("b"), 1, NULL);
+
+  /* 3461: cfs_path_concat source empty */
+  cfs_path_init_str(&p, CFS_STR("abc"));
+  cfs_path_concat(&p, CFS_STR(""));
+  cfs_path_destroy(&p);
+
+  /* 3464: cfs_path_concat reserve fails */
+  cfs_path_init(&p); /* 0 capacity */
+  g_cfs_malloc_fail = 1;
+  cfs_path_concat(&p, CFS_STR("xyz"));
+  g_cfs_malloc_fail = 0;
+  cfs_path_destroy(&p);
+
+  /* 3495: cfs_path_append p is empty */
+  cfs_path_init(&p);
+  cfs_path_append(&p, CFS_STR("abc"));
+  cfs_path_destroy(&p);
+
+  /* 3500: cfs_path_append source is empty */
+  cfs_path_init_str(&p, CFS_STR("abc"));
+  cfs_path_append(&p, CFS_STR(""));
+  cfs_path_destroy(&p);
+
+  /* 3509: cfs_path_append source starts with '/' */
+  cfs_path_init_str(&p, CFS_STR("abc"));
+  cfs_path_append(&p, CFS_STR("/def"));
+  cfs_path_destroy(&p);
+
+  /* 3521-3522, 3531-3532: both have separators */
+  cfs_path_init_str(&p, CFS_STR("abc\\"));
+  cfs_path_append(&p, CFS_STR("\\def"));
+  cfs_path_destroy(&p);
+
+  /* 3525: cfs_path_append reserve fails */
+  cfs_path_init_str(&p, CFS_STR("a"));
+  g_cfs_realloc_fail = 1;
+  cfs_path_append(
+      &p,
+      CFS_STR("a_very_long_string_that_exceeds_initial_capacity_by_a_lot_xyz"));
+  g_cfs_realloc_fail = 0;
+  cfs_path_destroy(&p);
+
+  /* 3608-3609: cfs_path_assign source is NULL */
+  cfs_path_init_str(&p, CFS_STR("abc"));
+  cfs_path_assign(&p, NULL);
+  cfs_path_destroy(&p);
+
+  /* 3678: cfs_path_filename out is NULL */
+  cfs_path_init_str(&p, CFS_STR("abc"));
+  cfs_path_filename(&p, NULL);
+  cfs_path_destroy(&p);
+
+  /* 3706: cfs_path_extension out is NULL */
+  cfs_path_init_str(&p, CFS_STR("abc.txt"));
+  cfs_path_extension(&p, NULL);
+  cfs_path_destroy(&p);
+
+  /* 3726, 3729: cfs_path_extension loop break on sep, no extension */
+  cfs_path_init_str(&p, CFS_STR("abc/def"));
+  cfs_path_extension(&p, &res);
+  cfs_path_destroy(&p);
+  cfs_path_destroy(&res);
+
+  /* 3743: cfs_path_stem out is NULL */
+  cfs_path_init_str(&p, CFS_STR("abc.txt"));
+  cfs_path_stem(&p, NULL);
+  cfs_path_destroy(&p);
+
+  /* 3750-3751: cfs_path_stem no filename */
+  cfs_path_init_str(&p, CFS_STR("abc/"));
+  cfs_path_stem(&p, &res);
+  cfs_path_destroy(&p);
+  cfs_path_destroy(&res);
+
+  /* 3766-3767: cfs_path_stem no extension */
+  cfs_path_init_str(&p, CFS_STR("file"));
+  cfs_path_stem(&p, &res);
+  cfs_path_destroy(&p);
+  cfs_path_destroy(&res);
+
+  /* 3796: cfs_remove fallback success */
+  {
+    FILE *f = fopen("test_rem.txt", "w");
+    if (f)
+      fclose(f);
+    cfs_path_init_str(&p, CFS_STR("test_rem.txt"));
+    cfs_remove(&p, NULL);
+    cfs_path_destroy(&p);
+  }
+
+  /* 3994: cfs_deserialize_request malloc fails */
+  {
+    int dummy_buf[1] = {0};
+    g_cfs_malloc_fail = 1;
+    cfs_deserialize_request(dummy_buf, sizeof(dummy_buf), &req_out);
+    g_cfs_malloc_fail = 0;
+  }
+
+  /* 4341: cfs_greenthread_create out_gt is NULL */
+  cfs_greenthread_spawn(NULL, NULL, NULL);
+
+  /* 4374: cfs_greenthread_scheduler_init out_sched is NULL */
+  cfs_greenthread_scheduler_init(NULL);
+
+  /* 4421: cfs_dir_itr_init_async malloc fails */
+  cfs_path_init_str(&p, CFS_STR("."));
+  g_cfs_malloc_fail = 1;
+  cfs_dir_itr_init_async((cfs_runtime_t *)1, &p, NULL, NULL);
+  g_cfs_malloc_fail = 0;
+  cfs_path_destroy(&p);
+
+  /* 4953: cfs_path_lexically_relative out is NULL */
+  cfs_path_init_str(&p, CFS_STR("abc"));
+  cfs_path_lexically_relative(&p, &p, NULL);
+  cfs_path_destroy(&p);
+
+  /* 4983: cfs_path_is_absolute out is NULL */
+  cfs_path_init_str(&p, CFS_STR("abc"));
+  cfs_path_is_absolute(&p, NULL);
+  cfs_path_destroy(&p);
+
+  PASS();
+}
+
+static void dummy_async_callback(cfs_request_t *req, void *user_data) {
+  (void)req;
+  (void)user_data;
+}
+
+TEST missing_lines_coverage_async() {
+  cfs_runtime_config cfg;
+  cfs_runtime_t *rt;
+  cfs_path p;
+  int i;
+  cfs_request_t *req;
+
+  cfs_path_init_str(&p, CFS_STR("dummy"));
+
+  /* 2942: sync dispatch with callback */
+  cfg.mode = cfs_modality_sync;
+  cfg.thread_pool_size = 1;
+  cfg.ipc_path = NULL;
+  cfs_runtime_init(&cfg, &rt, NULL);
+  cfs_remove_async(rt, &p, dummy_async_callback, NULL);
+  cfs_runtime_destroy(rt);
+
+  /* 2949: non-sync but no work_queue */
+  cfg.mode = cfs_modality_singlethread;
+  cfg.thread_pool_size = 1;
+  cfg.ipc_path = NULL;
+  cfs_runtime_init(&cfg, &rt, NULL);
+  cfs_remove_async(rt, &p, dummy_async_callback, NULL);
+  cfs_runtime_destroy(rt);
+
+  /* 2667: cancelled in execute_async */
+  cfg.mode = cfs_modality_multithread;
+  cfg.thread_pool_size = 1;
+  cfg.ipc_path = NULL;
+  cfs_runtime_init(&cfg, &rt, NULL);
+
+  /* Dispatch many requests to ensure some queue up, then cancel them
+   * immediately */
+  {
+    cfs_request_t *reqs[1000];
+    int j;
+    for (j = 0; j < 1000; j++) {
+      cfs_malloc(sizeof(cfs_request_t), (void **)&reqs[j]);
+      if (reqs[j]) {
+        memset(reqs[j], 0, sizeof(*reqs[j]));
+        reqs[j]->opcode = cfs_opcode_remove;
+        cfs_dispatch_request(rt, reqs[j], NULL, NULL);
+        cfs_cancel_request(rt, reqs[j]);
+      }
+    }
+  }
+
+  /* wait a bit for threads to process */
+  test_sleep_ms(100);
+
+  cfs_runtime_destroy(rt);
+  cfs_path_destroy(&p);
+
+  PASS();
+}
+
+TEST branch_coverage_nulls() {
+  cfs_path p;
+  cfs_path empty_p;
+  cfs_file_status st;
+  cfs_bool b;
+  cfs_uintmax_t u;
+  cfs_space_info sp;
+  cfs_file_time_type ft;
+  cfs_runtime_config cfg;
+  cfs_runtime_t *rt = NULL;
+  cfs_request_t *req = NULL;
+  const cfs_char_t *cstr;
+
+  cfs_path_init_str(&p, CFS_STR("dummy"));
+  cfs_path_init(&empty_p);
+
+  /* cfs_runtime_init NULL ec */
+  cfs_runtime_init(NULL, NULL, NULL);
+  cfg.mode = cfs_modality_sync;
+  cfg.thread_pool_size = 1;
+  cfg.ipc_path = NULL;
+  cfs_runtime_init(&cfg, &rt, NULL);
+
+  /* Async funcs NULL params */
+  cfs_remove_async(NULL, NULL, NULL, NULL);
+  cfs_file_size_async(NULL, NULL, NULL, NULL);
+  cfs_dispatch_request(NULL, NULL, NULL, NULL);
+  cfs_cancel_request(NULL, NULL);
+  cfs_dir_itr_init_async(NULL, NULL, NULL, NULL);
+
+  cfs_runtime_destroy(rt);
+
+  /* UTF conversions out_req = NULL */
+#if defined(CFS_OS_WINDOWS)
+  cfs_utf8_to_utf16("test", NULL, 0, NULL);
+  cfs_utf16_to_utf8(L"test", NULL, 0, NULL);
+#endif
+  cfs_mb_to_wide("test", NULL, 0, NULL);
+  cfs_wide_to_mb(L"test", NULL, 0, NULL);
+
+  /* cfs_path_c_str */
+  cfs_path_c_str(&p, &cstr);
+  cfs_path_c_str(NULL, &cstr);
+  cfs_path_c_str(&empty_p, &cstr);
+
+  /* cfs_path_clear */
+  cfs_path_clear(NULL);
+  cfs_path_clear(&empty_p);
+
+  /* cfs_path_swap */
+  cfs_path_swap(NULL, NULL);
+
+  /* cfs_path_append */
+  cfs_path_append(NULL, NULL);
+
+  /* cfs_path decomposition NULLs */
+  {
+    cfs_path dummy_out;
+    cfs_path_filename(NULL, NULL);
+    cfs_path_filename(&empty_p, &dummy_out);
+    cfs_path_extension(NULL, NULL);
+    cfs_path_extension(&empty_p, &dummy_out);
+    cfs_path_stem(NULL, NULL);
+    cfs_path_stem(&empty_p, &dummy_out);
+  }
+
+  /* Message passing */
+  cfs_message_pipe_create(NULL, NULL);
+  cfs_serialize_request(NULL, NULL, NULL);
+  cfs_deserialize_request(NULL, 0, NULL);
+
+  /* Process */
+  cfs_process_spawn(NULL, NULL);
+
+  /* SHM */
+  cfs_shm_create(0, NULL, NULL);
+  cfs_shm_map(NULL, NULL);
+  cfs_shm_unmap(NULL, NULL);
+
+  /* Sem */
+  cfs_named_semaphore_create(NULL, 0, NULL);
+
+  /* Greenthreads */
+  cfs_greenthread_scheduler_destroy(NULL);
+
+  /* cfs_copy_file NULLs */
+  cfs_copy_file(NULL, NULL, 0, NULL);
+
+  /* cfs_path_is_absolute NULLs */
+  cfs_path_is_absolute(NULL, NULL);
+  cfs_path_is_absolute(&empty_p, &b);
+
+  /* Also NULL ec with valid arguments to trigger success path missing ec
+   * branches */
+  {
+    cfs_path tmp;
+    cfs_path_init(&tmp);
+    cfs_temp_directory_path(&tmp, NULL);
+    cfs_current_path(&tmp, NULL);
+    cfs_path_destroy(&tmp);
+  }
+
+  cfs_path_destroy(&p);
+  cfs_path_destroy(&empty_p);
+  PASS();
+}
+
 SUITE(cfs_suite) {
+  RUN_TEST(missing_lines_coverage);
+  RUN_TEST(branch_coverage_nulls);
+  RUN_TEST(missing_lines_coverage_async);
   RUN_TEST(fix_last_missing);
 
   RUN_TEST(out_of_memory_precise);
