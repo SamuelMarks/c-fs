@@ -16,7 +16,13 @@
 #if defined(CFS_OS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
-#include <windows.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+__declspec(dllimport) void __stdcall Sleep(unsigned long dwMilliseconds);
+#ifdef __cplusplus
+}
+#endif
 #else
 #include <unistd.h>
 #endif

@@ -5,6 +5,10 @@
 #ifndef CFS_H
 #define CFS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #if defined(CFS_HEADER_ONLY_MODE) && !defined(CFS_IMPLEMENTATION)
 #define CFS_IMPLEMENTATION
 #endif
@@ -29,10 +33,6 @@
 #endif
 #endif
 /* clang-format on */
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 
 /* Phase 3: Platform & Compiler Detection Macros */
 
@@ -2118,10 +2118,6 @@ typedef struct cfs_sandbox_config {
  */
 CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
                                     const cfs_sandbox_config *config);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #ifdef CFS_IMPLEMENTATION
 
@@ -5790,5 +5786,9 @@ CFS_API void cfs_rec_dir_itr_close(cfs_recursive_directory_iterator *it) {
 }
 
 #endif /* CFS_IMPLEMENTATION */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CFS_H */

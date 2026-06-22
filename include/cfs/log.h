@@ -5,6 +5,10 @@
 #ifndef CFS_LOG_H
 #define CFS_LOG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef CFS_API
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
 #if defined(CFS_BUILD_SHARED)
@@ -24,10 +28,6 @@
 #endif
 #endif
 #endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 
 #ifndef LOG_DEBUG
 #ifdef DEBUG
