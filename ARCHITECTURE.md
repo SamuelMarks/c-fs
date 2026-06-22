@@ -38,7 +38,7 @@ typedef struct cfs_error_code {
 
 ### Execution Runtime (`cfs_runtime_t`)
 Defines the behavior of background operations (async).
-A `cfs_runtime_t` spins up a configurable Thread Pool and two Thread-Safe FIFO queues: a `work_queue` and a `completion_queue`. 
+A `cfs_runtime_t` spins up a configurable Thread Pool and two Thread-Safe FIFO queues: a `work_queue` and a `completion_queue`.
 
 ## Cross-Platform Polyfills
 

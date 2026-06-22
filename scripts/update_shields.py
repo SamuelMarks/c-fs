@@ -34,13 +34,13 @@ def get_test_coverage():
     try:
         if os.name == 'nt':
             return None
-        cmd = ["gcovr", "-r", "..", ".", "-f", r".*/cfs\.h$", "-f", r".*/cfs\.c$", 
+        cmd = ["gcovr", "-r", "..", ".", "-f", r".*/cfs\.h$", "-f", r".*/cfs\.c$",
                "--gcov-ignore-parse-errors=negative_hits.warn", "--print-summary"]
         res = subprocess.run(cmd, cwd="build_precommit", capture_output=True, text=True)
         if res.returncode != 0:
             print("gcovr failed:\n" + res.stderr)
             return None
-        
+
         match = re.search(r"lines:\s+([0-9.]+)%", res.stdout)
         if match:
             return float(match.group(1))
@@ -52,7 +52,7 @@ def get_test_coverage():
 def main():
     doc_cov = get_doc_coverage()
     test_cov = get_test_coverage()
-    
+
     print(f"Doc Coverage: {doc_cov:.1f}%")
     if test_cov is not None:
         print(f"Test Coverage: {test_cov:.1f}%")
@@ -70,7 +70,7 @@ def main():
 
         doc_color = get_color(doc_cov)
         doc_shield = f"[![Doc Coverage](https://img.shields.io/badge/docs-{doc_cov:.0f}%25-{doc_color}.svg)](#)"
-        
+
         test_shield = ""
         if test_cov is not None:
             test_color = get_color(test_cov)
@@ -78,16 +78,16 @@ def main():
 
         # Find license shield and insert right after it
         license_regex = r"(\[!\[License\].*?\]\(.*?\)\n?)"
-        
+
         insert_str = r"\1" + doc_shield + "\n"
         if test_shield:
             insert_str += test_shield + "\n"
-            
+
         readme = re.sub(license_regex, insert_str, readme, count=1)
 
         with open("README.md", "w") as f:
             f.write(readme)
-            
+
     except Exception as e:
         print(f"Error updating README.md: {e}")
         sys.exit(1)

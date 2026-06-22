@@ -7,7 +7,7 @@
 [![CI](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml)
 ![C Standard](https://img.shields.io/badge/C-89-blue.svg)
 
-A highly robust, strictly ISO C90 (C89) compliant port of the C++17 `std::filesystem` library. `c-fs` is designed for embedding directly into legacy systems, deep embedded environments, and modern workflows needing high-performance, cross-platform path manipulation and OS stream controls. 
+A highly robust, strictly ISO C90 (C89) compliant port of the C++17 `std::filesystem` library. `c-fs` is designed for embedding directly into legacy systems, deep embedded environments, and modern workflows needing high-performance, cross-platform path manipulation and OS stream controls.
 
 Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling, thread pooling, and execution modality abstractions, enabling sophisticated concurrent I/O on any compiler from MSVC 2005 & MSVC 2026 to modern Clang/GCC.
 
@@ -116,9 +116,9 @@ int main() {
     cfs_path p;
     cfs_path_init_str(&p, CFS_STR("var/log"));
     cfs_path_append(&p, CFS_STR("application.log"));
-    
+
     printf("Full Path: %s\n", cfs_path_c_str(&p));
-    
+
     cfs_path_destroy(&p);
     return 0;
 }
@@ -139,14 +139,14 @@ int main() {
     cfs_runtime_config cfg = { .mode = cfs_modality_async, .thread_pool_size = 4 };
     cfs_error_code ec;
     cfs_runtime_t* rt = cfs_runtime_init(&cfg, &ec);
-    
+
     cfs_path p;
     cfs_path_init_str(&p, CFS_STR("file.bin"));
-    
+
     cfs_file_size_async(rt, &p, on_size, NULL);
-    
+
     while (cfs_runtime_poll(rt) == 0) { /* event loop */ }
-    
+
     cfs_path_destroy(&p);
     cfs_runtime_destroy(rt);
     return 0;

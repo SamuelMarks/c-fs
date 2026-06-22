@@ -14,27 +14,27 @@ For header-only usage, always ensure exactly one source file in your project has
 
 int main() {
     cfs_path p;
-    
+
     /* Initialize an empty path or from a string literal */
     cfs_path_init_str(&p, CFS_STR("var/log"));
-    
+
     /* Append dynamically adds separators based on OS */
     cfs_path_append(&p, CFS_STR("application.log"));
-    
+
     printf("Full Path: %s\n", cfs_path_c_str(&p));
-    
+
     /* Path decomposition */
     cfs_path filename = cfs_path_filename(&p);
     cfs_path extension = cfs_path_extension(&p);
-    
+
     printf("Filename: %s\n", cfs_path_c_str(&filename));
     printf("Extension: %s\n", cfs_path_c_str(&extension));
-    
+
     /* Memory cleanup is mandatory */
     cfs_path_destroy(&filename);
     cfs_path_destroy(&extension);
     cfs_path_destroy(&p);
-    
+
     return 0;
 }
 ```
@@ -51,21 +51,21 @@ void check_file(const cfs_char_t* path_str) {
     cfs_path p;
     cfs_error_code ec;
     cfs_path_init_str(&p, path_str);
-    
+
     if (cfs_exists_path(&p, &ec)) {
         cfs_uintmax_t size = cfs_file_size(&p, &ec);
         printf("File size: %llu bytes\n", (unsigned long long)size);
     } else {
         printf("File does not exist. (Error: %d)\n", ec.value);
     }
-    
+
     cfs_path_destroy(&p);
 }
 ```
 
 ## 3. Asynchronous, Multithreaded Operations
 
-`c-fs` natively supports advanced asynchronous scheduling, allowing you to defer execution via configurable modalities. This includes built-in thread-pooling to push blocking operations off your main thread seamlessly. 
+`c-fs` natively supports advanced asynchronous scheduling, allowing you to defer execution via configurable modalities. This includes built-in thread-pooling to push blocking operations off your main thread seamlessly.
 
 ```c
 #include "cfs/cfs.h"
@@ -91,11 +91,11 @@ int main() {
     config.mode = cfs_modality_async;
     config.thread_pool_size = 4;
     rt = cfs_runtime_init(&config, &ec);
-    
+
     /* 2. Dispatch Task */
     cfs_path_init_str(&p, CFS_STR("huge_file.bin"));
     cfs_file_size_async(rt, &p, on_file_size_complete, NULL);
-    
+
     /* 3. Main Application Loop */
     while (1) {
         /* Poll the runtime to invoke callbacks on the main thread */

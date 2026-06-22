@@ -1,4 +1,10 @@
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v18.1.8
     hooks:
@@ -8,29 +14,64 @@ repos:
   - repo: local
     hooks:
       - id: cppcheck
-        name: cppcheck
-        entry: cppcheck --force --error-exitcode=1 -I include src/ tests/
-        language: system
+        name: Cppcheck
+        entry: python3 scripts/precommit_matrix.py cppcheck
+        language: python
+        pass_filenames: false
         types_or: [c, c++]
+      - id: build-gcc
+        name: Build (GCC)
+        entry: python3 scripts/precommit_matrix.py build gcc
+        language: python
         pass_filenames: false
-      - id: build
-        name: Build Project
-        entry: bash -c "mkdir -p build_precommit && cd build_precommit && if [[ \"$OSTYPE\" == \"msys\" || \"$OSTYPE\" == \"win32\" ]]; then cmake .. -DCFS_BUILD_TESTING=ON; else cmake .. -DCFS_BUILD_TESTING=ON -DCMAKE_C_FLAGS=\"--coverage\" -DCMAKE_EXE_LINKER_FLAGS=\"--coverage\"; fi && cmake --build ."
+      - id: test-gcc
+        name: Test (GCC)
+        entry: python3 scripts/precommit_matrix.py test gcc
+        language: python
+        pass_filenames: false
+      - id: build-clang
+        name: Build (Clang)
+        entry: python3 scripts/precommit_matrix.py build clang
+        language: python
+        pass_filenames: false
+      - id: test-clang
+        name: Test (Clang)
+        entry: python3 scripts/precommit_matrix.py test clang
+        language: python
+        pass_filenames: false
+      - id: build-msvc-wine
+        name: Build and Test (MSVC Wine)
+        entry: bash -c "curl -f -sSL https://raw.githubusercontent.com/SamuelMarks/c-ci/master/build_msvc_wine.sh | bash"
         language: system
         pass_filenames: false
-      - id: test
-        name: Run Tests
-        entry: bash -c "cd build_precommit && ctest --output-on-failure"
-        language: system
+      - id: build-msvc
+        name: Build (MSVC)
+        entry: python3 scripts/precommit_matrix.py build msvc
+        language: python
+        pass_filenames: false
+      - id: test-msvc
+        name: Test (MSVC)
+        entry: python3 scripts/precommit_matrix.py test msvc
+        language: python
+        pass_filenames: false
+      - id: build-mingw
+        name: Build (MinGW)
+        entry: python3 scripts/precommit_matrix.py build mingw
+        language: python
+        pass_filenames: false
+      - id: test-mingw
+        name: Test (MinGW)
+        entry: python3 scripts/precommit_matrix.py test mingw
+        language: python
         pass_filenames: false
       - id: valgrind
-        name: Run Valgrind
-        entry: bash -c "if [[ \"$OSTYPE\" == \"linux-gnu\"* ]]; then cd build_precommit && valgrind --error-exitcode=1 ./cfs_test; fi"
-        language: system
+        name: Valgrind (GCC)
+        entry: python3 scripts/precommit_matrix.py valgrind gcc
+        language: python
         pass_filenames: false
       - id: update-shields
-        name: Update Shields
-        entry: python3 scripts/update_shields.py
+        name: Update README Shields
+        entry: python3 scripts/precommit_matrix.py shields
         language: python
         additional_dependencies: [gcovr]
         pass_filenames: false

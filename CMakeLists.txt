@@ -31,6 +31,33 @@ option(CFS_UNICODE "Use Unicode (Wide char) APIs natively on Windows" ON)
 option(CFS_MULTITHREADED "Enable thread-safe error handling and primitives" ON)
 option(CFS_ENABLE_LTO "Enable Link-Time Optimization" OFF)
 
+# Map generic CDD_ variables from c-ci/build_msvc_wine.sh to CFS_ specific variables
+if(DEFINED CDD_CHARSET)
+    if(CDD_CHARSET STREQUAL "UNICODE")
+        set(CFS_UNICODE ON)
+    else()
+        set(CFS_UNICODE OFF)
+    endif()
+endif()
+if(DEFINED CDD_THREADING)
+    set(CFS_MULTITHREADED ${CDD_THREADING})
+endif()
+if(DEFINED CDD_MSVC_RTC)
+    if(CDD_MSVC_RTC STREQUAL "RTC1")
+        set(CFS_MSVC_RTC1 ON)
+        set(CFS_MSVC_RTCS OFF)
+        set(CFS_MSVC_RTCU OFF)
+    elseif(CDD_MSVC_RTC STREQUAL "RTCs")
+        set(CFS_MSVC_RTC1 OFF)
+        set(CFS_MSVC_RTCS ON)
+        set(CFS_MSVC_RTCU OFF)
+    elseif(CDD_MSVC_RTC STREQUAL "RTCu")
+        set(CFS_MSVC_RTC1 OFF)
+        set(CFS_MSVC_RTCS OFF)
+        set(CFS_MSVC_RTCU ON)
+    endif()
+endif()
+
 # Phase 2: MSVC & Toolchain Configuration
 if(MSVC)
     option(CFS_MSVC_CRT_STATIC "Link MSVC statically (/MT)" OFF)
@@ -48,7 +75,7 @@ if(MSVC)
     if(MSVC_VERSION LESS 1400) # Pre-2005
         message(WARNING "MSVC version earlier than 2005 is not officially supported.")
     endif()
-    
+
     # CRT Linkage (Note: CMake 3.15+ supports CMAKE_MSVC_RUNTIME_LIBRARY but we target 3.1)
     if(CFS_MSVC_CRT_STATIC)
         if(CFS_MSVC_CRT_DEBUG OR CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -83,7 +110,7 @@ if(MSVC)
     endif()
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     list(APPEND CFS_C_FLAGS "-std=c89" "-pedantic" "-Wall" "-Wextra" "-D_GNU_SOURCE")
-    
+
     if(MINGW)
         # MinGW specific overrides
         list(APPEND CFS_C_FLAGS "-D__USE_MINGW_ANSI_STDIO=1")
@@ -118,7 +145,7 @@ endif()
 # Target definition
 if(CFS_HEADER_ONLY)
     add_library(cfs INTERFACE)
-    target_include_directories(cfs INTERFACE 
+    target_include_directories(cfs INTERFACE
         $<BUILD_INTERFACE:${CFS_INCLUDE_DIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
@@ -139,12 +166,12 @@ else()
         add_library(cfs STATIC ${CFS_SOURCES})
     endif()
 
-    target_include_directories(cfs PUBLIC 
+    target_include_directories(cfs PUBLIC
         $<BUILD_INTERFACE:${CFS_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:include>
     )
     target_compile_options(cfs PRIVATE ${CFS_C_FLAGS})
-    
+
     if(CFS_UNICODE)
         target_compile_definitions(cfs PUBLIC CFS_UNICODE)
     endif()
