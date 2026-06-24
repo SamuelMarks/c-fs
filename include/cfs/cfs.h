@@ -26,6 +26,7 @@ extern "C" {
 #if defined(_WIN32) || defined(_WIN64)
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
+#include <io.h>
 #elif !defined(__WATCOMC__) && !defined(__MSDOS__) && !defined(CFS_OS_DOS)
 #include <pthread.h>
 #include <sys/types.h>
@@ -2653,7 +2654,7 @@ static void *cfs_worker_thread(void *arg) {
   cfs_thread_pool_t *pool = (cfs_thread_pool_t *)arg;
   cfs_request_t *req = NULL;
 
-  while (1) {
+  for (;;) {
     if (cfs_queue_pop(pool->work_queue, cfs_true, &req) != 0 || !req) {
       /* Cascade shutdown signal to wake up other waiting threads when using
        * event fallback */
