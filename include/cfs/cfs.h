@@ -3792,7 +3792,7 @@ CFS_API int cfs_path_filename(const cfs_path *p, cfs_path *out) {
     if (fn_len > 0) {
       if (cfs_calloc(fn_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
         return -1;
-      cfs_strncpy(buf, p->str + start_idx, fn_len, NULL);
+      CFS_STRNCPY_SAFE(buf, fn_len + 1, p->str + start_idx, fn_len);
       cfs_path_assign(out, buf);
       cfs_free(buf);
     }
@@ -3837,7 +3837,7 @@ CFS_API int cfs_path_extension(const cfs_path *p, cfs_path *out) {
       cfs_path_destroy(&fn);
       return -1;
     }
-    cfs_strncpy(buf, fn.str + dot_idx, ext_len, NULL);
+    CFS_STRNCPY_SAFE(buf, ext_len + 1, fn.str + dot_idx, ext_len);
     cfs_path_assign(out, buf);
     cfs_free(buf);
   }
@@ -3882,7 +3882,7 @@ CFS_API int cfs_path_stem(const cfs_path *p, cfs_path *out) {
       cfs_path_destroy(&fn);
       return -1;
     }
-    cfs_strncpy(buf, fn.str, dot_idx, NULL);
+    CFS_STRNCPY_SAFE(buf, dot_idx + 1, fn.str, dot_idx);
     cfs_path_assign(out, buf);
     cfs_free(buf);
   } else {
@@ -5245,7 +5245,7 @@ CFS_API int cfs_path_root_name(const cfs_path *p, cfs_path *out) {
     return 0;
   if (cfs_calloc(len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return -1;
-  cfs_strncpy(buf, p->str, len, NULL);
+  CFS_STRNCPY_SAFE(buf, len + 1, p->str, len);
   cfs_path_assign(out, buf);
   cfs_free(buf);
   return 0;
@@ -5301,7 +5301,7 @@ CFS_API int cfs_path_root_path(const cfs_path *p, cfs_path *out) {
     return 0;
   if (cfs_calloc(total_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return -1;
-  cfs_strncpy(buf, p->str, total_len, NULL);
+  CFS_STRNCPY_SAFE(buf, total_len + 1, p->str, total_len);
   cfs_path_assign(out, buf);
   cfs_free(buf);
   return 0;
@@ -5331,7 +5331,7 @@ CFS_API int cfs_path_relative_path(const cfs_path *p, cfs_path *out) {
   rel_len = p->length - root_len;
   if (cfs_calloc(rel_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return -1;
-  cfs_strncpy(buf, p->str + root_len, rel_len, NULL);
+  CFS_STRNCPY_SAFE(buf, rel_len + 1, p->str + root_len, rel_len);
   cfs_path_assign(out, buf);
   cfs_free(buf);
   return 0;
@@ -5680,7 +5680,7 @@ CFS_API int cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
     if (cfs_calloc(root_name_len + 1, sizeof(cfs_char_t), (void **)&rn_buf) !=
         0)
       return -1;
-    cfs_strncpy(rn_buf, p->str, root_name_len, NULL);
+    CFS_STRNCPY_SAFE(rn_buf, root_name_len + 1, p->str, root_name_len);
     cfs_path_assign(out, rn_buf);
     cfs_free(rn_buf);
   }
@@ -5745,7 +5745,7 @@ CFS_API int cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
     }
     if (cfs_calloc(len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
       return -1;
-    cfs_strncpy(buf, p->str + comps[i].s, len, NULL);
+    CFS_STRNCPY_SAFE(buf, len + 1, p->str + comps[i].s, len);
     cfs_path_concat(out, buf);
     cfs_free(buf);
   }

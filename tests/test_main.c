@@ -1014,9 +1014,10 @@ TEST final_coverage() {
   cfs_path p = {0}, p2 = {0}, out = {0};
   cfs_error_code ec;
   cfs_bool b;
+  FILE *f;
 
   /* cfs_permissions success branch */
-  FILE *f = fopen("test_perms.txt", "w");
+  f = fopen("test_perms.txt", "w");
   if (f) {
     fclose(f);
   }
