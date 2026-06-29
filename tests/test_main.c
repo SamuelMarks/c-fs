@@ -211,7 +211,7 @@ TEST path_decomposition() {
     cfs_path_c_str(&res, &c_str);
     cfs_strcmp(CFS_STR("file.txt"), c_str, &cmp);
     if (cmp != 0)
-      printf("failed fn: %s\n", c_str ? c_str : "NULL");
+      printf("failed fn: %p\n", (const void *)c_str);
     ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
@@ -223,7 +223,7 @@ TEST path_decomposition() {
     cfs_path_c_str(&res, &c_str);
     cfs_strcmp(CFS_STR(".txt"), c_str, &cmp);
     if (cmp != 0)
-      printf("failed ext: %s\n", c_str ? c_str : "NULL");
+      printf("failed ext: %p\n", (const void *)c_str);
     ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
