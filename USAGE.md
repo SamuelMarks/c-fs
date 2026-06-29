@@ -11,24 +11,33 @@ For header-only usage, always ensure exactly one source file in your project has
 ```c
 #include "cfs/cfs.h"
 #include <stdio.h>
+#include <assert.h>
 
 int main() {
     cfs_path p;
+    cfs_path filename;
+    cfs_path extension;
+    const cfs_char_t *str;
 
     /* Initialize an empty path or from a string literal */
-    cfs_path_init_str(&p, CFS_STR("var/log"));
+    assert(cfs_path_init_str(&p, CFS_STR("var/log")) == 0);
 
     /* Append dynamically adds separators based on OS */
-    cfs_path_append(&p, CFS_STR("application.log"));
+    assert(cfs_path_append(&p, CFS_STR("application.log")) == 0);
 
-    printf("Full Path: %s\n", cfs_path_c_str(&p));
+    assert(cfs_path_c_str(&p, &str) == 0);
+    printf("Full Path: %s\n", str);
 
     /* Path decomposition */
-    cfs_path filename = cfs_path_filename(&p);
-    cfs_path extension = cfs_path_extension(&p);
+    cfs_path_init(&filename);
+    cfs_path_init(&extension);
+    assert(cfs_path_filename(&p, &filename) == 0);
+    assert(cfs_path_extension(&p, &extension) == 0);
 
-    printf("Filename: %s\n", cfs_path_c_str(&filename));
-    printf("Extension: %s\n", cfs_path_c_str(&extension));
+    assert(cfs_path_c_str(&filename, &str) == 0);
+    printf("Filename: %s\n", str);
+    assert(cfs_path_c_str(&extension, &str) == 0);
+    printf("Extension: %s\n", str);
 
     /* Memory cleanup is mandatory */
     cfs_path_destroy(&filename);
@@ -46,17 +55,24 @@ Query the file system using path instances to retrieve sizes, types, and statuse
 ```c
 #include "cfs/cfs.h"
 #include <stdio.h>
+#include <assert.h>
 
 void check_file(const cfs_char_t* path_str) {
     cfs_path p;
     cfs_error_code ec;
-    cfs_path_init_str(&p, path_str);
+    cfs_bool exists;
+    cfs_uintmax_t size;
 
-    if (cfs_exists_path(&p, &ec)) {
-        cfs_uintmax_t size = cfs_file_size(&p, &ec);
-        printf("File size: %llu bytes\n", (unsigned long long)size);
+    assert(cfs_path_init_str(&p, path_str) == 0);
+
+    if (cfs_exists_path(&p, &exists, &ec) == 0 && exists) {
+        if (cfs_file_size(&p, &size, &ec) == 0) {
+            printf("File size: %llu bytes\n", (unsigned long long)size);
+        } else {
+            printf("Failed to get file size. (Error: %d)\n", ec.value);
+        }
     } else {
-        printf("File does not exist. (Error: %d)\n", ec.value);
+        printf("File does not exist or error occurred. (Error: %d)\n", ec.value);
     }
 
     cfs_path_destroy(&p);
@@ -70,6 +86,7 @@ void check_file(const cfs_char_t* path_str) {
 ```c
 #include "cfs/cfs.h"
 #include <stdio.h>
+#include <assert.h>
 
 /* The callback executed on the main thread during cfs_runtime_poll */
 void on_file_size_complete(cfs_request_t* req, void* user_data) {
@@ -86,20 +103,22 @@ int main() {
     cfs_runtime_t* rt;
     cfs_path p;
     cfs_error_code ec;
+    int processed;
 
     /* 1. Setup Runtime */
     config.mode = cfs_modality_async;
     config.thread_pool_size = 4;
-    rt = cfs_runtime_init(&config, &ec);
+    config.ipc_path = NULL;
+    assert(cfs_runtime_init(&config, &rt, &ec) == 0);
 
     /* 2. Dispatch Task */
-    cfs_path_init_str(&p, CFS_STR("huge_file.bin"));
-    cfs_file_size_async(rt, &p, on_file_size_complete, NULL);
+    assert(cfs_path_init_str(&p, CFS_STR("huge_file.bin")) == 0);
+    assert(cfs_file_size_async(rt, &p, on_file_size_complete, NULL) == 0);
 
     /* 3. Main Application Loop */
     while (1) {
         /* Poll the runtime to invoke callbacks on the main thread */
-        int processed = cfs_runtime_poll(rt);
+        processed = cfs_runtime_poll(rt);
         if (processed > 0) {
             break; /* For example purposes, break after processing our task */
         }

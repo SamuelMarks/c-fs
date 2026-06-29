@@ -3,7 +3,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Doc Coverage](https://img.shields.io/badge/docs-100%25-brightgreen.svg)](#)
-[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](#)
+[![Test Coverage](https://img.shields.io/badge/coverage-0%25-red.svg)](#)
 [![CI](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuelMarks/c-fs/actions/workflows/ci.yml)
 ![C Standard](https://img.shields.io/badge/C-89-blue.svg)
 
@@ -111,13 +111,17 @@ In all other files, just include the header:
 ```c
 #include "cfs/cfs.h"
 #include <stdio.h>
+#include <assert.h>
 
 int main() {
     cfs_path p;
-    cfs_path_init_str(&p, CFS_STR("var/log"));
-    cfs_path_append(&p, CFS_STR("application.log"));
+    const cfs_char_t *str;
 
-    printf("Full Path: %s\n", cfs_path_c_str(&p));
+    assert(cfs_path_init_str(&p, CFS_STR("var/log")) == 0);
+    assert(cfs_path_append(&p, CFS_STR("application.log")) == 0);
+
+    assert(cfs_path_c_str(&p, &str) == 0);
+    printf("Full Path: %s\n", str);
 
     cfs_path_destroy(&p);
     return 0;
@@ -128,6 +132,7 @@ int main() {
 ```c
 #include "cfs/cfs.h"
 #include <stdio.h>
+#include <assert.h>
 
 void on_size(cfs_request_t* req, void* user_data) {
     if (req->error.value == 0) {
@@ -136,14 +141,20 @@ void on_size(cfs_request_t* req, void* user_data) {
 }
 
 int main() {
-    cfs_runtime_config cfg = { .mode = cfs_modality_async, .thread_pool_size = 4 };
+    cfs_runtime_config cfg;
     cfs_error_code ec;
-    cfs_runtime_t* rt = cfs_runtime_init(&cfg, &ec);
-
+    cfs_runtime_t* rt;
     cfs_path p;
-    cfs_path_init_str(&p, CFS_STR("file.bin"));
 
-    cfs_file_size_async(rt, &p, on_size, NULL);
+    cfg.mode = cfs_modality_async;
+    cfg.thread_pool_size = 4;
+    cfg.ipc_path = NULL;
+
+    assert(cfs_runtime_init(&cfg, &rt, &ec) == 0);
+
+    assert(cfs_path_init_str(&p, CFS_STR("file.bin")) == 0);
+
+    assert(cfs_file_size_async(rt, &p, on_size, NULL) == 0);
 
     while (cfs_runtime_poll(rt) == 0) { /* event loop */ }
 

@@ -41,7 +41,7 @@ static void test_sleep_ms(int ms) {
  * \return The test result.
  */
 TEST path_initialization() {
-  cfs_path p;
+  cfs_path p = {0};
   cfs_path_init(&p);
   {
     cfs_bool empty;
@@ -77,7 +77,7 @@ TEST path_initialization() {
  * \return The test result.
  */
 TEST path_appending() {
-  cfs_path p;
+  cfs_path p = {0};
   cfs_path_init_str(&p, CFS_STR("dir"));
   cfs_path_append(&p, CFS_STR("file.txt"));
 
@@ -97,8 +97,110 @@ TEST path_appending() {
  * \brief Test case for path_decomposition.
  * \return The test result.
  */
+
+/**
+ * \brief Test case for root_path_decomposition.
+ * \return The test result.
+ */
+TEST root_path_decomposition() {
+  cfs_path p = {0}, out = {0};
+  cfs_bool b;
+  int cmp;
+  const cfs_char_t *cstr;
+
+  cfs_path_init(&out);
+
+  /* Windows tests only apply on Windows, but the parser functions run
+     regardless of OS if we fake it? No, the parser is #if
+     defined(CFS_OS_WINDOWS). So we should only test Windows paths on Windows.
+   */
+#if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
+  cfs_path_init_str(&p, CFS_STR("C:\\Windows"));
+  cfs_path_root_name(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR("C:"), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_is_absolute(&p, &b);
+  ASSERT_EQ(1, b);
+  cfs_path_destroy(&p);
+
+  cfs_path_init_str(&p, CFS_STR("\\Windows"));
+  cfs_path_root_name(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR(""), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_is_absolute(&p, &b);
+  ASSERT_EQ(0, b); /* Relative absolute! */
+  cfs_path_destroy(&p);
+
+  cfs_path_init_str(&p, CFS_STR("\\\\server\\share\\file.txt"));
+  cfs_path_root_name(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR("\\\\server\\share"), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_destroy(&out);
+  cfs_path_root_directory(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR("\\"), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_is_absolute(&p, &b);
+  ASSERT_EQ(1, b);
+  cfs_path_destroy(&p);
+
+  cfs_path_init_str(&p, CFS_STR("\\\\?\\C:\\file.txt"));
+  cfs_path_root_name(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR("\\\\?\\C:"), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_destroy(&p);
+
+  cfs_path_init_str(&p, CFS_STR("\\\\.\\COM1"));
+  cfs_path_root_name(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR("\\\\.\\COM1"), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_destroy(&p);
+#else
+  cfs_path_init_str(&p, CFS_STR("/usr/bin"));
+  cfs_path_root_name(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR(""), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_destroy(&out);
+
+  cfs_path_root_directory(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR("/"), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_destroy(&out);
+
+  cfs_path_is_absolute(&p, &b);
+  ASSERT_EQ(1, b);
+  cfs_path_destroy(&p);
+#endif
+
+#if !defined(CFS_OS_WINDOWS) && !defined(CFS_OS_DOS)
+  cfs_path_init_str(&p, CFS_STR("/usr/bin"));
+  cfs_path_root_path(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR("/"), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_destroy(&p);
+#else
+  cfs_path_init_str(&p, CFS_STR("\\\\server\\share\\file.txt"));
+  cfs_path_root_path(&p, &out);
+  cfs_path_c_str(&out, &cstr);
+  cfs_strcmp(cstr, CFS_STR("\\\\server\\share\\"), &cmp);
+  ASSERT_EQ(0, cmp);
+  cfs_path_destroy(&p);
+#endif
+
+  cfs_path_destroy(&out);
+  PASS();
+}
+
 TEST path_decomposition() {
-  cfs_path p, res;
+  cfs_path p = {0}, res = {0};
   cfs_path_init_str(&p, CFS_STR("dir") PATH_SEP_STR CFS_STR("subdir")
                             PATH_SEP_STR CFS_STR("file.txt"));
 
@@ -108,6 +210,8 @@ TEST path_decomposition() {
     int cmp;
     cfs_path_c_str(&res, &c_str);
     cfs_strcmp(CFS_STR("file.txt"), c_str, &cmp);
+    if (cmp != 0)
+      printf("failed fn: %s\n", c_str ? c_str : "NULL");
     ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
@@ -118,6 +222,8 @@ TEST path_decomposition() {
     int cmp;
     cfs_path_c_str(&res, &c_str);
     cfs_strcmp(CFS_STR(".txt"), c_str, &cmp);
+    if (cmp != 0)
+      printf("failed ext: %s\n", c_str ? c_str : "NULL");
     ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
@@ -158,7 +264,7 @@ static void async_callback(cfs_request_t *req, void *user_data) {
 TEST thread_pool_async_validation() {
   cfs_runtime_config config;
   cfs_runtime_t *rt;
-  cfs_path p;
+  cfs_path p = {0};
   cfs_error_code ec;
   int i;
   int res;
@@ -258,8 +364,8 @@ TEST string_handling() {
  * \return The test result.
  */
 TEST path_utilities() {
-  cfs_path p;
-  cfs_path p2;
+  cfs_path p = {0};
+  cfs_path p2 = {0};
   cfs_char_t *gen_str = NULL;
 
   cfs_path_init_str(&p, CFS_STR("dir/subdir\\file.txt"));
@@ -296,22 +402,17 @@ TEST path_utilities() {
  * \return The test result.
  */
 TEST path_decomposition_more() {
-  cfs_path p, out;
+  cfs_path p = {0}, out = {0};
   cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
 
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_root_name(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_root_directory(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_root_path(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_relative_path(&p, &out);
   cfs_path_destroy(&out);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_path_parent_path(&p, &out);
   cfs_path_destroy(&out);
 
@@ -336,7 +437,7 @@ TEST path_decomposition_more() {
  * \return The test result.
  */
 TEST path_queries() {
-  cfs_path p;
+  cfs_path p = {0};
   cfs_bool out_bool;
   cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
 
@@ -372,7 +473,7 @@ TEST path_queries() {
  * \return The test result.
  */
 TEST path_lexical() {
-  cfs_path p, base, out;
+  cfs_path p = {0}, base = {0}, out = {0};
   cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
   cfs_path_init_str(&base, CFS_STR("/usr/local/"));
 
@@ -404,7 +505,7 @@ TEST path_lexical() {
  */
 TEST dir_iterators() {
   cfs_directory_iterator *itr = NULL;
-  cfs_path p;
+  cfs_path p = {0};
   const cfs_directory_entry *out_entry = NULL;
   cfs_error_code ec;
 
@@ -431,7 +532,7 @@ TEST dir_iterators() {
  */
 TEST rec_dir_iterators() {
   cfs_recursive_directory_iterator *itr = NULL;
-  cfs_path p;
+  cfs_path p = {0};
   const cfs_directory_entry *out_entry = NULL;
   cfs_error_code ec;
 
@@ -461,7 +562,7 @@ TEST rec_dir_iterators() {
  * \return The test result.
  */
 TEST file_queries() {
-  cfs_path p, p2, p_out;
+  cfs_path p = {0}, p2 = {0}, p_out = {0};
   cfs_file_status s;
   cfs_bool b;
   cfs_error_code ec;
@@ -637,7 +738,7 @@ TEST greenthreads_and_utils() {
   cfs_runtime_t *rt;
   cfs_runtime_config cfg;
   cfs_error_code ec;
-  cfs_path p;
+  cfs_path p = {0};
   cfs_sandbox_config sbox;
 
   cfg.mode = cfs_modality_multithread;
@@ -693,7 +794,7 @@ TEST greenthreads_and_utils() {
  * \return The test result.
  */
 TEST exhaustive_nulls() {
-  cfs_path p;
+  cfs_path p = {0};
   int out_int;
   cfs_size_t out_sz;
   cfs_uintmax_t out_u;
@@ -704,7 +805,7 @@ TEST exhaustive_nulls() {
   cfs_char_t *out_str;
   cfs_runtime_t *rt = NULL;
   cfs_error_code ec;
-  cfs_path out_p;
+  cfs_path out_p = {0};
 
   cfs_path_init_str(&p, CFS_STR("dummy"));
 
@@ -803,7 +904,7 @@ TEST exhaustive_nulls() {
  */
 TEST real_file_operations() {
   FILE *f;
-  cfs_path p;
+  cfs_path p = {0};
   cfs_file_status st;
   cfs_error_code ec;
   cfs_uintmax_t size;
@@ -812,7 +913,7 @@ TEST real_file_operations() {
   cfs_uintmax_t links;
   cfs_perms perms = 0;
   cfs_bool is_empty;
-  cfs_path p_renamed;
+  cfs_path p_renamed = {0};
 
   f = fopen("test_real.txt", "w");
   if (f) {
@@ -846,7 +947,7 @@ TEST real_file_operations() {
  */
 TEST more_coverage() {
   cfs_file_status s;
-  cfs_path p, p2, p3, p4, out;
+  cfs_path p = {0}, p2 = {0}, p3 = {0}, p4 = {0}, out = {0};
   cfs_error_code ec;
   cfs_bool b;
   cfs_perms perms = 0777;
@@ -880,20 +981,17 @@ TEST more_coverage() {
   /* cfs_read_symlink success branch */
   cfs_path_init_str(&p3, CFS_STR("test_eq_sym.txt"));
   cfs_create_symlink(&p2, &p3, &ec);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_read_symlink(&p3, &out, &ec);
   cfs_path_destroy(&out);
 
   /* cfs_absolute already absolute */
   cfs_path_init_str(&p4, CFS_STR("/absolute/path"));
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_absolute(&p4, &out, &ec);
   cfs_path_destroy(&out);
   cfs_path_destroy(&p4);
 
   /* Canonical on absolute path */
   cfs_path_init_str(&p4, CFS_STR("/dev/null"));
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_canonical(&p4, &out, &ec);
   cfs_path_destroy(&out);
   cfs_path_destroy(&p4);
@@ -913,7 +1011,7 @@ TEST more_coverage() {
  * \return The test result.
  */
 TEST final_coverage() {
-  cfs_path p, p2, out;
+  cfs_path p = {0}, p2 = {0}, out = {0};
   cfs_error_code ec;
   cfs_bool b;
 
@@ -928,7 +1026,7 @@ TEST final_coverage() {
   /* cfs_copy_symlink success branch */
   cfs_path_init_str(&p2, CFS_STR("test_perms_sym.txt"));
   cfs_create_symlink(&p, &p2, &ec);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
+  cfs_path_init_str(&out, CFS_STR("test_perms_sym_copy.txt"));
   cfs_copy_symlink(&p2, &out, &ec);
   cfs_path_destroy(&out);
 
@@ -963,7 +1061,7 @@ TEST out_of_memory() {
   cfs_runtime_config cfg;
   cfs_error_code ec;
   cfs_request_t *req = NULL;
-  cfs_path p;
+  cfs_path p = {0};
   void *buf;
   cfs_size_t sz;
   cfs_message_pipe *pipe;
@@ -1036,14 +1134,13 @@ TEST out_of_memory() {
  * \return The test result.
  */
 TEST extreme_edge_cases() {
-  cfs_path p;
-  cfs_path out;
+  cfs_path p = {0};
+  cfs_path out = {0};
   cfs_error_code ec;
   cfs_path_init_str(&p, NULL);
 
   /* cfs_current_path getcwd failure */
   g_cfs_getcwd_fail = 1;
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_current_path(&out, &ec);
   cfs_path_destroy(&out);
   g_cfs_getcwd_fail = 0;
@@ -1051,7 +1148,6 @@ TEST extreme_edge_cases() {
   /* cfs_read_symlink readlink failure */
   g_cfs_readlink_fail = 1;
   cfs_path_init_str(&p, CFS_STR("dummy_symlink_path"));
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_read_symlink(&p, &out, &ec);
   cfs_path_destroy(&out);
   g_cfs_readlink_fail = 0;
@@ -1068,8 +1164,8 @@ TEST last_mile() {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
-  cfs_path p;
-  cfs_path out;
+  cfs_path p = {0};
+  cfs_path out = {0};
   cfs_request_t req;
   cfs_request_t *req1 = NULL, *req2 = NULL;
 
@@ -1081,7 +1177,6 @@ TEST last_mile() {
 
   /* 2635-2636: cfs_absolute where getcwd fails */
   g_cfs_getcwd_fail = 1;
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_2.txt"));
   cfs_absolute(&p, &out, &ec);
   cfs_path_destroy(&out);
   g_cfs_getcwd_fail = 0;
@@ -1172,7 +1267,7 @@ TEST out_of_memory_precise() {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
-  cfs_path p;
+  cfs_path p = {0};
   cfs_path_init_str(&p, CFS_STR("dummy"));
 
   cfg.mode = cfs_modality_multithread;
@@ -1216,7 +1311,7 @@ TEST fix_last_missing() {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
-  cfs_path p;
+  cfs_path p = {0};
   cfs_request_t *req1;
 
   cfs_path_init_str(&p, CFS_STR("dummy"));
@@ -1259,7 +1354,7 @@ TEST fix_last_missing() {
  */
 
 TEST missing_lines_coverage() {
-  cfs_path p, res;
+  cfs_path p = {0}, res = {0};
   cfs_char_t dest[10];
   cfs_request_t *req_out;
   cfs_directory_iterator *dir_it;
@@ -1404,7 +1499,7 @@ static void dummy_async_callback(cfs_request_t *req, void *user_data) {
 TEST missing_lines_coverage_async() {
   cfs_runtime_config cfg;
   cfs_runtime_t *rt;
-  cfs_path p;
+  cfs_path p = {0};
   int i;
   cfs_request_t *req;
 
@@ -1458,8 +1553,8 @@ TEST missing_lines_coverage_async() {
 }
 
 TEST branch_coverage_nulls() {
-  cfs_path p;
-  cfs_path empty_p;
+  cfs_path p = {0};
+  cfs_path empty_p = {0};
   cfs_file_status st;
   cfs_bool b;
   cfs_uintmax_t u;
@@ -1514,7 +1609,7 @@ TEST branch_coverage_nulls() {
 
   /* cfs_path decomposition NULLs */
   {
-    cfs_path dummy_out;
+    cfs_path dummy_out = {0};
     cfs_path_filename(NULL, NULL);
     cfs_path_filename(&empty_p, &dummy_out);
     cfs_path_extension(NULL, NULL);
@@ -1552,7 +1647,7 @@ TEST branch_coverage_nulls() {
   /* Also NULL ec with valid arguments to trigger success path missing ec
    * branches */
   {
-    cfs_path tmp;
+    cfs_path tmp = {0};
     cfs_path_init(&tmp);
     cfs_temp_directory_path(&tmp, NULL);
     cfs_current_path(&tmp, NULL);
@@ -1604,6 +1699,7 @@ SUITE(cfs_suite) {
   RUN_TEST(path_initialization);
   RUN_TEST(path_appending);
   RUN_TEST(path_decomposition);
+  RUN_TEST(root_path_decomposition);
   RUN_TEST(thread_pool_async_validation);
   RUN_TEST(greenthread_scheduler_validation);
   RUN_TEST(memory_allocation);
