@@ -6,6 +6,9 @@
 /** \brief Internal Macro CFS_IMPLEMENTATION */
 #define CFS_IMPLEMENTATION
 #include <stdlib.h>
+#ifdef __EMSCRIPTEN__
+#include <pthread.h>
+#endif
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
 #else
