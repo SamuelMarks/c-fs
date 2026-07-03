@@ -28,9 +28,13 @@ extern "C" {
 #include <winsock2.h>
 #include <io.h>
 #elif !defined(__WATCOMC__) && !defined(__MSDOS__) && !defined(CFS_OS_DOS)
+#include <dirent.h>
 #include <pthread.h>
+#include <sys/statvfs.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <utime.h>
 #endif
 #endif
 /* clang-format on */
@@ -40,6 +44,8 @@ extern "C" {
 /* 22-25. OS Detection */
 #if defined(_WIN32) || defined(_WIN64)
 #define CFS_OS_WINDOWS
+#elif defined(__EMSCRIPTEN__)
+#define CFS_OS_EMSCRIPTEN
 #elif defined(__linux__)
 #define CFS_OS_LINUX
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -1574,6 +1580,7 @@ typedef struct cfs_directory_entry {
 
 /* 182-185. Standard Directory Iterator */
 typedef struct cfs_directory_iterator cfs_directory_iterator;
+
 /**
  * \brief Performs the cfs_dir_itr_init filesystem operation.
  *
@@ -1607,6 +1614,7 @@ CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it);
 /* 186-189. Recursive Directory Iterator */
 typedef struct cfs_recursive_directory_iterator
     cfs_recursive_directory_iterator;
+
 /**
  * \brief Performs the cfs_rec_dir_itr_init filesystem operation.
  *
@@ -2126,7 +2134,7 @@ CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
 #if defined(CFS_OS_WINDOWS)
 /* Windows native includes */
 #elif defined(CFS_OS_LINUX) || defined(CFS_OS_MACOS) || defined(CFS_OS_BSD) || \
-    defined(CFS_ENV_CYGWIN)
+    defined(CFS_ENV_CYGWIN) || defined(CFS_OS_EMSCRIPTEN)
 /* POSIX native includes */
 #elif defined(CFS_OS_DOS)
 /* DOS stub includes */
@@ -2135,6 +2143,20 @@ CFS_API int cfs_runtime_set_sandbox(cfs_runtime_t *rt,
 #endif
 
 /* Implementation details */
+
+struct cfs_directory_iterator {
+#if defined(CFS_OS_WINDOWS)
+  int dummy;
+#else
+  DIR *dirp;
+#endif
+  cfs_directory_entry current;
+  cfs_bool is_end;
+};
+
+struct cfs_recursive_directory_iterator {
+  cfs_directory_iterator base;
+};
 
 /**
  * \brief Performs the cfs_is_separator filesystem operation.
@@ -6054,10 +6076,28 @@ CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
  */
 CFS_API int cfs_space(const cfs_path *p, cfs_space_info *out,
                       cfs_error_code *ec) {
+#if defined(CFS_OS_WINDOWS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)p;
   (void)out;
-  (void)ec;
   return -1;
+#else
+  struct statvfs sv;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !out)
+    return -1;
+  if (statvfs(p->str, &sv) == 0) {
+    out->capacity = sv.f_blocks * sv.f_frsize;
+    out->free = sv.f_bfree * sv.f_frsize;
+    out->available = sv.f_bavail * sv.f_frsize;
+    return 0;
+  }
+  if (ec)
+    cfs_get_last_error(ec);
+  return -1;
+#endif
 }
 
 /**
@@ -6070,10 +6110,26 @@ CFS_API int cfs_space(const cfs_path *p, cfs_space_info *out,
  */
 CFS_API int cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
                                 cfs_error_code *ec) {
+#if defined(CFS_OS_WINDOWS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)p;
   (void)out;
-  (void)ec;
   return -1;
+#else
+  struct stat st;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !out)
+    return -1;
+  if (stat(p->str, &st) == 0) {
+    *out = st.st_mtime;
+    return 0;
+  }
+  if (ec)
+    cfs_get_last_error(ec);
+  return -1;
+#endif
 }
 
 /**
@@ -6084,9 +6140,23 @@ CFS_API int cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
 CFS_API int cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec) {
+#if defined(CFS_OS_WINDOWS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)out;
-  (void)ec;
   return -1;
+#else
+  const char *tmp;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!out)
+    return -1;
+  tmp = getenv("TMPDIR");
+  if (!tmp)
+    tmp = "/tmp";
+  cfs_path_init_str(out, tmp);
+  return 0;
+#endif
 }
 
 /**
@@ -6099,10 +6169,37 @@ CFS_API int cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec) {
  */
 CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
                              cfs_error_code *ec) {
+#if defined(CFS_OS_WINDOWS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)p;
-  (void)out_it;
-  (void)ec;
+  if (out_it)
+    *out_it = NULL;
   return -1;
+#else
+  cfs_directory_iterator *it;
+  if (ec)
+    cfs_clear_error(ec);
+  if (out_it)
+    *out_it = NULL;
+  if (!p || !out_it)
+    return -1;
+  if (cfs_malloc(sizeof(cfs_directory_iterator), (void **)&it) != 0) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
+    return -1;
+  }
+  it->is_end = cfs_false;
+  it->dirp = opendir(p->str);
+  if (!it->dirp) {
+    cfs_free(it);
+    if (ec)
+      cfs_get_last_error(ec);
+    return -1;
+  }
+  *out_it = it;
+  return 0;
+#endif
 }
 
 /**
@@ -6116,10 +6213,29 @@ CFS_API int cfs_dir_itr_init(const cfs_path *p, cfs_directory_iterator **out_it,
 CFS_API int cfs_dir_itr_next(cfs_directory_iterator *it,
                              const cfs_directory_entry **out_entry,
                              cfs_error_code *ec) {
+#if defined(CFS_OS_WINDOWS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)it;
   (void)out_entry;
-  (void)ec;
   return -1;
+#else
+  struct dirent *dp;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!it || !out_entry)
+    return -1;
+  if (it->is_end)
+    return 1;
+  dp = readdir(it->dirp);
+  if (!dp) {
+    it->is_end = cfs_true;
+    return 1;
+  }
+  cfs_path_init_str(&it->current.path, dp->d_name);
+  *out_entry = &it->current;
+  return 0;
+#endif
 }
 
 /**
@@ -6127,7 +6243,18 @@ CFS_API int cfs_dir_itr_next(cfs_directory_iterator *it,
  *
  * \param void Argument representing the target resource.
  */
-CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) { (void)it; }
+CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) {
+#if defined(CFS_OS_WINDOWS)
+  (void)it;
+#else
+  if (!it)
+    return;
+  if (it->dirp)
+    closedir(it->dirp);
+  cfs_path_destroy(&it->current.path);
+  cfs_free(it);
+#endif
+}
 
 /**
  * \brief Performs the cfs_rec_dir_itr_init filesystem operation.
@@ -6140,10 +6267,35 @@ CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) { (void)it; }
 CFS_API int cfs_rec_dir_itr_init(const cfs_path *p,
                                  cfs_recursive_directory_iterator **out_it,
                                  cfs_error_code *ec) {
+#if defined(CFS_OS_WINDOWS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)p;
-  (void)out_it;
-  (void)ec;
+  if (out_it)
+    *out_it = NULL;
   return -1;
+#else
+  cfs_recursive_directory_iterator *it;
+  cfs_directory_iterator *base_it;
+  if (ec)
+    cfs_clear_error(ec);
+  if (out_it)
+    *out_it = NULL;
+  if (!p || !out_it)
+    return -1;
+  if (cfs_dir_itr_init(p, &base_it, ec) != 0)
+    return -1;
+  if (cfs_malloc(sizeof(cfs_recursive_directory_iterator), (void **)&it) != 0) {
+    cfs_dir_itr_close(base_it);
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
+    return -1;
+  }
+  it->base = *base_it;
+  cfs_free(base_it);
+  *out_it = it;
+  return 0;
+#endif
 }
 
 /**
@@ -6157,10 +6309,19 @@ CFS_API int cfs_rec_dir_itr_init(const cfs_path *p,
 CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
                                  const cfs_directory_entry **out_entry,
                                  cfs_error_code *ec) {
+#if defined(CFS_OS_WINDOWS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)it;
   (void)out_entry;
-  (void)ec;
   return -1;
+#else
+  if (!it)
+    return -1;
+  /* Not a true recursive implementation yet, just falls back to base dir
+   * iteration for POSIX stub */
+  return cfs_dir_itr_next(&it->base, out_entry, ec);
+#endif
 }
 
 /**
@@ -6171,7 +6332,11 @@ CFS_API int cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
  */
 CFS_API void cfs_rec_dir_itr_disable_recursion_pending(
     cfs_recursive_directory_iterator *it) {
+#if defined(CFS_OS_WINDOWS)
   (void)it;
+#else
+  (void)it; /* Recursion not fully tracked in basic stub yet */
+#endif
 }
 
 /**
@@ -6183,8 +6348,16 @@ CFS_API void cfs_rec_dir_itr_disable_recursion_pending(
  */
 CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
                                  cfs_error_code *ec) {
+#if defined(CFS_OS_WINDOWS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)it;
-  (void)ec;
+#else
+  if (ec)
+    cfs_clear_error(ec);
+  if (it)
+    it->base.is_end = cfs_true;
+#endif
 }
 
 /**
@@ -6193,7 +6366,16 @@ CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
  * \param it Argument representing the target resource.
  */
 CFS_API void cfs_rec_dir_itr_close(cfs_recursive_directory_iterator *it) {
+#if defined(CFS_OS_WINDOWS)
   (void)it;
+#else
+  if (!it)
+    return;
+  if (it->base.dirp)
+    closedir(it->base.dirp);
+  cfs_path_destroy(&it->base.current.path);
+  cfs_free(it);
+#endif
 }
 
 #endif /* CFS_IMPLEMENTATION */

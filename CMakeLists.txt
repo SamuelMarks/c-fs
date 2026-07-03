@@ -119,6 +119,10 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         # Cygwin specific overrides
         list(APPEND CFS_C_FLAGS "-D_DEFAULT_SOURCE")
     endif()
+    if(EMSCRIPTEN)
+        # Emscripten specific overrides
+        list(APPEND CFS_C_FLAGS "-pthread")
+    endif()
 endif()
 
 if(CFS_ENABLE_LTO)
