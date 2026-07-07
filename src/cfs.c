@@ -3,6 +3,9 @@
  * \brief Core implementation of the c-fs filesystem abstraction library.
  */
 /* clang-format off */
+#if !defined(_XOPEN_SOURCE) && !defined(_WIN32)
+#define _XOPEN_SOURCE 500
+#endif
 /** \brief Internal Macro CFS_IMPLEMENTATION */
 #define CFS_IMPLEMENTATION
 #include <stdlib.h>
