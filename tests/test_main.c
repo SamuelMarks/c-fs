@@ -1358,7 +1358,6 @@ TEST missing_lines_coverage() {
   cfs_path p = {0}, res = {0};
   cfs_char_t dest[10];
   cfs_request_t *req_out;
-  cfs_directory_iterator *dir_it;
 
   /* 3041: cfs_strncpy padding */
   cfs_strncpy(dest, CFS_STR("abc"), 5, NULL);
@@ -1501,8 +1500,6 @@ TEST missing_lines_coverage_async() {
   cfs_runtime_config cfg;
   cfs_runtime_t *rt;
   cfs_path p = {0};
-  int i;
-  cfs_request_t *req;
 
   cfs_path_init_str(&p, CFS_STR("dummy"));
 
@@ -1556,14 +1553,9 @@ TEST missing_lines_coverage_async() {
 TEST branch_coverage_nulls() {
   cfs_path p = {0};
   cfs_path empty_p = {0};
-  cfs_file_status st;
   cfs_bool b;
-  cfs_uintmax_t u;
-  cfs_space_info sp;
-  cfs_file_time_type ft;
   cfs_runtime_config cfg;
   cfs_runtime_t *rt = NULL;
-  cfs_request_t *req = NULL;
   const cfs_char_t *cstr;
 
   cfs_path_init_str(&p, CFS_STR("dummy"));

@@ -2073,7 +2073,7 @@ typedef struct cfs_greenthread_scheduler cfs_greenthread_scheduler;
  * \param out_sched Pointer to store the initialized scheduler.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API int
+CFS_API cfs_errc
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched);
 /**
  * \brief Performs the cfs_greenthread_scheduler_run filesystem operation.
@@ -4526,7 +4526,7 @@ CFS_API void cfs_greenthread_destroy(cfs_greenthread_t *gt) {
  * \param out_sched Pointer to store the initialized scheduler.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API int
+CFS_API cfs_errc
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched) {
   if (!out_sched)
     return -1;

@@ -4,7 +4,7 @@
 include(FetchContent)
 FetchContent_Declare(
   greatest
-  URL https://raw.githubusercontent.com/SamuelMarks/greatest/refs/heads/master/greatest.h
+  URL https://raw.githubusercontent.com/SamuelMarks/greatest/master/greatest.h
   DOWNLOAD_NO_EXTRACT TRUE
 )
 FetchContent_MakeAvailable(greatest)
