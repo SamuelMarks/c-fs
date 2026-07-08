@@ -4,7 +4,7 @@
  */
 /* clang-format off */
 #if !defined(_XOPEN_SOURCE) && !defined(_WIN32)
-#define _XOPEN_SOURCE 500
+#define _XOPEN_SOURCE 600
 #endif
 /** \brief Internal Macro CFS_IMPLEMENTATION */
 #define CFS_IMPLEMENTATION
