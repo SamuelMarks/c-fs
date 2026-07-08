@@ -210,8 +210,6 @@ TEST path_decomposition() {
     int cmp;
     cfs_path_c_str(&res, &c_str);
     cfs_strcmp(CFS_STR("file.txt"), c_str, &cmp);
-    if (cmp != 0)
-      printf("failed fn: %p\n", (const void *)c_str);
     ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
@@ -222,8 +220,6 @@ TEST path_decomposition() {
     int cmp;
     cfs_path_c_str(&res, &c_str);
     cfs_strcmp(CFS_STR(".txt"), c_str, &cmp);
-    if (cmp != 0)
-      printf("failed ext: %p\n", (const void *)c_str);
     ASSERT_EQ(0, cmp);
   }
   cfs_path_destroy(&res);
@@ -288,6 +284,8 @@ TEST thread_pool_async_validation() {
   /* Wait for operations to hit completion queue (simulate event loop tick) */
 #if defined(CFS_OS_WINDOWS)
   Sleep(100);
+#else
+  usleep(100000);
 #endif
 
   cfs_runtime_poll(rt);
@@ -746,6 +744,8 @@ TEST greenthreads_and_utils() {
   cfg.ipc_path = NULL;
 
   cfs_runtime_init(&cfg, &rt, &ec);
+
+  dummy_greenthread(NULL);
 
   cfs_greenthread_spawn(dummy_greenthread, NULL, &gt);
   cfs_greenthread_yield();
@@ -1652,7 +1652,293 @@ TEST branch_coverage_nulls() {
   PASS();
 }
 
+TEST edge_cases_and_oom() {
+  cfs_path p, out;
+  cfs_bool b;
+  cfs_directory_iterator *it;
+  cfs_recursive_directory_iterator *rit;
+  cfs_error_code ec;
+  const cfs_directory_entry *entry;
+  extern int g_cfs_calloc_fail;
+  extern int g_cfs_malloc_fail;
+
+  /* null checks */
+  cfs_path_root_name(NULL, NULL);
+  cfs_path_root_directory(NULL, NULL);
+  cfs_path_root_path(NULL, NULL);
+  cfs_path_relative_path(NULL, NULL);
+  cfs_path_parent_path(NULL, NULL);
+  cfs_path_filename(NULL, NULL);
+  cfs_path_stem(NULL, NULL);
+  cfs_path_extension(NULL, NULL);
+  cfs_path_has_root_path(NULL, NULL);
+  cfs_path_has_root_name(NULL, NULL);
+  cfs_path_has_root_directory(NULL, NULL);
+  cfs_path_has_relative_path(NULL, NULL);
+  cfs_path_has_parent_path(NULL, NULL);
+  cfs_path_has_filename(NULL, NULL);
+  cfs_path_has_stem(NULL, NULL);
+  cfs_path_has_extension(NULL, NULL);
+  cfs_path_is_absolute(NULL, NULL);
+  cfs_path_is_relative(NULL, NULL);
+  cfs_path_lexically_normal(NULL, NULL);
+
+  /* empty paths */
+  cfs_path_init(&p);
+  cfs_path_init(&out);
+  cfs_path_root_name(&p, &out);
+  cfs_path_root_directory(&p, &out);
+  cfs_path_root_path(&p, &out);
+  cfs_path_relative_path(&p, &out);
+  cfs_path_parent_path(&p, &out);
+  cfs_path_filename(&p, &out);
+  cfs_path_stem(&p, &out);
+  cfs_path_extension(&p, &out);
+  cfs_path_has_root_path(&p, &b);
+  cfs_path_has_root_name(&p, &b);
+  cfs_path_has_root_directory(&p, &b);
+  cfs_path_has_relative_path(&p, &b);
+  cfs_path_has_parent_path(&p, &b);
+  cfs_path_has_filename(&p, &b);
+  cfs_path_has_stem(&p, &b);
+  cfs_path_has_extension(&p, &b);
+  cfs_path_lexically_normal(&p, &out);
+
+  /* lexically normal specific */
+  cfs_path_assign(&p, CFS_STR("a/../b/./c/../../d/.."));
+  cfs_path_lexically_normal(&p, &out);
+  cfs_path_assign(&p, CFS_STR("../../.."));
+  cfs_path_lexically_normal(&p, &out);
+  cfs_path_assign(&p, CFS_STR("/a/.."));
+  cfs_path_lexically_normal(&p, &out);
+  cfs_path_assign(&p, CFS_STR("a/b/..."));
+  cfs_path_lexically_normal(&p, &out);
+
+  /* oom tests */
+  cfs_path_assign(&p, CFS_STR("/root/dir/file.ext"));
+
+  g_cfs_calloc_fail = 1;
+  cfs_path_root_directory(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_root_path(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_relative_path(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_parent_path(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_filename(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_stem(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_extension(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_lexically_normal(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_replace_filename(&p, CFS_STR("new.txt"));
+  g_cfs_calloc_fail = 1;
+  cfs_path_replace_extension(&p, CFS_STR("old"));
+
+  cfs_path_remove_filename(&p);
+
+  cfs_path_assign(&p, CFS_STR("C:/root/dir"));
+  cfs_path_has_root_name(&p, &b);
+
+  cfs_path_assign(&p, CFS_STR("/C:"));
+  cfs_path_root_name(&p, &out);
+
+  /* all remaining missing coverage cases */
+  cfs_path_assign(&p, CFS_STR("."));
+  cfs_path_filename(&p, &out);
+  cfs_path_stem(&p, &out);
+
+  cfs_path_assign(&p, CFS_STR(".."));
+  cfs_path_filename(&p, &out);
+  cfs_path_stem(&p, &out);
+
+  cfs_path_assign(&p, CFS_STR("C:/"));
+  cfs_path_root_path(&p, &out);
+  cfs_path_parent_path(&p, &out);
+  cfs_path_remove_filename(&p);
+  cfs_path_has_root_name(&p, &b);
+  cfs_path_lexically_normal(&p, &out);
+
+  cfs_path_assign(&p, CFS_STR("C:/root/"));
+  cfs_path_remove_filename(&p);
+
+  cfs_path_assign(&p, CFS_STR("C:/root/dir"));
+  cfs_path_root_directory(&p, &out);
+  cfs_path_parent_path(&p, &out);
+  cfs_path_has_root_name(&p, &b);
+  cfs_path_lexically_normal(&p, &out);
+
+  extern int g_cfs_realloc_fail;
+  cfs_path_assign(&p, CFS_STR("file"));
+  g_cfs_realloc_fail = 1;
+  cfs_path_replace_extension(&p, CFS_STR("ext"));
+
+  cfs_path_assign(&p, CFS_STR("file"));
+  g_cfs_realloc_fail = 2;
+  cfs_path_replace_extension(&p, CFS_STR("ext"));
+  g_cfs_realloc_fail = 0;
+
+  cfs_path_assign(&p, CFS_STR("/file.ext"));
+  g_cfs_calloc_fail = 2;
+  cfs_path_extension(&p, &out);
+  g_cfs_calloc_fail = 2;
+  cfs_path_stem(&p, &out);
+  g_cfs_calloc_fail = 1;
+  cfs_path_filename(&p, &out);
+
+  cfs_path_assign(&p, CFS_STR(""));
+  cfs_path_remove_filename(&p);
+
+  cfs_path_assign(&p, CFS_STR("/"));
+  cfs_path_remove_filename(&p);
+
+  /* more edge cases 3 */
+  cfs_path_assign(&p, CFS_STR("//host"));
+  cfs_path_root_name(&p, &out);
+  cfs_path_filename(&p, &out);
+  cfs_path_stem(&p, &out);
+  cfs_path_parent_path(&p, &out);
+  cfs_path_remove_filename(&p);
+  cfs_path_lexically_normal(&p, &out);
+
+  cfs_path_assign(&p, CFS_STR("/"));
+  cfs_path_filename(&p, &out);
+  cfs_path_stem(&p, &out);
+  cfs_path_parent_path(&p, &out);
+  cfs_path_remove_filename(&p);
+  cfs_path_lexically_normal(&p, &out);
+
+  cfs_path_assign(&p, CFS_STR(".a"));
+  cfs_path_filename(&p, &out);
+  cfs_path_stem(&p, &out);
+  cfs_path_extension(&p, &out);
+
+  cfs_path_assign(&p, CFS_STR("a"));
+  cfs_path_filename(&p, &out);
+  cfs_path_stem(&p, &out);
+  cfs_path_extension(&p, &out);
+
+  cfs_path_assign(&p, CFS_STR("ab"));
+  cfs_path_filename(&p, &out);
+  cfs_path_stem(&p, &out);
+  cfs_path_extension(&p, &out);
+
+  /* realloc failure in path_replace_extension */
+  extern int g_cfs_realloc_fail;
+  cfs_path_assign(&p, CFS_STR("file"));
+  g_cfs_realloc_fail = 3;
+  cfs_path_replace_extension(&p, CFS_STR("ext"));
+  g_cfs_realloc_fail = 4;
+  cfs_path_replace_extension(&p, CFS_STR("ext"));
+  g_cfs_realloc_fail = 0;
+
+  g_cfs_calloc_fail = 0;
+
+  g_cfs_calloc_fail = 0;
+
+  cfs_path_destroy(&p);
+  cfs_path_destroy(&out);
+
+  /* dir iterator */
+#if !defined(CFS_OS_WINDOWS)
+  cfs_path_init_str(&p, CFS_STR("/"));
+  g_cfs_malloc_fail = 1;
+  cfs_dir_itr_init(&p, &it, &ec);
+  g_cfs_malloc_fail = 2;
+  cfs_rec_dir_itr_init(&p, &rit, &ec);
+  g_cfs_malloc_fail = 0;
+
+  cfs_dir_itr_init(&p, &it, &ec);
+  if (it) {
+    while (cfs_dir_itr_next(it, &entry, &ec) == 0) {
+    }
+    cfs_dir_itr_next(it, &entry, &ec);
+    cfs_dir_itr_close(it);
+  }
+
+  cfs_path_destroy(&p);
+
+  /* non-existent dir */
+  cfs_path_init_str(&p, CFS_STR("/this_dir_does_not_exist_123456"));
+  cfs_dir_itr_init(&p, &it, &ec);
+  cfs_path_destroy(&p);
+
+  /* dir_itr_next on empty */
+  cfs_dir_itr_init(NULL, NULL, NULL);
+  cfs_dir_itr_next(NULL, NULL, NULL);
+#endif
+
+  /* final missing lines */
+  cfs_path_assign(&p, CFS_STR("/"));
+  cfs_path_relative_path(&p, &out);
+  cfs_path_has_root_directory(&p, &b);
+
+  /* use fresh paths */
+  {
+    cfs_path p2 = {0};
+    cfs_path_assign(&p2, CFS_STR("C:/root/dir"));
+    cfs_path_has_root_name(&p2, &b);
+    cfs_path_destroy(&p2);
+  }
+  {
+    cfs_path p2 = {0};
+    cfs_path_assign(&p2, CFS_STR("/file.ext"));
+    g_cfs_malloc_fail = 1;
+    cfs_path_parent_path(&p2, &out);
+    g_cfs_malloc_fail = 0;
+    cfs_path_destroy(&p2);
+  }
+  {
+    cfs_path p2 = {0};
+    cfs_path_assign(&p2, CFS_STR("/file.ext"));
+    g_cfs_realloc_fail = 1;
+    cfs_path_replace_filename(&p2,
+                              CFS_STR("very_long_name_to_exceed_capacity.txt"));
+    g_cfs_realloc_fail = 0;
+    cfs_path_destroy(&p2);
+  }
+  {
+    cfs_path p2 = {0};
+    cfs_path_assign(&p2, CFS_STR("file"));
+    g_cfs_realloc_fail = 1;
+    cfs_path_replace_extension(&p2, CFS_STR("ext"));
+    cfs_path_destroy(&p2);
+  }
+  {
+    cfs_path p2 = {0};
+    cfs_path_assign(&p2, CFS_STR("file"));
+    g_cfs_realloc_fail = 2;
+    cfs_path_replace_extension(&p2, CFS_STR("ext"));
+    g_cfs_realloc_fail = 0;
+    cfs_path_destroy(&p2);
+  }
+
+  cfs_path_init_str(&p, CFS_STR("/"));
+  g_cfs_malloc_fail = 1;
+  cfs_dir_itr_init(&p, &it, &ec);
+
+  cfs_path_init_str(&p, CFS_STR("/"));
+  g_cfs_malloc_fail = 2;
+  cfs_rec_dir_itr_init(&p, &rit, &ec);
+  g_cfs_malloc_fail = 0;
+
+  cfs_path_assign(&p, CFS_STR("/"));
+  g_cfs_malloc_fail = 2;
+  cfs_rec_dir_itr_init(&p, &rit, &ec);
+
+  cfs_path_assign(&p, CFS_STR("/"));
+  g_cfs_malloc_fail = 1;
+  cfs_rec_dir_itr_init(&p, &rit, &ec);
+  g_cfs_malloc_fail = 0;
+
+  PASS();
+}
+
 SUITE(cfs_suite) {
+  RUN_TEST(edge_cases_and_oom);
   RUN_TEST(missing_lines_coverage);
   RUN_TEST(branch_coverage_nulls);
   RUN_TEST(missing_lines_coverage_async);

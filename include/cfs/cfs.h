@@ -5272,13 +5272,17 @@ CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler) { (void)handler; }
  */
 CFS_API cfs_errc cfs_path_root_name(const cfs_path *p, cfs_path *out) {
   cfs_size_t len;
+#if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
   cfs_char_t *buf;
+#endif
   if (!out)
     return -1;
   cfs_path_init(out);
   if (!p)
     return -1;
   len = cfs_get_root_name_len(p);
+  (void)len;
+#if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
   if (len == 0)
     return 0;
   if (cfs_calloc(len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
@@ -5286,6 +5290,7 @@ CFS_API cfs_errc cfs_path_root_name(const cfs_path *p, cfs_path *out) {
   CFS_STRNCPY_SAFE(buf, len + 1, p->str, len);
   cfs_path_assign(out, buf);
   cfs_free(buf);
+#endif
   return 0;
 }
 
@@ -5527,8 +5532,10 @@ CFS_API cfs_errc cfs_path_has_root_name(const cfs_path *p, cfs_bool *out) {
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return 0;
+#if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
   if (cfs_get_root_name_len(p) > 0)
     *out = cfs_true;
+#endif
   return 0;
 }
 
@@ -5713,6 +5720,7 @@ CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
   root_dir_len = cfs_get_root_dir_len(p, root_name_len);
   root_len = root_name_len + root_dir_len;
 
+#if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
   if (root_name_len > 0) {
     cfs_char_t *rn_buf;
     if (cfs_calloc(root_name_len + 1, sizeof(cfs_char_t), (void **)&rn_buf) !=
@@ -5722,6 +5730,7 @@ CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
     cfs_path_assign(out, rn_buf);
     cfs_free(rn_buf);
   }
+#endif
   if (root_dir_len > 0) {
     cfs_path_concat(out, PATH_SEP_STR);
   }

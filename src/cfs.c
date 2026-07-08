@@ -46,9 +46,9 @@ extern CFS_API_FWD int g_cfs_readlink_fail;
 /** \brief Internal Macro malloc */
 #define malloc(s) ((g_cfs_malloc_fail > 0 && --g_cfs_malloc_fail == 0) ? NULL : malloc(s))
 /** \brief Internal Macro realloc */
-#define realloc(p, s) (g_cfs_realloc_fail ? NULL : realloc(p, s))
+#define realloc(p, s) ((g_cfs_realloc_fail > 0 && --g_cfs_realloc_fail == 0) ? NULL : realloc(p, s))
 /** \brief Internal Macro calloc */
-#define calloc(n, s) (g_cfs_calloc_fail ? NULL : calloc(n, s))
+#define calloc(n, s) ((g_cfs_calloc_fail > 0 && --g_cfs_calloc_fail == 0) ? NULL : calloc(n, s))
 /** \brief Internal Macro getcwd */
 #define getcwd(b, s) (g_cfs_getcwd_fail ? NULL : getcwd(b, s))
 /** \brief Internal Macro readlink */
