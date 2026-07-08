@@ -6216,6 +6216,7 @@ CFS_API cfs_errc cfs_dir_itr_init(const cfs_path *p,
     return -1;
   }
   it->is_end = cfs_false;
+  cfs_path_init(&it->current.path);
   it->dirp = opendir(p->str);
   if (!it->dirp) {
     cfs_free(it);
