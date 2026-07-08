@@ -1659,8 +1659,6 @@ TEST edge_cases_and_oom() {
   cfs_recursive_directory_iterator *rit;
   cfs_error_code ec;
   const cfs_directory_entry *entry;
-  extern int g_cfs_calloc_fail;
-  extern int g_cfs_malloc_fail;
 
   /* null checks */
   cfs_path_root_name(NULL, NULL);
@@ -1771,7 +1769,6 @@ TEST edge_cases_and_oom() {
   cfs_path_has_root_name(&p, &b);
   cfs_path_lexically_normal(&p, &out);
 
-  extern int g_cfs_realloc_fail;
   cfs_path_assign(&p, CFS_STR("file"));
   g_cfs_realloc_fail = 1;
   cfs_path_replace_extension(&p, CFS_STR("ext"));
@@ -1827,7 +1824,6 @@ TEST edge_cases_and_oom() {
   cfs_path_extension(&p, &out);
 
   /* realloc failure in path_replace_extension */
-  extern int g_cfs_realloc_fail;
   cfs_path_assign(&p, CFS_STR("file"));
   g_cfs_realloc_fail = 3;
   cfs_path_replace_extension(&p, CFS_STR("ext"));
