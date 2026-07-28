@@ -42,31 +42,31 @@ static void test_sleep_ms(int ms) {
  */
 TEST path_initialization() {
   cfs_path p = {0};
-  cfs_path_init(&p);
+  (void)cfs_path_init(&p);
   {
     cfs_bool empty;
-    cfs_path_is_empty(&p, &empty);
+    (void)cfs_path_is_empty(&p, &empty);
     ASSERT_EQ(1, empty);
   }
 
-  cfs_path_init_str(&p, CFS_STR("test") PATH_SEP_STR CFS_STR("path"));
+  (void)cfs_path_init_str(&p, CFS_STR("test") PATH_SEP_STR CFS_STR("path"));
   {
     cfs_bool empty;
-    cfs_path_is_empty(&p, &empty);
+    (void)cfs_path_is_empty(&p, &empty);
     ASSERT_EQ(0, empty);
   }
   {
     const cfs_char_t *c_str;
     int cmp;
-    cfs_path_c_str(&p, &c_str);
-    cfs_strcmp(CFS_STR("test") PATH_SEP_STR CFS_STR("path"), c_str, &cmp);
+    (void)cfs_path_c_str(&p, &c_str);
+    (void)cfs_strcmp(CFS_STR("test") PATH_SEP_STR CFS_STR("path"), c_str, &cmp);
     ASSERT_EQ(0, cmp);
   }
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   {
     cfs_bool empty;
-    cfs_path_is_empty(&p, &empty);
+    (void)cfs_path_is_empty(&p, &empty);
     ASSERT_EQ(1, empty);
   }
   PASS();
@@ -78,18 +78,19 @@ TEST path_initialization() {
  */
 TEST path_appending() {
   cfs_path p = {0};
-  cfs_path_init_str(&p, CFS_STR("dir"));
-  cfs_path_append(&p, CFS_STR("file.txt"));
+  (void)cfs_path_init_str(&p, CFS_STR("dir"));
+  (void)cfs_path_append(&p, CFS_STR("file.txt"));
 
   {
     const cfs_char_t *c_str;
     int cmp;
-    cfs_path_c_str(&p, &c_str);
-    cfs_strcmp(CFS_STR("dir") PATH_SEP_STR CFS_STR("file.txt"), c_str, &cmp);
+    (void)cfs_path_c_str(&p, &c_str);
+    (void)cfs_strcmp(CFS_STR("dir") PATH_SEP_STR CFS_STR("file.txt"), c_str,
+                     &cmp);
     ASSERT_EQ(0, cmp);
   }
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -108,133 +109,133 @@ TEST root_path_decomposition() {
   int cmp;
   const cfs_char_t *cstr;
 
-  cfs_path_init(&out);
+  (void)cfs_path_init(&out);
 
   /* Windows tests only apply on Windows, but the parser functions run
      regardless of OS if we fake it? No, the parser is #if
      defined(CFS_OS_WINDOWS). So we should only test Windows paths on Windows.
    */
 #if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
-  cfs_path_init_str(&p, CFS_STR("C:\\Windows"));
-  cfs_path_root_name(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR("C:"), &cmp);
+  (void)cfs_path_init_str(&p, CFS_STR("C:\\Windows"));
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR("C:"), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_is_absolute(&p, &b);
+  (void)cfs_path_is_absolute(&p, &b);
   ASSERT_EQ(1, b);
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
-  cfs_path_init_str(&p, CFS_STR("\\Windows"));
-  cfs_path_root_name(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR(""), &cmp);
+  (void)cfs_path_init_str(&p, CFS_STR("\\Windows"));
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR(""), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_is_absolute(&p, &b);
+  (void)cfs_path_is_absolute(&p, &b);
   ASSERT_EQ(0, b); /* Relative absolute! */
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
-  cfs_path_init_str(&p, CFS_STR("\\\\server\\share\\file.txt"));
-  cfs_path_root_name(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR("\\\\server\\share"), &cmp);
+  (void)cfs_path_init_str(&p, CFS_STR("\\\\server\\share\\file.txt"));
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR("\\\\server\\share"), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_destroy(&out);
-  cfs_path_root_directory(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR("\\"), &cmp);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_root_directory(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR("\\"), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_is_absolute(&p, &b);
+  (void)cfs_path_is_absolute(&p, &b);
   ASSERT_EQ(1, b);
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
-  cfs_path_init_str(&p, CFS_STR("\\\\?\\C:\\file.txt"));
-  cfs_path_root_name(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR("\\\\?\\C:"), &cmp);
+  (void)cfs_path_init_str(&p, CFS_STR("\\\\?\\C:\\file.txt"));
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR("\\\\?\\C:"), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
-  cfs_path_init_str(&p, CFS_STR("\\\\.\\COM1"));
-  cfs_path_root_name(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR("\\\\.\\COM1"), &cmp);
+  (void)cfs_path_init_str(&p, CFS_STR("\\\\.\\COM1"));
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR("\\\\.\\COM1"), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 #else
-  cfs_path_init_str(&p, CFS_STR("/usr/bin"));
-  cfs_path_root_name(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR(""), &cmp);
+  (void)cfs_path_init_str(&p, CFS_STR("/usr/bin"));
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR(""), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_destroy(&out);
+  (void)cfs_path_destroy(&out);
 
-  cfs_path_root_directory(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR("/"), &cmp);
+  (void)cfs_path_root_directory(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR("/"), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_destroy(&out);
+  (void)cfs_path_destroy(&out);
 
-  cfs_path_is_absolute(&p, &b);
+  (void)cfs_path_is_absolute(&p, &b);
   ASSERT_EQ(1, b);
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 #endif
 
 #if !defined(CFS_OS_WINDOWS) && !defined(CFS_OS_DOS)
-  cfs_path_init_str(&p, CFS_STR("/usr/bin"));
-  cfs_path_root_path(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR("/"), &cmp);
+  (void)cfs_path_init_str(&p, CFS_STR("/usr/bin"));
+  (void)cfs_path_root_path(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR("/"), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 #else
-  cfs_path_init_str(&p, CFS_STR("\\\\server\\share\\file.txt"));
-  cfs_path_root_path(&p, &out);
-  cfs_path_c_str(&out, &cstr);
-  cfs_strcmp(cstr, CFS_STR("\\\\server\\share\\"), &cmp);
+  (void)cfs_path_init_str(&p, CFS_STR("\\\\server\\share\\file.txt"));
+  (void)cfs_path_root_path(&p, &out);
+  (void)cfs_path_c_str(&out, &cstr);
+  (void)cfs_strcmp(cstr, CFS_STR("\\\\server\\share\\"), &cmp);
   ASSERT_EQ(0, cmp);
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 #endif
 
-  cfs_path_destroy(&out);
+  (void)cfs_path_destroy(&out);
   PASS();
 }
 
 TEST path_decomposition() {
   cfs_path p = {0}, res = {0};
-  cfs_path_init_str(&p, CFS_STR("dir") PATH_SEP_STR CFS_STR("subdir")
-                            PATH_SEP_STR CFS_STR("file.txt"));
+  (void)cfs_path_init_str(&p, CFS_STR("dir") PATH_SEP_STR CFS_STR("subdir")
+                                  PATH_SEP_STR CFS_STR("file.txt"));
 
-  cfs_path_filename(&p, &res);
+  (void)cfs_path_filename(&p, &res);
   {
     const cfs_char_t *c_str;
     int cmp;
-    cfs_path_c_str(&res, &c_str);
-    cfs_strcmp(CFS_STR("file.txt"), c_str, &cmp);
+    (void)cfs_path_c_str(&res, &c_str);
+    (void)cfs_strcmp(CFS_STR("file.txt"), c_str, &cmp);
     ASSERT_EQ(0, cmp);
   }
-  cfs_path_destroy(&res);
+  (void)cfs_path_destroy(&res);
 
-  cfs_path_extension(&p, &res);
+  (void)cfs_path_extension(&p, &res);
   {
     const cfs_char_t *c_str;
     int cmp;
-    cfs_path_c_str(&res, &c_str);
-    cfs_strcmp(CFS_STR(".txt"), c_str, &cmp);
+    (void)cfs_path_c_str(&res, &c_str);
+    (void)cfs_strcmp(CFS_STR(".txt"), c_str, &cmp);
     ASSERT_EQ(0, cmp);
   }
-  cfs_path_destroy(&res);
+  (void)cfs_path_destroy(&res);
 
-  cfs_path_stem(&p, &res);
+  (void)cfs_path_stem(&p, &res);
   {
     const cfs_char_t *c_str;
     int cmp;
-    cfs_path_c_str(&res, &c_str);
-    cfs_strcmp(CFS_STR("file"), c_str, &cmp);
+    (void)cfs_path_c_str(&res, &c_str);
+    (void)cfs_strcmp(CFS_STR("file"), c_str, &cmp);
     ASSERT_EQ(0, cmp);
   }
-  cfs_path_destroy(&res);
+  (void)cfs_path_destroy(&res);
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -275,10 +276,10 @@ TEST thread_pool_async_validation() {
 
   test_completed_ops = 0;
 
-  cfs_path_init_str(&p, CFS_STR("dummy_test_file.txt"));
+  (void)cfs_path_init_str(&p, CFS_STR("dummy_test_file.txt"));
 
   for (i = 0; i < 100; i++) {
-    cfs_remove_async(rt, &p, async_callback, NULL);
+    (void)cfs_remove_async(rt, &p, async_callback, NULL);
   }
 
   /* Wait for operations to hit completion queue (simulate event loop tick) */
@@ -288,13 +289,13 @@ TEST thread_pool_async_validation() {
   usleep(100000);
 #endif
 
-  cfs_runtime_poll(rt);
+  (void)cfs_runtime_poll(rt);
 
   /* We expect some to have finished depending on thread timing. Just validate
    * poll works */
 
-  cfs_path_destroy(&p);
-  cfs_runtime_destroy(rt);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_runtime_destroy(rt);
   PASS();
 }
 
@@ -309,7 +310,7 @@ TEST greenthread_scheduler_validation() {
   res = cfs_greenthread_scheduler_run(sched);
   ASSERT_EQ(0, res);
 
-  cfs_greenthread_scheduler_destroy(sched);
+  (void)cfs_greenthread_scheduler_destroy(sched);
   PASS();
 }
 
@@ -323,11 +324,11 @@ TEST memory_allocation() {
   ASSERT_NEQ(NULL, ptr);
   ASSERT_EQ(0, cfs_realloc(ptr, 2048, &ptr));
   ASSERT_NEQ(NULL, ptr);
-  cfs_free(ptr);
+  (void)cfs_free(ptr);
 
   ASSERT_EQ(0, cfs_calloc(10, 10, &ptr));
   ASSERT_NEQ(NULL, ptr);
-  cfs_free(ptr);
+  (void)cfs_free(ptr);
   PASS();
 }
 
@@ -339,19 +340,19 @@ TEST string_handling() {
   cfs_char_t buf[100];
   cfs_size_t len;
   cfs_char_t *out = NULL;
-  cfs_strcpy(buf, CFS_STR("Hello"), &out);
-  cfs_strlen(buf, &len);
+  (void)cfs_strcpy(buf, CFS_STR("Hello"), &out);
+  (void)cfs_strlen(buf, &len);
   ASSERT_EQ(5, len);
 
-  cfs_strcat(buf, CFS_STR(" World"), &out);
-  cfs_strlen(buf, &len);
+  (void)cfs_strcat(buf, CFS_STR(" World"), &out);
+  (void)cfs_strlen(buf, &len);
   ASSERT_EQ(11, len);
 
   {
     int cmp;
-    cfs_strcmp(buf, CFS_STR("Hello World"), &cmp);
+    (void)cfs_strcmp(buf, CFS_STR("Hello World"), &cmp);
     ASSERT_EQ(0, cmp);
-    cfs_strncmp(buf, CFS_STR("Hello W"), 7, &cmp);
+    (void)cfs_strncmp(buf, CFS_STR("Hello W"), 7, &cmp);
     ASSERT_EQ(0, cmp);
   }
   PASS();
@@ -366,31 +367,31 @@ TEST path_utilities() {
   cfs_path p2 = {0};
   cfs_char_t *gen_str = NULL;
 
-  cfs_path_init_str(&p, CFS_STR("dir/subdir\\file.txt"));
-  cfs_path_make_preferred(&p);
-  cfs_path_generic_string(&p, &gen_str);
+  (void)cfs_path_init_str(&p, CFS_STR("dir/subdir\\file.txt"));
+  (void)cfs_path_make_preferred(&p);
+  (void)cfs_path_generic_string(&p, &gen_str);
   if (gen_str)
-    cfs_free(gen_str);
+    (void)cfs_free(gen_str);
 
-  cfs_path_clear(&p);
-  cfs_path_destroy(&p);
+  (void)cfs_path_clear(&p);
+  (void)cfs_path_destroy(&p);
 
-  cfs_path_init_str(&p, CFS_STR("first"));
-  cfs_path_init_str(&p2, CFS_STR("second"));
-  cfs_path_swap(&p, &p2);
-  cfs_path_concat(&p, CFS_STR("_part"));
+  (void)cfs_path_init_str(&p, CFS_STR("first"));
+  (void)cfs_path_init_str(&p2, CFS_STR("second"));
+  (void)cfs_path_swap(&p, &p2);
+  (void)cfs_path_concat(&p, CFS_STR("_part"));
 
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&p2);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p2);
 
-  cfs_path_make_preferred(NULL);
-  cfs_path_generic_string(NULL, &gen_str);
-  cfs_path_generic_string(&p, NULL);
-  cfs_path_clear(NULL);
-  cfs_path_swap(NULL, &p2);
-  cfs_path_swap(&p, NULL);
-  cfs_path_concat(NULL, CFS_STR("a"));
-  cfs_path_concat(&p, NULL);
+  (void)cfs_path_make_preferred(NULL);
+  (void)cfs_path_generic_string(NULL, &gen_str);
+  (void)cfs_path_generic_string(&p, NULL);
+  (void)cfs_path_clear(NULL);
+  (void)cfs_path_swap(NULL, &p2);
+  (void)cfs_path_swap(&p, NULL);
+  (void)cfs_path_concat(NULL, CFS_STR("a"));
+  (void)cfs_path_concat(&p, NULL);
 
   PASS();
 }
@@ -401,31 +402,31 @@ TEST path_utilities() {
  */
 TEST path_decomposition_more() {
   cfs_path p = {0}, out = {0};
-  cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
+  (void)cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
 
-  cfs_path_root_name(&p, &out);
-  cfs_path_destroy(&out);
-  cfs_path_root_directory(&p, &out);
-  cfs_path_destroy(&out);
-  cfs_path_root_path(&p, &out);
-  cfs_path_destroy(&out);
-  cfs_path_relative_path(&p, &out);
-  cfs_path_destroy(&out);
-  cfs_path_parent_path(&p, &out);
-  cfs_path_destroy(&out);
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_root_directory(&p, &out);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_root_path(&p, &out);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_relative_path(&p, &out);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_parent_path(&p, &out);
+  (void)cfs_path_destroy(&out);
 
-  cfs_path_replace_filename(&p, CFS_STR("new.exe"));
-  cfs_path_replace_extension(&p, CFS_STR(".bin"));
+  (void)cfs_path_replace_filename(&p, CFS_STR("new.exe"));
+  (void)cfs_path_replace_extension(&p, CFS_STR(".bin"));
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
-  cfs_path_root_name(NULL, &out);
-  cfs_path_root_directory(NULL, &out);
-  cfs_path_root_path(NULL, &out);
-  cfs_path_relative_path(NULL, &out);
-  cfs_path_parent_path(NULL, &out);
-  cfs_path_replace_filename(NULL, CFS_STR(""));
-  cfs_path_replace_extension(NULL, CFS_STR(""));
+  (void)cfs_path_root_name(NULL, &out);
+  (void)cfs_path_root_directory(NULL, &out);
+  (void)cfs_path_root_path(NULL, &out);
+  (void)cfs_path_relative_path(NULL, &out);
+  (void)cfs_path_parent_path(NULL, &out);
+  (void)cfs_path_replace_filename(NULL, CFS_STR(""));
+  (void)cfs_path_replace_extension(NULL, CFS_STR(""));
 
   PASS();
 }
@@ -437,31 +438,31 @@ TEST path_decomposition_more() {
 TEST path_queries() {
   cfs_path p = {0};
   cfs_bool out_bool;
-  cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
+  (void)cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
 
-  cfs_path_has_root_path(&p, &out_bool);
-  cfs_path_has_root_name(&p, &out_bool);
-  cfs_path_has_root_directory(&p, &out_bool);
-  cfs_path_has_relative_path(&p, &out_bool);
-  cfs_path_has_parent_path(&p, &out_bool);
-  cfs_path_has_filename(&p, &out_bool);
-  cfs_path_has_stem(&p, &out_bool);
-  cfs_path_has_extension(&p, &out_bool);
-  cfs_path_is_absolute(&p, &out_bool);
-  cfs_path_is_relative(&p, &out_bool);
+  (void)cfs_path_has_root_path(&p, &out_bool);
+  (void)cfs_path_has_root_name(&p, &out_bool);
+  (void)cfs_path_has_root_directory(&p, &out_bool);
+  (void)cfs_path_has_relative_path(&p, &out_bool);
+  (void)cfs_path_has_parent_path(&p, &out_bool);
+  (void)cfs_path_has_filename(&p, &out_bool);
+  (void)cfs_path_has_stem(&p, &out_bool);
+  (void)cfs_path_has_extension(&p, &out_bool);
+  (void)cfs_path_is_absolute(&p, &out_bool);
+  (void)cfs_path_is_relative(&p, &out_bool);
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
-  cfs_path_has_root_path(NULL, &out_bool);
-  cfs_path_has_root_name(NULL, &out_bool);
-  cfs_path_has_root_directory(NULL, &out_bool);
-  cfs_path_has_relative_path(NULL, &out_bool);
-  cfs_path_has_parent_path(NULL, &out_bool);
-  cfs_path_has_filename(NULL, &out_bool);
-  cfs_path_has_stem(NULL, &out_bool);
-  cfs_path_has_extension(NULL, &out_bool);
-  cfs_path_is_absolute(NULL, &out_bool);
-  cfs_path_is_relative(NULL, &out_bool);
+  (void)cfs_path_has_root_path(NULL, &out_bool);
+  (void)cfs_path_has_root_name(NULL, &out_bool);
+  (void)cfs_path_has_root_directory(NULL, &out_bool);
+  (void)cfs_path_has_relative_path(NULL, &out_bool);
+  (void)cfs_path_has_parent_path(NULL, &out_bool);
+  (void)cfs_path_has_filename(NULL, &out_bool);
+  (void)cfs_path_has_stem(NULL, &out_bool);
+  (void)cfs_path_has_extension(NULL, &out_bool);
+  (void)cfs_path_is_absolute(NULL, &out_bool);
+  (void)cfs_path_is_relative(NULL, &out_bool);
 
   PASS();
 }
@@ -472,27 +473,27 @@ TEST path_queries() {
  */
 TEST path_lexical() {
   cfs_path p = {0}, base = {0}, out = {0};
-  cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
-  cfs_path_init_str(&base, CFS_STR("/usr/local/"));
+  (void)cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
+  (void)cfs_path_init_str(&base, CFS_STR("/usr/local/"));
 
-  cfs_path_compare(&p, &base);
-  cfs_path_init(&out);
-  cfs_path_lexically_normal(&p, &out);
-  cfs_path_destroy(&out);
-  cfs_path_init(&out);
-  cfs_path_lexically_relative(&p, &base, &out);
-  cfs_path_destroy(&out);
-  cfs_path_init(&out);
-  cfs_path_lexically_proximate(&p, &base, &out);
-  cfs_path_destroy(&out);
+  (void)cfs_path_compare(&p, &base);
+  (void)cfs_path_init(&out);
+  (void)cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_init(&out);
+  (void)cfs_path_lexically_relative(&p, &base, &out);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_init(&out);
+  (void)cfs_path_lexically_proximate(&p, &base, &out);
+  (void)cfs_path_destroy(&out);
 
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&base);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&base);
 
-  cfs_path_compare(NULL, NULL);
-  cfs_path_lexically_normal(NULL, &out);
-  cfs_path_lexically_relative(NULL, &base, &out);
-  cfs_path_lexically_proximate(NULL, &base, &out);
+  (void)cfs_path_compare(NULL, NULL);
+  (void)cfs_path_lexically_normal(NULL, &out);
+  (void)cfs_path_lexically_relative(NULL, &base, &out);
+  (void)cfs_path_lexically_proximate(NULL, &base, &out);
 
   PASS();
 }
@@ -507,20 +508,20 @@ TEST dir_iterators() {
   const cfs_directory_entry *out_entry = NULL;
   cfs_error_code ec;
 
-  cfs_path_init_str(&p, CFS_STR("."));
+  (void)cfs_path_init_str(&p, CFS_STR("."));
 
-  cfs_dir_itr_init(&p, &itr, &ec);
-  cfs_dir_itr_next(itr, &out_entry, &ec);
-  cfs_dir_itr_close(itr);
+  (void)cfs_dir_itr_init(&p, &itr, &ec);
+  (void)cfs_dir_itr_next(itr, &out_entry, &ec);
+  (void)cfs_dir_itr_close(itr);
 
-  cfs_dir_itr_init(NULL, &itr, &ec);
-  cfs_dir_itr_init(&p, NULL, &ec);
-  cfs_dir_itr_next(NULL, &out_entry, &ec);
-  cfs_dir_itr_next(itr, NULL, &ec);
-  cfs_dir_itr_next(itr, &out_entry, NULL);
-  cfs_dir_itr_close(NULL);
+  (void)cfs_dir_itr_init(NULL, &itr, &ec);
+  (void)cfs_dir_itr_init(&p, NULL, &ec);
+  (void)cfs_dir_itr_next(NULL, &out_entry, &ec);
+  (void)cfs_dir_itr_next(itr, NULL, &ec);
+  (void)cfs_dir_itr_next(itr, &out_entry, NULL);
+  (void)cfs_dir_itr_close(NULL);
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -534,24 +535,24 @@ TEST rec_dir_iterators() {
   const cfs_directory_entry *out_entry = NULL;
   cfs_error_code ec;
 
-  cfs_path_init_str(&p, CFS_STR("."));
+  (void)cfs_path_init_str(&p, CFS_STR("."));
 
-  cfs_rec_dir_itr_init(&p, &itr, &ec);
-  cfs_rec_dir_itr_next(itr, &out_entry, &ec);
-  cfs_rec_dir_itr_disable_recursion_pending(itr);
-  cfs_rec_dir_itr_pop(itr, &ec);
-  cfs_rec_dir_itr_close(itr);
+  (void)cfs_rec_dir_itr_init(&p, &itr, &ec);
+  (void)cfs_rec_dir_itr_next(itr, &out_entry, &ec);
+  (void)cfs_rec_dir_itr_disable_recursion_pending(itr);
+  (void)cfs_rec_dir_itr_pop(itr, &ec);
+  (void)cfs_rec_dir_itr_close(itr);
 
-  cfs_rec_dir_itr_init(NULL, &itr, &ec);
-  cfs_rec_dir_itr_init(&p, NULL, &ec);
-  cfs_rec_dir_itr_next(NULL, &out_entry, &ec);
-  cfs_rec_dir_itr_next(itr, NULL, &ec);
-  cfs_rec_dir_itr_next(itr, &out_entry, NULL);
-  cfs_rec_dir_itr_disable_recursion_pending(NULL);
-  cfs_rec_dir_itr_pop(NULL, &ec);
-  cfs_rec_dir_itr_close(NULL);
+  (void)cfs_rec_dir_itr_init(NULL, &itr, &ec);
+  (void)cfs_rec_dir_itr_init(&p, NULL, &ec);
+  (void)cfs_rec_dir_itr_next(NULL, &out_entry, &ec);
+  (void)cfs_rec_dir_itr_next(itr, NULL, &ec);
+  (void)cfs_rec_dir_itr_next(itr, &out_entry, NULL);
+  (void)cfs_rec_dir_itr_disable_recursion_pending(NULL);
+  (void)cfs_rec_dir_itr_pop(NULL, &ec);
+  (void)cfs_rec_dir_itr_close(NULL);
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -570,79 +571,79 @@ TEST file_queries() {
   cfs_uintmax_t count;
   cfs_perms perms = 0;
 
-  cfs_path_init_str(&p, CFS_STR("dummy"));
-  cfs_path_init_str(&p2, CFS_STR("dummy2"));
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_path_init_str(&p2, CFS_STR("dummy2"));
 
-  cfs_status(&p, &s, &ec);
-  cfs_symlink_status(&p, &s, &ec);
-  cfs_status_known(s, &b);
-  cfs_exists(s, &b);
-  cfs_exists_path(&p, &b, &ec);
-  cfs_is_block_file(s, &b);
-  cfs_is_character_file(s, &b);
-  cfs_is_directory(s, &b);
-  cfs_is_fifo(s, &b);
-  cfs_is_other(s, &b);
-  cfs_is_regular_file(s, &b);
-  cfs_is_socket(s, &b);
-  cfs_is_symlink(s, &b);
-  cfs_is_empty_path(&p, &b, &ec);
+  (void)cfs_status(&p, &s, &ec);
+  (void)cfs_symlink_status(&p, &s, &ec);
+  (void)cfs_status_known(s, &b);
+  (void)cfs_exists(s, &b);
+  (void)cfs_exists_path(&p, &b, &ec);
+  (void)cfs_is_block_file(s, &b);
+  (void)cfs_is_character_file(s, &b);
+  (void)cfs_is_directory(s, &b);
+  (void)cfs_is_fifo(s, &b);
+  (void)cfs_is_other(s, &b);
+  (void)cfs_is_regular_file(s, &b);
+  (void)cfs_is_socket(s, &b);
+  (void)cfs_is_symlink(s, &b);
+  (void)cfs_is_empty_path(&p, &b, &ec);
 
-  cfs_create_directory(&p, &ec);
-  cfs_create_directories(&p, &ec);
-  cfs_create_hard_link(&p, &p2, &ec);
-  cfs_create_symlink(&p, &p2, &ec);
-  cfs_create_directory_symlink(&p, &p2, &ec);
+  (void)cfs_create_directory(&p, &ec);
+  (void)cfs_create_directories(&p, &ec);
+  (void)cfs_create_hard_link(&p, &p2, &ec);
+  (void)cfs_create_symlink(&p, &p2, &ec);
+  (void)cfs_create_directory_symlink(&p, &p2, &ec);
 
-  cfs_remove_all(&p, &sz, &ec);
-  cfs_rename(&p, &p2, &ec);
-  cfs_resize_file(&p, 1024, &ec);
-  cfs_space(&p, &spc, &ec);
-  cfs_last_write_time(&p, &ft, &ec);
-  cfs_hard_link_count(&p, &count, &ec);
-  cfs_permissions(&p, perms, 0, &ec);
-  cfs_equivalent(&p, &p2, &b, &ec);
+  (void)cfs_remove_all(&p, &sz, &ec);
+  (void)cfs_rename(&p, &p2, &ec);
+  (void)cfs_resize_file(&p, 1024, &ec);
+  (void)cfs_space(&p, &spc, &ec);
+  (void)cfs_last_write_time(&p, &ft, &ec);
+  (void)cfs_hard_link_count(&p, &count, &ec);
+  (void)cfs_permissions(&p, perms, 0, &ec);
+  (void)cfs_equivalent(&p, &p2, &b, &ec);
 
-  cfs_path_init(&p_out);
-  cfs_read_symlink(&p, &p_out, &ec);
-  cfs_path_destroy(&p_out);
+  (void)cfs_path_init(&p_out);
+  (void)cfs_read_symlink(&p, &p_out, &ec);
+  (void)cfs_path_destroy(&p_out);
 
-  cfs_path_init(&p_out);
-  cfs_absolute(&p, &p_out, &ec);
-  cfs_path_destroy(&p_out);
+  (void)cfs_path_init(&p_out);
+  (void)cfs_absolute(&p, &p_out, &ec);
+  (void)cfs_path_destroy(&p_out);
 
-  cfs_path_init(&p_out);
-  cfs_canonical(&p, &p_out, &ec);
-  cfs_path_destroy(&p_out);
+  (void)cfs_path_init(&p_out);
+  (void)cfs_canonical(&p, &p_out, &ec);
+  (void)cfs_path_destroy(&p_out);
 
-  cfs_path_init(&p_out);
-  cfs_weakly_canonical(&p, &p_out, &ec);
-  cfs_path_destroy(&p_out);
+  (void)cfs_path_init(&p_out);
+  (void)cfs_weakly_canonical(&p, &p_out, &ec);
+  (void)cfs_path_destroy(&p_out);
 
-  cfs_path_init(&p_out);
-  cfs_proximate(&p, &p2, &p_out, &ec);
-  cfs_path_destroy(&p_out);
+  (void)cfs_path_init(&p_out);
+  (void)cfs_proximate(&p, &p2, &p_out, &ec);
+  (void)cfs_path_destroy(&p_out);
 
-  cfs_path_init(&p_out);
-  cfs_relative(&p, &p2, &p_out, &ec);
-  cfs_path_destroy(&p_out);
+  (void)cfs_path_init(&p_out);
+  (void)cfs_relative(&p, &p2, &p_out, &ec);
+  (void)cfs_path_destroy(&p_out);
 
-  cfs_path_init(&p_out);
-  cfs_temp_directory_path(&p_out, &ec);
-  cfs_path_destroy(&p_out);
+  (void)cfs_path_init(&p_out);
+  (void)cfs_temp_directory_path(&p_out, &ec);
+  (void)cfs_path_destroy(&p_out);
 
-  cfs_copy(&p, &p2, 0, &ec);
-  cfs_copy_symlink(&p, &p2, &ec);
-  cfs_copy_file(&p, &p2, 0, &ec);
+  (void)cfs_copy(&p, &p2, 0, &ec);
+  (void)cfs_copy_symlink(&p, &p2, &ec);
+  (void)cfs_copy_file(&p, &p2, 0, &ec);
 
-  cfs_current_path(&p_out, &ec);
-  cfs_path_destroy(&p_out);
-  cfs_current_path_set(&p, &ec);
+  (void)cfs_current_path(&p_out, &ec);
+  (void)cfs_path_destroy(&p_out);
+  (void)cfs_current_path_set(&p, &ec);
 
-  cfs_path_remove_filename(&p);
+  (void)cfs_path_remove_filename(&p);
 
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&p2);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p2);
 
   PASS();
 }
@@ -658,17 +659,17 @@ TEST string_and_errors() {
   cfs_error_code ec;
   const char *msg;
 
-  cfs_mb_to_wide("test", dest_w, 100, &out_req);
-  cfs_wide_to_mb(L"test", dest_c, 100, &out_req);
+  (void)cfs_mb_to_wide("test", dest_w, 100, &out_req);
+  (void)cfs_wide_to_mb(L"test", dest_c, 100, &out_req);
 
-  cfs_make_error_code_from_os(2, &ec);
-  cfs_get_last_error(&ec);
-  cfs_error_message(cfs_errc_no_such_file_or_directory, &msg);
+  (void)cfs_make_error_code_from_os(2, &ec);
+  (void)cfs_get_last_error(&ec);
+  (void)cfs_error_message(cfs_errc_no_such_file_or_directory, &msg);
 
-  cfs_mb_to_wide(NULL, dest_w, 100, &out_req);
-  cfs_wide_to_mb(NULL, dest_c, 100, &out_req);
-  cfs_error_message(cfs_errc_success, NULL);
-  cfs_get_last_error(NULL);
+  (void)cfs_mb_to_wide(NULL, dest_w, 100, &out_req);
+  (void)cfs_wide_to_mb(NULL, dest_c, 100, &out_req);
+  (void)cfs_error_message(cfs_errc_success, NULL);
+  (void)cfs_get_last_error(NULL);
 
   PASS();
 }
@@ -684,35 +685,35 @@ TEST ipc_and_processes() {
   cfs_named_semaphore *sem = NULL;
   void *addr;
 
-  cfs_message_pipe_create(CFS_STR("pipe"), &pipe);
-  cfs_message_pipe_destroy(pipe);
-  cfs_message_pipe_create(NULL, &pipe);
-  cfs_message_pipe_destroy(NULL);
+  (void)cfs_message_pipe_create(CFS_STR("pipe"), &pipe);
+  (void)cfs_message_pipe_destroy(pipe);
+  (void)cfs_message_pipe_create(NULL, &pipe);
+  (void)cfs_message_pipe_destroy(NULL);
 
-  cfs_process_spawn(CFS_STR("dummy"), &proc);
-  cfs_process_wait(proc);
-  cfs_process_destroy(proc);
-  cfs_process_spawn(NULL, &proc);
-  cfs_process_wait(NULL);
-  cfs_process_destroy(NULL);
+  (void)cfs_process_spawn(CFS_STR("dummy"), &proc);
+  (void)cfs_process_wait(proc);
+  (void)cfs_process_destroy(proc);
+  (void)cfs_process_spawn(NULL, &proc);
+  (void)cfs_process_wait(NULL);
+  (void)cfs_process_destroy(NULL);
 
-  cfs_shm_create(1024, CFS_STR("shm"), &shm);
-  cfs_shm_map(shm, &addr);
-  cfs_shm_unmap(shm, addr);
-  cfs_shm_destroy(shm);
-  cfs_shm_create(0, NULL, &shm);
-  cfs_shm_map(NULL, &addr);
-  cfs_shm_unmap(NULL, addr);
-  cfs_shm_destroy(NULL);
+  (void)cfs_shm_create(1024, CFS_STR("shm"), &shm);
+  (void)cfs_shm_map(shm, &addr);
+  (void)cfs_shm_unmap(shm, addr);
+  (void)cfs_shm_destroy(shm);
+  (void)cfs_shm_create(0, NULL, &shm);
+  (void)cfs_shm_map(NULL, &addr);
+  (void)cfs_shm_unmap(NULL, addr);
+  (void)cfs_shm_destroy(NULL);
 
-  cfs_named_semaphore_create(CFS_STR("sem"), 1, &sem);
-  cfs_named_semaphore_wait(sem);
-  cfs_named_semaphore_post(sem);
-  cfs_named_semaphore_destroy(sem);
-  cfs_named_semaphore_create(NULL, 1, &sem);
-  cfs_named_semaphore_wait(NULL);
-  cfs_named_semaphore_post(NULL);
-  cfs_named_semaphore_destroy(NULL);
+  (void)cfs_named_semaphore_create(CFS_STR("sem"), 1, &sem);
+  (void)cfs_named_semaphore_wait(sem);
+  (void)cfs_named_semaphore_post(sem);
+  (void)cfs_named_semaphore_destroy(sem);
+  (void)cfs_named_semaphore_create(NULL, 1, &sem);
+  (void)cfs_named_semaphore_wait(NULL);
+  (void)cfs_named_semaphore_post(NULL);
+  (void)cfs_named_semaphore_destroy(NULL);
 
   PASS();
 }
@@ -743,48 +744,48 @@ TEST greenthreads_and_utils() {
   cfg.thread_pool_size = 1;
   cfg.ipc_path = NULL;
 
-  cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
 
   dummy_greenthread(NULL);
 
-  cfs_greenthread_spawn(dummy_greenthread, NULL, &gt);
-  cfs_greenthread_yield();
-  cfs_greenthread_destroy(gt);
+  (void)cfs_greenthread_spawn(dummy_greenthread, NULL, &gt);
+  (void)cfs_greenthread_yield();
+  (void)cfs_greenthread_destroy(gt);
 
-  cfs_greenthread_spawn(NULL, NULL, &gt);
-  cfs_greenthread_destroy(NULL);
-  cfs_greenthread_destroy(gt);
+  (void)cfs_greenthread_spawn(NULL, NULL, &gt);
+  (void)cfs_greenthread_destroy(NULL);
+  (void)cfs_greenthread_destroy(gt);
 
-  cfs_malloc(sizeof(cfs_request_t), (void **)&req);
+  (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (req) {
     memset(req, 0, sizeof(cfs_request_t));
-    cfs_request_retain(req);
-    cfs_cancel_request(rt, req);
-    cfs_cancel_request(NULL, req);
+    (void)cfs_request_retain(req);
+    (void)cfs_cancel_request(rt, req);
+    (void)cfs_cancel_request(NULL, req);
 
-    cfs_serialize_request(req, &buf, &sz);
-    cfs_deserialize_request(buf, sz, &req_ptr);
-    cfs_free(buf);
-    cfs_request_release(req_ptr);
-    cfs_serialize_request(NULL, &buf, &sz);
-    cfs_deserialize_request(NULL, sz, &req_ptr);
+    (void)cfs_serialize_request(req, &buf, &sz);
+    (void)cfs_deserialize_request(buf, sz, &req_ptr);
+    (void)cfs_free(buf);
+    (void)cfs_request_release(req_ptr);
+    (void)cfs_serialize_request(NULL, &buf, &sz);
+    (void)cfs_deserialize_request(NULL, sz, &req_ptr);
 
-    cfs_request_release(req);
+    (void)cfs_request_release(req);
   }
 
-  cfs_set_oom_handler(NULL);
-  cfs_runtime_set_sandbox(rt, &sbox);
-  cfs_runtime_set_sandbox(NULL, &sbox);
+  (void)cfs_set_oom_handler(NULL);
+  (void)cfs_runtime_set_sandbox(rt, &sbox);
+  (void)cfs_runtime_set_sandbox(NULL, &sbox);
 
-  cfs_path_init_str(&p, CFS_STR("dummy"));
-  cfs_file_size_async(rt, &p, NULL, NULL);
-  cfs_dir_itr_init_async(rt, &p, NULL, NULL);
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_file_size_async(rt, &p, NULL, NULL);
+  (void)cfs_dir_itr_init_async(rt, &p, NULL, NULL);
 
-  cfs_file_size_async(NULL, &p, NULL, NULL);
-  cfs_dir_itr_init_async(NULL, &p, NULL, NULL);
+  (void)cfs_file_size_async(NULL, &p, NULL, NULL);
+  (void)cfs_dir_itr_init_async(NULL, &p, NULL, NULL);
 
-  cfs_path_destroy(&p);
-  cfs_runtime_destroy(rt);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_runtime_destroy(rt);
 
   PASS();
 }
@@ -807,94 +808,94 @@ TEST exhaustive_nulls() {
   cfs_error_code ec;
   cfs_path out_p = {0};
 
-  cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
 
   /* cfs_path nulls */
-  cfs_path_init(NULL);
-  cfs_path_destroy(NULL);
-  cfs_path_clone(NULL, &p);
-  cfs_path_clone(&p, NULL);
-  cfs_path_c_str(&p, NULL);
-  cfs_path_assign(NULL, CFS_STR(""));
-  cfs_path_append(NULL, CFS_STR(""));
-  cfs_path_is_empty(NULL, &b);
-  cfs_path_is_empty(&p, NULL);
-  cfs_path_filename(NULL, &out_p);
-  cfs_path_extension(NULL, &out_p);
-  cfs_path_stem(NULL, &out_p);
-  cfs_path_remove_filename(NULL);
+  (void)cfs_path_init(NULL);
+  (void)cfs_path_destroy(NULL);
+  (void)cfs_path_clone(NULL, &p);
+  (void)cfs_path_clone(&p, NULL);
+  (void)cfs_path_c_str(&p, NULL);
+  (void)cfs_path_assign(NULL, CFS_STR(""));
+  (void)cfs_path_append(NULL, CFS_STR(""));
+  (void)cfs_path_is_empty(NULL, &b);
+  (void)cfs_path_is_empty(&p, NULL);
+  (void)cfs_path_filename(NULL, &out_p);
+  (void)cfs_path_extension(NULL, &out_p);
+  (void)cfs_path_stem(NULL, &out_p);
+  (void)cfs_path_remove_filename(NULL);
 
   /* cfs_string nulls */
-  cfs_strlen(NULL, &out_sz);
-  cfs_strlen(CFS_STR(""), NULL);
-  cfs_strcpy(NULL, CFS_STR(""), &out_str);
-  cfs_strcpy(buf, NULL, &out_str);
-  cfs_strncpy(NULL, CFS_STR(""), 5, &out_str);
-  cfs_strncpy(buf, NULL, 5, &out_str);
-  cfs_strcat(NULL, CFS_STR(""), &out_str);
-  cfs_strcat(buf, NULL, &out_str);
-  cfs_strcmp(NULL, NULL, &out_int);
-  cfs_strcmp(NULL, CFS_STR(""), &out_int);
-  cfs_strcmp(CFS_STR(""), NULL, &out_int);
-  cfs_strncmp(NULL, NULL, 5, &out_int);
-  cfs_strncmp(NULL, CFS_STR(""), 5, &out_int);
-  cfs_strncmp(CFS_STR(""), NULL, 5, &out_int);
+  (void)cfs_strlen(NULL, &out_sz);
+  (void)cfs_strlen(CFS_STR(""), NULL);
+  (void)cfs_strcpy(NULL, CFS_STR(""), &out_str);
+  (void)cfs_strcpy(buf, NULL, &out_str);
+  (void)cfs_strncpy(NULL, CFS_STR(""), 5, &out_str);
+  (void)cfs_strncpy(buf, NULL, 5, &out_str);
+  (void)cfs_strcat(NULL, CFS_STR(""), &out_str);
+  (void)cfs_strcat(buf, NULL, &out_str);
+  (void)cfs_strcmp(NULL, NULL, &out_int);
+  (void)cfs_strcmp(NULL, CFS_STR(""), &out_int);
+  (void)cfs_strcmp(CFS_STR(""), NULL, &out_int);
+  (void)cfs_strncmp(NULL, NULL, 5, &out_int);
+  (void)cfs_strncmp(NULL, CFS_STR(""), 5, &out_int);
+  (void)cfs_strncmp(CFS_STR(""), NULL, 5, &out_int);
 
   /* File nulls */
-  cfs_remove(NULL, &ec);
-  cfs_file_size(NULL, &out_u, &ec);
-  cfs_file_size(&p, NULL, &ec);
-  cfs_space(NULL, &out_spc, &ec);
-  cfs_last_write_time(NULL, &out_ft, &ec);
-  cfs_hard_link_count(NULL, &out_u, &ec);
-  cfs_permissions(NULL, 0, 0, &ec);
-  cfs_equivalent(NULL, &p, &b, &ec);
-  cfs_equivalent(&p, NULL, &b, &ec);
-  cfs_status(NULL, NULL, &ec);
-  cfs_symlink_status(NULL, NULL, &ec);
-  cfs_exists_path(NULL, &b, &ec);
-  cfs_is_empty_path(NULL, &b, &ec);
-  cfs_create_directory(NULL, &ec);
-  cfs_create_directories(NULL, &ec);
-  cfs_create_hard_link(NULL, &p, &ec);
-  cfs_create_hard_link(&p, NULL, &ec);
-  cfs_create_directory_symlink(NULL, &p, &ec);
-  cfs_create_directory_symlink(&p, NULL, &ec);
-  cfs_remove_all(NULL, &out_sz, &ec);
-  cfs_rename(NULL, &p, &ec);
-  cfs_rename(&p, NULL, &ec);
-  cfs_resize_file(NULL, 0, &ec);
-  cfs_temp_directory_path(NULL, &ec);
+  (void)cfs_remove(NULL, &ec);
+  (void)cfs_file_size(NULL, &out_u, &ec);
+  (void)cfs_file_size(&p, NULL, &ec);
+  (void)cfs_space(NULL, &out_spc, &ec);
+  (void)cfs_last_write_time(NULL, &out_ft, &ec);
+  (void)cfs_hard_link_count(NULL, &out_u, &ec);
+  (void)cfs_permissions(NULL, 0, 0, &ec);
+  (void)cfs_equivalent(NULL, &p, &b, &ec);
+  (void)cfs_equivalent(&p, NULL, &b, &ec);
+  (void)cfs_status(NULL, NULL, &ec);
+  (void)cfs_symlink_status(NULL, NULL, &ec);
+  (void)cfs_exists_path(NULL, &b, &ec);
+  (void)cfs_is_empty_path(NULL, &b, &ec);
+  (void)cfs_create_directory(NULL, &ec);
+  (void)cfs_create_directories(NULL, &ec);
+  (void)cfs_create_hard_link(NULL, &p, &ec);
+  (void)cfs_create_hard_link(&p, NULL, &ec);
+  (void)cfs_create_directory_symlink(NULL, &p, &ec);
+  (void)cfs_create_directory_symlink(&p, NULL, &ec);
+  (void)cfs_remove_all(NULL, &out_sz, &ec);
+  (void)cfs_rename(NULL, &p, &ec);
+  (void)cfs_rename(&p, NULL, &ec);
+  (void)cfs_resize_file(NULL, 0, &ec);
+  (void)cfs_temp_directory_path(NULL, &ec);
 
   /* Path copy/abs nulls */
-  cfs_absolute(NULL, &p, &ec);
-  cfs_canonical(NULL, &p, &ec);
-  cfs_weakly_canonical(NULL, &p, &ec);
-  cfs_read_symlink(NULL, &p, &ec);
-  cfs_relative(NULL, &p, &out_p, &ec);
-  cfs_proximate(NULL, &p, &out_p, &ec);
-  cfs_copy(NULL, &p, 0, &ec);
-  cfs_copy_symlink(NULL, &p, &ec);
-  cfs_copy_file(NULL, &p, 0, &ec);
-  cfs_current_path(NULL, &ec);
-  cfs_current_path_set(NULL, &ec);
+  (void)cfs_absolute(NULL, &p, &ec);
+  (void)cfs_canonical(NULL, &p, &ec);
+  (void)cfs_weakly_canonical(NULL, &p, &ec);
+  (void)cfs_read_symlink(NULL, &p, &ec);
+  (void)cfs_relative(NULL, &p, &out_p, &ec);
+  (void)cfs_proximate(NULL, &p, &out_p, &ec);
+  (void)cfs_copy(NULL, &p, 0, &ec);
+  (void)cfs_copy_symlink(NULL, &p, &ec);
+  (void)cfs_copy_file(NULL, &p, 0, &ec);
+  (void)cfs_current_path(NULL, &ec);
+  (void)cfs_current_path_set(NULL, &ec);
 
   /* Runtime nulls */
-  cfs_runtime_init(NULL, &rt, &ec);
-  cfs_runtime_init(NULL, NULL, &ec);
-  cfs_dispatch_request(NULL, NULL, NULL, NULL);
-  cfs_remove_async(NULL, NULL, NULL, NULL);
-  cfs_runtime_poll(NULL);
-  cfs_request_retain(NULL);
-  cfs_request_release(NULL);
+  (void)cfs_runtime_init(NULL, &rt, &ec);
+  (void)cfs_runtime_init(NULL, NULL, &ec);
+  (void)cfs_dispatch_request(NULL, NULL, NULL, NULL);
+  (void)cfs_remove_async(NULL, NULL, NULL, NULL);
+  (void)cfs_runtime_poll(NULL);
+  (void)cfs_request_retain(NULL);
+  (void)cfs_request_release(NULL);
 
   /* Others */
-  cfs_malloc(0, NULL);
-  cfs_free(NULL);
-  cfs_realloc(NULL, 0, NULL);
-  cfs_calloc(0, 0, NULL);
+  (void)cfs_malloc(0, NULL);
+  (void)cfs_free(NULL);
+  (void)cfs_realloc(NULL, 0, NULL);
+  (void)cfs_calloc(0, 0, NULL);
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -921,23 +922,23 @@ TEST real_file_operations() {
     fclose(f);
   }
 
-  cfs_path_init_str(&p, CFS_STR("test_real.txt"));
+  (void)cfs_path_init_str(&p, CFS_STR("test_real.txt"));
 
-  cfs_status(&p, &st, &ec);
-  cfs_file_size(&p, &size, &ec);
-  cfs_space(&p, &spc, &ec);
-  cfs_last_write_time(&p, &ft, &ec);
-  cfs_hard_link_count(&p, &links, &ec);
-  cfs_permissions(&p, perms, 0, &ec);
-  cfs_is_empty_path(&p, &is_empty, &ec);
+  (void)cfs_status(&p, &st, &ec);
+  (void)cfs_file_size(&p, &size, &ec);
+  (void)cfs_space(&p, &spc, &ec);
+  (void)cfs_last_write_time(&p, &ft, &ec);
+  (void)cfs_hard_link_count(&p, &links, &ec);
+  (void)cfs_permissions(&p, perms, 0, &ec);
+  (void)cfs_is_empty_path(&p, &is_empty, &ec);
 
-  cfs_path_init_str(&p_renamed, CFS_STR("test_real_renamed.txt"));
-  cfs_rename(&p, &p_renamed, &ec);
+  (void)cfs_path_init_str(&p_renamed, CFS_STR("test_real_renamed.txt"));
+  (void)cfs_rename(&p, &p_renamed, &ec);
 
-  cfs_remove(&p_renamed, &ec);
+  (void)cfs_remove(&p_renamed, &ec);
 
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&p_renamed);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p_renamed);
   PASS();
 }
 
@@ -955,53 +956,53 @@ TEST more_coverage() {
 
   memset(&s, 0, sizeof(s));
 
-  cfs_status_known(s, NULL);
-  cfs_exists(s, NULL);
-  cfs_is_block_file(s, NULL);
-  cfs_is_character_file(s, NULL);
-  cfs_is_directory(s, NULL);
-  cfs_is_fifo(s, NULL);
-  cfs_is_other(s, NULL);
-  cfs_is_regular_file(s, NULL);
-  cfs_is_socket(s, NULL);
-  cfs_is_symlink(s, NULL);
+  (void)cfs_status_known(s, NULL);
+  (void)cfs_exists(s, NULL);
+  (void)cfs_is_block_file(s, NULL);
+  (void)cfs_is_character_file(s, NULL);
+  (void)cfs_is_directory(s, NULL);
+  (void)cfs_is_fifo(s, NULL);
+  (void)cfs_is_other(s, NULL);
+  (void)cfs_is_regular_file(s, NULL);
+  (void)cfs_is_socket(s, NULL);
+  (void)cfs_is_symlink(s, NULL);
 
   /* cfs_permissions with replace so it tries chmod and fails */
-  cfs_path_init_str(&p, CFS_STR("dummy_nonexistent.txt"));
-  cfs_permissions(&p, perms, cfs_perm_options_replace, &ec);
+  (void)cfs_path_init_str(&p, CFS_STR("dummy_nonexistent.txt"));
+  (void)cfs_permissions(&p, perms, cfs_perm_options_replace, &ec);
 
   /* cfs_equivalent success branch */
   f = fopen("test_eq.txt", "w");
   if (f) {
     fclose(f);
   }
-  cfs_path_init_str(&p2, CFS_STR("test_eq.txt"));
-  cfs_equivalent(&p2, &p2, &b, &ec);
+  (void)cfs_path_init_str(&p2, CFS_STR("test_eq.txt"));
+  (void)cfs_equivalent(&p2, &p2, &b, &ec);
 
   /* cfs_read_symlink success branch */
-  cfs_path_init_str(&p3, CFS_STR("test_eq_sym.txt"));
-  cfs_create_symlink(&p2, &p3, &ec);
-  cfs_read_symlink(&p3, &out, &ec);
-  cfs_path_destroy(&out);
+  (void)cfs_path_init_str(&p3, CFS_STR("test_eq_sym.txt"));
+  (void)cfs_create_symlink(&p2, &p3, &ec);
+  (void)cfs_read_symlink(&p3, &out, &ec);
+  (void)cfs_path_destroy(&out);
 
   /* cfs_absolute already absolute */
-  cfs_path_init_str(&p4, CFS_STR("/absolute/path"));
-  cfs_absolute(&p4, &out, &ec);
-  cfs_path_destroy(&out);
-  cfs_path_destroy(&p4);
+  (void)cfs_path_init_str(&p4, CFS_STR("/absolute/path"));
+  (void)cfs_absolute(&p4, &out, &ec);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_destroy(&p4);
 
   /* Canonical on absolute path */
-  cfs_path_init_str(&p4, CFS_STR("/dev/null"));
-  cfs_canonical(&p4, &out, &ec);
-  cfs_path_destroy(&out);
-  cfs_path_destroy(&p4);
+  (void)cfs_path_init_str(&p4, CFS_STR("/dev/null"));
+  (void)cfs_canonical(&p4, &out, &ec);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_destroy(&p4);
 
   remove("test_eq.txt");
   remove("test_eq_sym.txt");
 
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&p2);
-  cfs_path_destroy(&p3);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p2);
+  (void)cfs_path_destroy(&p3);
 
   PASS();
 }
@@ -1021,28 +1022,28 @@ TEST final_coverage() {
   if (f) {
     fclose(f);
   }
-  cfs_path_init_str(&p, CFS_STR("test_perms.txt"));
-  cfs_permissions(&p, 0777, cfs_perm_options_replace, &ec);
+  (void)cfs_path_init_str(&p, CFS_STR("test_perms.txt"));
+  (void)cfs_permissions(&p, 0777, cfs_perm_options_replace, &ec);
 
   /* cfs_copy_symlink success branch */
-  cfs_path_init_str(&p2, CFS_STR("test_perms_sym.txt"));
-  cfs_create_symlink(&p, &p2, &ec);
-  cfs_path_init_str(&out, CFS_STR("test_perms_sym_copy.txt"));
-  cfs_copy_symlink(&p2, &out, &ec);
-  cfs_path_destroy(&out);
+  (void)cfs_path_init_str(&p2, CFS_STR("test_perms_sym.txt"));
+  (void)cfs_create_symlink(&p, &p2, &ec);
+  (void)cfs_path_init_str(&out, CFS_STR("test_perms_sym_copy.txt"));
+  (void)cfs_copy_symlink(&p2, &out, &ec);
+  (void)cfs_path_destroy(&out);
 
   /* cfs_path_lexically_relative */
-  cfs_path_init(&out);
-  cfs_path_lexically_relative(&p, &p2, &out);
-  cfs_path_destroy(&out);
+  (void)cfs_path_init(&out);
+  (void)cfs_path_lexically_relative(&p, &p2, &out);
+  (void)cfs_path_destroy(&out);
 
   /* cfs_path_is_absolute */
-  cfs_path_is_absolute(&p, &b);
+  (void)cfs_path_is_absolute(&p, &b);
 
   remove("test_perms.txt");
   remove("test_perms_sym.txt");
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&p2);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p2);
 
   PASS();
 }
@@ -1073,7 +1074,7 @@ TEST out_of_memory() {
   cfs_greenthread_scheduler *sched;
   cfs_request_t req_dummy;
 
-  cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
 
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
@@ -1081,52 +1082,52 @@ TEST out_of_memory() {
 
   /* Test cfs_malloc OOM */
   g_cfs_malloc_fail = 1;
-  cfs_malloc(100, &buf);
+  (void)cfs_malloc(100, &buf);
   g_cfs_malloc_fail = 1;
-  cfs_path_assign(&p, CFS_STR("very_long_string_to_force_allocation"));
+  (void)cfs_path_assign(&p, CFS_STR("very_long_string_to_force_allocation"));
   g_cfs_malloc_fail = 1;
-  cfs_path_generic_string(&p, (cfs_char_t **)&buf);
+  (void)cfs_path_generic_string(&p, (cfs_char_t **)&buf);
   g_cfs_malloc_fail = 1;
-  cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
   g_cfs_malloc_fail = 1;
-  cfs_remove_async(rt, &p, NULL, NULL);
+  (void)cfs_remove_async(rt, &p, NULL, NULL);
   g_cfs_malloc_fail = 1;
-  cfs_file_size_async(rt, &p, NULL, NULL);
+  (void)cfs_file_size_async(rt, &p, NULL, NULL);
   g_cfs_malloc_fail = 1;
-  cfs_message_pipe_create(CFS_STR("pipe"), &pipe);
+  (void)cfs_message_pipe_create(CFS_STR("pipe"), &pipe);
   g_cfs_malloc_fail = 1;
-  cfs_process_spawn(CFS_STR("dummy"), &proc);
+  (void)cfs_process_spawn(CFS_STR("dummy"), &proc);
   g_cfs_malloc_fail = 1;
-  cfs_shm_create(1024, CFS_STR("shm"), &shm);
+  (void)cfs_shm_create(1024, CFS_STR("shm"), &shm);
   g_cfs_malloc_fail = 1;
-  cfs_named_semaphore_create(CFS_STR("sem"), 1, &sem);
+  (void)cfs_named_semaphore_create(CFS_STR("sem"), 1, &sem);
   g_cfs_malloc_fail = 1;
-  cfs_greenthread_spawn(NULL, NULL, &gt);
+  (void)cfs_greenthread_spawn(NULL, NULL, &gt);
   g_cfs_malloc_fail = 1;
-  cfs_greenthread_scheduler_init(&sched);
+  (void)cfs_greenthread_scheduler_init(&sched);
   g_cfs_malloc_fail = 1;
-  cfs_dir_itr_init_async(rt, &p, NULL, NULL);
+  (void)cfs_dir_itr_init_async(rt, &p, NULL, NULL);
 
   req_dummy.opcode = 0;
   g_cfs_malloc_fail = 1;
-  cfs_serialize_request(&req_dummy, &buf, &sz);
+  (void)cfs_serialize_request(&req_dummy, &buf, &sz);
   g_cfs_malloc_fail = 1;
-  cfs_deserialize_request(buf, sz, &req);
+  (void)cfs_deserialize_request(buf, sz, &req);
 
   g_cfs_malloc_fail = 0;
 
   /* Test cfs_realloc OOM */
   g_cfs_realloc_fail = 1;
-  cfs_realloc(NULL, 100, &buf);
-  cfs_path_assign(&p, CFS_STR("another_long_string_for_realloc"));
+  (void)cfs_realloc(NULL, 100, &buf);
+  (void)cfs_path_assign(&p, CFS_STR("another_long_string_for_realloc"));
   g_cfs_realloc_fail = 0;
 
   /* Test cfs_calloc OOM */
   g_cfs_calloc_fail = 1;
-  cfs_calloc(10, 10, &buf);
+  (void)cfs_calloc(10, 10, &buf);
   g_cfs_calloc_fail = 0;
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -1138,22 +1139,22 @@ TEST extreme_edge_cases() {
   cfs_path p = {0};
   cfs_path out = {0};
   cfs_error_code ec;
-  cfs_path_init_str(&p, NULL);
+  (void)cfs_path_init_str(&p, NULL);
 
   /* cfs_current_path getcwd failure */
   g_cfs_getcwd_fail = 1;
-  cfs_current_path(&out, &ec);
-  cfs_path_destroy(&out);
+  (void)cfs_current_path(&out, &ec);
+  (void)cfs_path_destroy(&out);
   g_cfs_getcwd_fail = 0;
 
   /* cfs_read_symlink readlink failure */
   g_cfs_readlink_fail = 1;
-  cfs_path_init_str(&p, CFS_STR("dummy_symlink_path"));
-  cfs_read_symlink(&p, &out, &ec);
-  cfs_path_destroy(&out);
+  (void)cfs_path_init_str(&p, CFS_STR("dummy_symlink_path"));
+  (void)cfs_read_symlink(&p, &out, &ec);
+  (void)cfs_path_destroy(&out);
   g_cfs_readlink_fail = 0;
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -1170,7 +1171,7 @@ TEST last_mile() {
   cfs_request_t req;
   cfs_request_t *req1 = NULL, *req2 = NULL;
 
-  cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
 
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
@@ -1178,43 +1179,43 @@ TEST last_mile() {
 
   /* 2635-2636: cfs_absolute where getcwd fails */
   g_cfs_getcwd_fail = 1;
-  cfs_absolute(&p, &out, &ec);
-  cfs_path_destroy(&out);
+  (void)cfs_absolute(&p, &out, &ec);
+  (void)cfs_path_destroy(&out);
   g_cfs_getcwd_fail = 0;
 
   /* 959: invalid opcode execution */
   memset(&req, 0, sizeof(req));
   req.opcode = 9999;
-  cfs_dispatch_request(NULL, &req, NULL, NULL);
+  (void)cfs_dispatch_request(NULL, &req, NULL, NULL);
 
   /* Async errors inside thread pool / queues */
-  cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
 
   /* Force malloc failures for async variants */
   g_cfs_malloc_fail = 1;
-  cfs_remove_async(rt, &p, NULL, NULL);
-  cfs_file_size_async(rt, &p, NULL, NULL);
+  (void)cfs_remove_async(rt, &p, NULL, NULL);
+  (void)cfs_file_size_async(rt, &p, NULL, NULL);
   g_cfs_malloc_fail = 0;
 
   /* Add cancelled requests and normal requests to queue, then destroy runtime
    */
-  cfs_malloc(sizeof(cfs_request_t), (void **)&req1);
-  cfs_malloc(sizeof(cfs_request_t), (void **)&req2);
+  (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req1);
+  (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req2);
   if (req1 && req2) {
     memset(req1, 0, sizeof(*req1));
     memset(req2, 0, sizeof(*req2));
     req1->ref_count = 1;
     req2->ref_count = 1;
     req1->cancelled = cfs_true;
-    cfs_dispatch_request(rt, req1, NULL, NULL);
-    cfs_dispatch_request(rt, req2, NULL, NULL);
+    (void)cfs_dispatch_request(rt, req1, NULL, NULL);
+    (void)cfs_dispatch_request(rt, req2, NULL, NULL);
   }
 
   /* Give threads a tiny bit of time if possible to process */
   /* cfs_runtime_destroy will flush the queues and destroy the pool */
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_destroy(rt);
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -1228,33 +1229,33 @@ TEST cover_everything() {
   cfs_error_code ec;
   cfs_request_t req;
 
-  cfs_log_debug("testing logger");
+  (void)cfs_log_debug("testing logger");
 
   cfg.mode = cfs_modality_sync;
   cfg.thread_pool_size = 0;
   cfg.ipc_path = NULL;
-  cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
 
   /* Force 959 */
   memset(&req, 0, sizeof(req));
   req.opcode = 9999;
-  cfs_dispatch_request(rt, &req, NULL, NULL);
+  (void)cfs_dispatch_request(rt, &req, NULL, NULL);
 
   /* Clean up */
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_destroy(rt);
 
   /* Thread pool creation failure */
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
 
   g_cfs_calloc_fail = 1;
-  cfs_runtime_init(&cfg, &rt, &ec);
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_destroy(rt);
   g_cfs_calloc_fail = 0;
 
   g_cfs_malloc_fail = 1;
-  cfs_runtime_init(&cfg, &rt, &ec);
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_destroy(rt);
   g_cfs_malloc_fail = 0;
 
   PASS();
@@ -1269,7 +1270,7 @@ TEST out_of_memory_precise() {
   cfs_runtime_config cfg;
   cfs_error_code ec;
   cfs_path p = {0};
-  cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
 
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
@@ -1281,26 +1282,26 @@ TEST out_of_memory_precise() {
      (malloc), pool->threads (calloc). */
 
   g_cfs_malloc_fail = 2; /* Fail allocating work_queue */
-  cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
 
   g_cfs_malloc_fail = 3; /* Fail allocating completion_queue */
-  cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
 
   g_cfs_malloc_fail = 4; /* Fail allocating thread_pool_t */
-  cfs_runtime_init(&cfg, &rt, &ec);
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_destroy(rt);
 
   g_cfs_malloc_fail = 0;
 
   /* cfs_file_size_async has 2 allocations: request_t and result_buffer */
-  cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
 
   g_cfs_malloc_fail = 2; /* Fail allocating result buffer */
-  cfs_file_size_async(rt, &p, NULL, NULL);
+  (void)cfs_file_size_async(rt, &p, NULL, NULL);
 
   g_cfs_malloc_fail = 0;
-  cfs_runtime_destroy(rt);
-  cfs_path_destroy(&p);
+  (void)cfs_runtime_destroy(rt);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -1315,38 +1316,38 @@ TEST fix_last_missing() {
   cfs_path p = {0};
   cfs_request_t *req1;
 
-  cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
 
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
   cfg.ipc_path = NULL;
 
   /* Re-test malloc failures with proper resetting of the countdown */
-  cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
 
   g_cfs_malloc_fail = 1;
-  cfs_remove_async(rt, &p, NULL, NULL);
+  (void)cfs_remove_async(rt, &p, NULL, NULL);
 
   g_cfs_malloc_fail = 1;
-  cfs_file_size_async(rt, &p, NULL, NULL);
+  (void)cfs_file_size_async(rt, &p, NULL, NULL);
 
   g_cfs_malloc_fail = 0;
 
   /* Hit 1171 specifically */
-  cfs_malloc(sizeof(cfs_request_t), (void **)&req1);
+  (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req1);
   if (req1) {
     memset(req1, 0, sizeof(*req1));
     req1->ref_count = 1;
     req1->cancelled = cfs_true;
-    cfs_dispatch_request(rt, req1, NULL, NULL);
+    (void)cfs_dispatch_request(rt, req1, NULL, NULL);
 
     /* Give thread time to pop it BEFORE shutdown */
     test_sleep_ms(100);
   }
 
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_destroy(rt);
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
   PASS();
 }
 
@@ -1360,133 +1361,133 @@ TEST missing_lines_coverage() {
   cfs_request_t *req_out;
 
   /* 3041: cfs_strncpy padding */
-  cfs_strncpy(dest, CFS_STR("abc"), 5, NULL);
+  (void)cfs_strncpy(dest, CFS_STR("abc"), 5, NULL);
 
   /* 3077: cfs_strcmp out = NULL */
-  cfs_strcmp(CFS_STR("a"), CFS_STR("b"), NULL);
+  (void)cfs_strcmp(CFS_STR("a"), CFS_STR("b"), NULL);
 
   /* 3111: cfs_strncmp out = NULL */
-  cfs_strncmp(CFS_STR("a"), CFS_STR("b"), 1, NULL);
+  (void)cfs_strncmp(CFS_STR("a"), CFS_STR("b"), 1, NULL);
 
   /* 3461: cfs_path_concat source empty */
-  cfs_path_init_str(&p, CFS_STR("abc"));
-  cfs_path_concat(&p, CFS_STR(""));
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc"));
+  (void)cfs_path_concat(&p, CFS_STR(""));
+  (void)cfs_path_destroy(&p);
 
   /* 3464: cfs_path_concat reserve fails */
-  cfs_path_init(&p); /* 0 capacity */
+  (void)cfs_path_init(&p); /* 0 capacity */
   g_cfs_malloc_fail = 1;
-  cfs_path_concat(&p, CFS_STR("xyz"));
+  (void)cfs_path_concat(&p, CFS_STR("xyz"));
   g_cfs_malloc_fail = 0;
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
   /* 3495: cfs_path_append p is empty */
-  cfs_path_init(&p);
-  cfs_path_append(&p, CFS_STR("abc"));
-  cfs_path_destroy(&p);
+  (void)cfs_path_init(&p);
+  (void)cfs_path_append(&p, CFS_STR("abc"));
+  (void)cfs_path_destroy(&p);
 
   /* 3500: cfs_path_append source is empty */
-  cfs_path_init_str(&p, CFS_STR("abc"));
-  cfs_path_append(&p, CFS_STR(""));
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc"));
+  (void)cfs_path_append(&p, CFS_STR(""));
+  (void)cfs_path_destroy(&p);
 
   /* 3509: cfs_path_append source starts with '/' */
-  cfs_path_init_str(&p, CFS_STR("abc"));
-  cfs_path_append(&p, CFS_STR("/def"));
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc"));
+  (void)cfs_path_append(&p, CFS_STR("/def"));
+  (void)cfs_path_destroy(&p);
 
   /* 3521-3522, 3531-3532: both have separators */
-  cfs_path_init_str(&p, CFS_STR("abc\\"));
-  cfs_path_append(&p, CFS_STR("\\def"));
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc\\"));
+  (void)cfs_path_append(&p, CFS_STR("\\def"));
+  (void)cfs_path_destroy(&p);
 
   /* 3525: cfs_path_append reserve fails */
-  cfs_path_init_str(&p, CFS_STR("a"));
+  (void)cfs_path_init_str(&p, CFS_STR("a"));
   g_cfs_realloc_fail = 1;
-  cfs_path_append(
+  (void)cfs_path_append(
       &p,
       CFS_STR("a_very_long_string_that_exceeds_initial_capacity_by_a_lot_xyz"));
   g_cfs_realloc_fail = 0;
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
   /* 3608-3609: cfs_path_assign source is NULL */
-  cfs_path_init_str(&p, CFS_STR("abc"));
-  cfs_path_assign(&p, NULL);
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc"));
+  (void)cfs_path_assign(&p, NULL);
+  (void)cfs_path_destroy(&p);
 
   /* 3678: cfs_path_filename out is NULL */
-  cfs_path_init_str(&p, CFS_STR("abc"));
-  cfs_path_filename(&p, NULL);
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc"));
+  (void)cfs_path_filename(&p, NULL);
+  (void)cfs_path_destroy(&p);
 
   /* 3706: cfs_path_extension out is NULL */
-  cfs_path_init_str(&p, CFS_STR("abc.txt"));
-  cfs_path_extension(&p, NULL);
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc.txt"));
+  (void)cfs_path_extension(&p, NULL);
+  (void)cfs_path_destroy(&p);
 
   /* 3726, 3729: cfs_path_extension loop break on sep, no extension */
-  cfs_path_init_str(&p, CFS_STR("abc/def"));
-  cfs_path_extension(&p, &res);
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&res);
+  (void)cfs_path_init_str(&p, CFS_STR("abc/def"));
+  (void)cfs_path_extension(&p, &res);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&res);
 
   /* 3743: cfs_path_stem out is NULL */
-  cfs_path_init_str(&p, CFS_STR("abc.txt"));
-  cfs_path_stem(&p, NULL);
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc.txt"));
+  (void)cfs_path_stem(&p, NULL);
+  (void)cfs_path_destroy(&p);
 
   /* 3750-3751: cfs_path_stem no filename */
-  cfs_path_init_str(&p, CFS_STR("abc/"));
-  cfs_path_stem(&p, &res);
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&res);
+  (void)cfs_path_init_str(&p, CFS_STR("abc/"));
+  (void)cfs_path_stem(&p, &res);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&res);
 
   /* 3766-3767: cfs_path_stem no extension */
-  cfs_path_init_str(&p, CFS_STR("file"));
-  cfs_path_stem(&p, &res);
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&res);
+  (void)cfs_path_init_str(&p, CFS_STR("file"));
+  (void)cfs_path_stem(&p, &res);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&res);
 
   /* 3796: cfs_remove fallback success */
   {
     FILE *f = fopen("test_rem.txt", "w");
     if (f)
       fclose(f);
-    cfs_path_init_str(&p, CFS_STR("test_rem.txt"));
-    cfs_remove(&p, NULL);
-    cfs_path_destroy(&p);
+    (void)cfs_path_init_str(&p, CFS_STR("test_rem.txt"));
+    (void)cfs_remove(&p, NULL);
+    (void)cfs_path_destroy(&p);
   }
 
   /* 3994: cfs_deserialize_request malloc fails */
   {
     int dummy_buf[1] = {0};
     g_cfs_malloc_fail = 1;
-    cfs_deserialize_request(dummy_buf, sizeof(dummy_buf), &req_out);
+    (void)cfs_deserialize_request(dummy_buf, sizeof(dummy_buf), &req_out);
     g_cfs_malloc_fail = 0;
   }
 
   /* 4341: cfs_greenthread_create out_gt is NULL */
-  cfs_greenthread_spawn(NULL, NULL, NULL);
+  (void)cfs_greenthread_spawn(NULL, NULL, NULL);
 
   /* 4374: cfs_greenthread_scheduler_init out_sched is NULL */
-  cfs_greenthread_scheduler_init(NULL);
+  (void)cfs_greenthread_scheduler_init(NULL);
 
   /* 4421: cfs_dir_itr_init_async malloc fails */
-  cfs_path_init_str(&p, CFS_STR("."));
+  (void)cfs_path_init_str(&p, CFS_STR("."));
   g_cfs_malloc_fail = 1;
-  cfs_dir_itr_init_async((cfs_runtime_t *)1, &p, NULL, NULL);
+  (void)cfs_dir_itr_init_async((cfs_runtime_t *)1, &p, NULL, NULL);
   g_cfs_malloc_fail = 0;
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
   /* 4953: cfs_path_lexically_relative out is NULL */
-  cfs_path_init_str(&p, CFS_STR("abc"));
-  cfs_path_lexically_relative(&p, &p, NULL);
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc"));
+  (void)cfs_path_lexically_relative(&p, &p, NULL);
+  (void)cfs_path_destroy(&p);
 
   /* 4983: cfs_path_is_absolute out is NULL */
-  cfs_path_init_str(&p, CFS_STR("abc"));
-  cfs_path_is_absolute(&p, NULL);
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("abc"));
+  (void)cfs_path_is_absolute(&p, NULL);
+  (void)cfs_path_destroy(&p);
 
   PASS();
 }
@@ -1501,29 +1502,29 @@ TEST missing_lines_coverage_async() {
   cfs_runtime_t *rt;
   cfs_path p = {0};
 
-  cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
 
   /* 2942: sync dispatch with callback */
   cfg.mode = cfs_modality_sync;
   cfg.thread_pool_size = 1;
   cfg.ipc_path = NULL;
-  cfs_runtime_init(&cfg, &rt, NULL);
-  cfs_remove_async(rt, &p, dummy_async_callback, NULL);
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_init(&cfg, &rt, NULL);
+  (void)cfs_remove_async(rt, &p, dummy_async_callback, NULL);
+  (void)cfs_runtime_destroy(rt);
 
   /* 2949: non-sync but no work_queue */
   cfg.mode = cfs_modality_singlethread;
   cfg.thread_pool_size = 1;
   cfg.ipc_path = NULL;
-  cfs_runtime_init(&cfg, &rt, NULL);
-  cfs_remove_async(rt, &p, dummy_async_callback, NULL);
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_init(&cfg, &rt, NULL);
+  (void)cfs_remove_async(rt, &p, dummy_async_callback, NULL);
+  (void)cfs_runtime_destroy(rt);
 
   /* 2667: cancelled in execute_async */
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
   cfg.ipc_path = NULL;
-  cfs_runtime_init(&cfg, &rt, NULL);
+  (void)cfs_runtime_init(&cfg, &rt, NULL);
 
   /* Dispatch many requests to ensure some queue up, then cancel them
    * immediately */
@@ -1531,12 +1532,12 @@ TEST missing_lines_coverage_async() {
     cfs_request_t *reqs[1000];
     int j;
     for (j = 0; j < 1000; j++) {
-      cfs_malloc(sizeof(cfs_request_t), (void **)&reqs[j]);
+      (void)cfs_malloc(sizeof(cfs_request_t), (void **)&reqs[j]);
       if (reqs[j]) {
         memset(reqs[j], 0, sizeof(*reqs[j]));
         reqs[j]->opcode = cfs_opcode_remove;
-        cfs_dispatch_request(rt, reqs[j], NULL, NULL);
-        cfs_cancel_request(rt, reqs[j]);
+        (void)cfs_dispatch_request(rt, reqs[j], NULL, NULL);
+        (void)cfs_cancel_request(rt, reqs[j]);
       }
     }
   }
@@ -1544,8 +1545,8 @@ TEST missing_lines_coverage_async() {
   /* wait a bit for threads to process */
   test_sleep_ms(100);
 
-  cfs_runtime_destroy(rt);
-  cfs_path_destroy(&p);
+  (void)cfs_runtime_destroy(rt);
+  (void)cfs_path_destroy(&p);
 
   PASS();
 }
@@ -1558,97 +1559,97 @@ TEST branch_coverage_nulls() {
   cfs_runtime_t *rt = NULL;
   const cfs_char_t *cstr;
 
-  cfs_path_init_str(&p, CFS_STR("dummy"));
-  cfs_path_init(&empty_p);
+  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
+  (void)cfs_path_init(&empty_p);
 
   /* cfs_runtime_init NULL ec */
-  cfs_runtime_init(NULL, NULL, NULL);
+  (void)cfs_runtime_init(NULL, NULL, NULL);
   cfg.mode = cfs_modality_sync;
   cfg.thread_pool_size = 1;
   cfg.ipc_path = NULL;
-  cfs_runtime_init(&cfg, &rt, NULL);
+  (void)cfs_runtime_init(&cfg, &rt, NULL);
 
   /* Async funcs NULL params */
-  cfs_remove_async(NULL, NULL, NULL, NULL);
-  cfs_file_size_async(NULL, NULL, NULL, NULL);
-  cfs_dispatch_request(NULL, NULL, NULL, NULL);
-  cfs_cancel_request(NULL, NULL);
-  cfs_dir_itr_init_async(NULL, NULL, NULL, NULL);
+  (void)cfs_remove_async(NULL, NULL, NULL, NULL);
+  (void)cfs_file_size_async(NULL, NULL, NULL, NULL);
+  (void)cfs_dispatch_request(NULL, NULL, NULL, NULL);
+  (void)cfs_cancel_request(NULL, NULL);
+  (void)cfs_dir_itr_init_async(NULL, NULL, NULL, NULL);
 
-  cfs_runtime_destroy(rt);
+  (void)cfs_runtime_destroy(rt);
 
   /* UTF conversions out_req = NULL */
 #if defined(CFS_OS_WINDOWS)
-  cfs_utf8_to_utf16("test", NULL, 0, NULL);
-  cfs_utf16_to_utf8(L"test", NULL, 0, NULL);
+  (void)cfs_utf8_to_utf16("test", NULL, 0, NULL);
+  (void)cfs_utf16_to_utf8(L"test", NULL, 0, NULL);
 #endif
-  cfs_mb_to_wide("test", NULL, 0, NULL);
-  cfs_wide_to_mb(L"test", NULL, 0, NULL);
+  (void)cfs_mb_to_wide("test", NULL, 0, NULL);
+  (void)cfs_wide_to_mb(L"test", NULL, 0, NULL);
 
   /* cfs_path_c_str */
-  cfs_path_c_str(&p, &cstr);
-  cfs_path_c_str(NULL, &cstr);
-  cfs_path_c_str(&empty_p, &cstr);
+  (void)cfs_path_c_str(&p, &cstr);
+  (void)cfs_path_c_str(NULL, &cstr);
+  (void)cfs_path_c_str(&empty_p, &cstr);
 
   /* cfs_path_clear */
-  cfs_path_clear(NULL);
-  cfs_path_clear(&empty_p);
+  (void)cfs_path_clear(NULL);
+  (void)cfs_path_clear(&empty_p);
 
   /* cfs_path_swap */
-  cfs_path_swap(NULL, NULL);
+  (void)cfs_path_swap(NULL, NULL);
 
   /* cfs_path_append */
-  cfs_path_append(NULL, NULL);
+  (void)cfs_path_append(NULL, NULL);
 
   /* cfs_path decomposition NULLs */
   {
     cfs_path dummy_out = {0};
-    cfs_path_filename(NULL, NULL);
-    cfs_path_filename(&empty_p, &dummy_out);
-    cfs_path_extension(NULL, NULL);
-    cfs_path_extension(&empty_p, &dummy_out);
-    cfs_path_stem(NULL, NULL);
-    cfs_path_stem(&empty_p, &dummy_out);
+    (void)cfs_path_filename(NULL, NULL);
+    (void)cfs_path_filename(&empty_p, &dummy_out);
+    (void)cfs_path_extension(NULL, NULL);
+    (void)cfs_path_extension(&empty_p, &dummy_out);
+    (void)cfs_path_stem(NULL, NULL);
+    (void)cfs_path_stem(&empty_p, &dummy_out);
   }
 
   /* Message passing */
-  cfs_message_pipe_create(NULL, NULL);
-  cfs_serialize_request(NULL, NULL, NULL);
-  cfs_deserialize_request(NULL, 0, NULL);
+  (void)cfs_message_pipe_create(NULL, NULL);
+  (void)cfs_serialize_request(NULL, NULL, NULL);
+  (void)cfs_deserialize_request(NULL, 0, NULL);
 
   /* Process */
-  cfs_process_spawn(NULL, NULL);
+  (void)cfs_process_spawn(NULL, NULL);
 
   /* SHM */
-  cfs_shm_create(0, NULL, NULL);
-  cfs_shm_map(NULL, NULL);
-  cfs_shm_unmap(NULL, NULL);
+  (void)cfs_shm_create(0, NULL, NULL);
+  (void)cfs_shm_map(NULL, NULL);
+  (void)cfs_shm_unmap(NULL, NULL);
 
   /* Sem */
-  cfs_named_semaphore_create(NULL, 0, NULL);
+  (void)cfs_named_semaphore_create(NULL, 0, NULL);
 
   /* Greenthreads */
-  cfs_greenthread_scheduler_destroy(NULL);
+  (void)cfs_greenthread_scheduler_destroy(NULL);
 
   /* cfs_copy_file NULLs */
-  cfs_copy_file(NULL, NULL, 0, NULL);
+  (void)cfs_copy_file(NULL, NULL, 0, NULL);
 
   /* cfs_path_is_absolute NULLs */
-  cfs_path_is_absolute(NULL, NULL);
-  cfs_path_is_absolute(&empty_p, &b);
+  (void)cfs_path_is_absolute(NULL, NULL);
+  (void)cfs_path_is_absolute(&empty_p, &b);
 
   /* Also NULL ec with valid arguments to trigger success path missing ec
    * branches */
   {
     cfs_path tmp = {0};
-    cfs_path_init(&tmp);
-    cfs_temp_directory_path(&tmp, NULL);
-    cfs_current_path(&tmp, NULL);
-    cfs_path_destroy(&tmp);
+    (void)cfs_path_init(&tmp);
+    (void)cfs_temp_directory_path(&tmp, NULL);
+    (void)cfs_current_path(&tmp, NULL);
+    (void)cfs_path_destroy(&tmp);
   }
 
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&empty_p);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&empty_p);
   PASS();
 }
 
@@ -1661,273 +1662,273 @@ TEST edge_cases_and_oom() {
   const cfs_directory_entry *entry;
 
   /* null checks */
-  cfs_path_root_name(NULL, NULL);
-  cfs_path_root_directory(NULL, NULL);
-  cfs_path_root_path(NULL, NULL);
-  cfs_path_relative_path(NULL, NULL);
-  cfs_path_parent_path(NULL, NULL);
-  cfs_path_filename(NULL, NULL);
-  cfs_path_stem(NULL, NULL);
-  cfs_path_extension(NULL, NULL);
-  cfs_path_has_root_path(NULL, NULL);
-  cfs_path_has_root_name(NULL, NULL);
-  cfs_path_has_root_directory(NULL, NULL);
-  cfs_path_has_relative_path(NULL, NULL);
-  cfs_path_has_parent_path(NULL, NULL);
-  cfs_path_has_filename(NULL, NULL);
-  cfs_path_has_stem(NULL, NULL);
-  cfs_path_has_extension(NULL, NULL);
-  cfs_path_is_absolute(NULL, NULL);
-  cfs_path_is_relative(NULL, NULL);
-  cfs_path_lexically_normal(NULL, NULL);
+  (void)cfs_path_root_name(NULL, NULL);
+  (void)cfs_path_root_directory(NULL, NULL);
+  (void)cfs_path_root_path(NULL, NULL);
+  (void)cfs_path_relative_path(NULL, NULL);
+  (void)cfs_path_parent_path(NULL, NULL);
+  (void)cfs_path_filename(NULL, NULL);
+  (void)cfs_path_stem(NULL, NULL);
+  (void)cfs_path_extension(NULL, NULL);
+  (void)cfs_path_has_root_path(NULL, NULL);
+  (void)cfs_path_has_root_name(NULL, NULL);
+  (void)cfs_path_has_root_directory(NULL, NULL);
+  (void)cfs_path_has_relative_path(NULL, NULL);
+  (void)cfs_path_has_parent_path(NULL, NULL);
+  (void)cfs_path_has_filename(NULL, NULL);
+  (void)cfs_path_has_stem(NULL, NULL);
+  (void)cfs_path_has_extension(NULL, NULL);
+  (void)cfs_path_is_absolute(NULL, NULL);
+  (void)cfs_path_is_relative(NULL, NULL);
+  (void)cfs_path_lexically_normal(NULL, NULL);
 
   /* empty paths */
-  cfs_path_init(&p);
-  cfs_path_init(&out);
-  cfs_path_root_name(&p, &out);
-  cfs_path_root_directory(&p, &out);
-  cfs_path_root_path(&p, &out);
-  cfs_path_relative_path(&p, &out);
-  cfs_path_parent_path(&p, &out);
-  cfs_path_filename(&p, &out);
-  cfs_path_stem(&p, &out);
-  cfs_path_extension(&p, &out);
-  cfs_path_has_root_path(&p, &b);
-  cfs_path_has_root_name(&p, &b);
-  cfs_path_has_root_directory(&p, &b);
-  cfs_path_has_relative_path(&p, &b);
-  cfs_path_has_parent_path(&p, &b);
-  cfs_path_has_filename(&p, &b);
-  cfs_path_has_stem(&p, &b);
-  cfs_path_has_extension(&p, &b);
-  cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_init(&p);
+  (void)cfs_path_init(&out);
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_root_directory(&p, &out);
+  (void)cfs_path_root_path(&p, &out);
+  (void)cfs_path_relative_path(&p, &out);
+  (void)cfs_path_parent_path(&p, &out);
+  (void)cfs_path_filename(&p, &out);
+  (void)cfs_path_stem(&p, &out);
+  (void)cfs_path_extension(&p, &out);
+  (void)cfs_path_has_root_path(&p, &b);
+  (void)cfs_path_has_root_name(&p, &b);
+  (void)cfs_path_has_root_directory(&p, &b);
+  (void)cfs_path_has_relative_path(&p, &b);
+  (void)cfs_path_has_parent_path(&p, &b);
+  (void)cfs_path_has_filename(&p, &b);
+  (void)cfs_path_has_stem(&p, &b);
+  (void)cfs_path_has_extension(&p, &b);
+  (void)cfs_path_lexically_normal(&p, &out);
 
   /* lexically normal specific */
-  cfs_path_assign(&p, CFS_STR("a/../b/./c/../../d/.."));
-  cfs_path_lexically_normal(&p, &out);
-  cfs_path_assign(&p, CFS_STR("../../.."));
-  cfs_path_lexically_normal(&p, &out);
-  cfs_path_assign(&p, CFS_STR("/a/.."));
-  cfs_path_lexically_normal(&p, &out);
-  cfs_path_assign(&p, CFS_STR("a/b/..."));
-  cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("a/../b/./c/../../d/.."));
+  (void)cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("../../.."));
+  (void)cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("/a/.."));
+  (void)cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("a/b/..."));
+  (void)cfs_path_lexically_normal(&p, &out);
 
   /* oom tests */
-  cfs_path_assign(&p, CFS_STR("/root/dir/file.ext"));
+  (void)cfs_path_assign(&p, CFS_STR("/root/dir/file.ext"));
 
   g_cfs_calloc_fail = 1;
-  cfs_path_root_directory(&p, &out);
+  (void)cfs_path_root_directory(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_root_path(&p, &out);
+  (void)cfs_path_root_path(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_relative_path(&p, &out);
+  (void)cfs_path_relative_path(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_parent_path(&p, &out);
+  (void)cfs_path_parent_path(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_filename(&p, &out);
+  (void)cfs_path_filename(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_stem(&p, &out);
+  (void)cfs_path_stem(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_extension(&p, &out);
+  (void)cfs_path_extension(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_lexically_normal(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_replace_filename(&p, CFS_STR("new.txt"));
+  (void)cfs_path_replace_filename(&p, CFS_STR("new.txt"));
   g_cfs_calloc_fail = 1;
-  cfs_path_replace_extension(&p, CFS_STR("old"));
+  (void)cfs_path_replace_extension(&p, CFS_STR("old"));
 
-  cfs_path_remove_filename(&p);
+  (void)cfs_path_remove_filename(&p);
 
-  cfs_path_assign(&p, CFS_STR("C:/root/dir"));
-  cfs_path_has_root_name(&p, &b);
+  (void)cfs_path_assign(&p, CFS_STR("C:/root/dir"));
+  (void)cfs_path_has_root_name(&p, &b);
 
-  cfs_path_assign(&p, CFS_STR("/C:"));
-  cfs_path_root_name(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("/C:"));
+  (void)cfs_path_root_name(&p, &out);
 
   /* all remaining missing coverage cases */
-  cfs_path_assign(&p, CFS_STR("."));
-  cfs_path_filename(&p, &out);
-  cfs_path_stem(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("."));
+  (void)cfs_path_filename(&p, &out);
+  (void)cfs_path_stem(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR(".."));
-  cfs_path_filename(&p, &out);
-  cfs_path_stem(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR(".."));
+  (void)cfs_path_filename(&p, &out);
+  (void)cfs_path_stem(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR("C:/"));
-  cfs_path_root_path(&p, &out);
-  cfs_path_parent_path(&p, &out);
-  cfs_path_remove_filename(&p);
-  cfs_path_has_root_name(&p, &b);
-  cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("C:/"));
+  (void)cfs_path_root_path(&p, &out);
+  (void)cfs_path_parent_path(&p, &out);
+  (void)cfs_path_remove_filename(&p);
+  (void)cfs_path_has_root_name(&p, &b);
+  (void)cfs_path_lexically_normal(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR("C:/root/"));
-  cfs_path_remove_filename(&p);
+  (void)cfs_path_assign(&p, CFS_STR("C:/root/"));
+  (void)cfs_path_remove_filename(&p);
 
-  cfs_path_assign(&p, CFS_STR("C:/root/dir"));
-  cfs_path_root_directory(&p, &out);
-  cfs_path_parent_path(&p, &out);
-  cfs_path_has_root_name(&p, &b);
-  cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("C:/root/dir"));
+  (void)cfs_path_root_directory(&p, &out);
+  (void)cfs_path_parent_path(&p, &out);
+  (void)cfs_path_has_root_name(&p, &b);
+  (void)cfs_path_lexically_normal(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR("file"));
+  (void)cfs_path_assign(&p, CFS_STR("file"));
   g_cfs_realloc_fail = 1;
-  cfs_path_replace_extension(&p, CFS_STR("ext"));
+  (void)cfs_path_replace_extension(&p, CFS_STR("ext"));
 
-  cfs_path_assign(&p, CFS_STR("file"));
+  (void)cfs_path_assign(&p, CFS_STR("file"));
   g_cfs_realloc_fail = 2;
-  cfs_path_replace_extension(&p, CFS_STR("ext"));
+  (void)cfs_path_replace_extension(&p, CFS_STR("ext"));
   g_cfs_realloc_fail = 0;
 
-  cfs_path_assign(&p, CFS_STR("/file.ext"));
+  (void)cfs_path_assign(&p, CFS_STR("/file.ext"));
   g_cfs_calloc_fail = 2;
-  cfs_path_extension(&p, &out);
+  (void)cfs_path_extension(&p, &out);
   g_cfs_calloc_fail = 2;
-  cfs_path_stem(&p, &out);
+  (void)cfs_path_stem(&p, &out);
   g_cfs_calloc_fail = 1;
-  cfs_path_filename(&p, &out);
+  (void)cfs_path_filename(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR(""));
-  cfs_path_remove_filename(&p);
+  (void)cfs_path_assign(&p, CFS_STR(""));
+  (void)cfs_path_remove_filename(&p);
 
-  cfs_path_assign(&p, CFS_STR("/"));
-  cfs_path_remove_filename(&p);
+  (void)cfs_path_assign(&p, CFS_STR("/"));
+  (void)cfs_path_remove_filename(&p);
 
   /* more edge cases 3 */
-  cfs_path_assign(&p, CFS_STR("//host"));
-  cfs_path_root_name(&p, &out);
-  cfs_path_filename(&p, &out);
-  cfs_path_stem(&p, &out);
-  cfs_path_parent_path(&p, &out);
-  cfs_path_remove_filename(&p);
-  cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("//host"));
+  (void)cfs_path_root_name(&p, &out);
+  (void)cfs_path_filename(&p, &out);
+  (void)cfs_path_stem(&p, &out);
+  (void)cfs_path_parent_path(&p, &out);
+  (void)cfs_path_remove_filename(&p);
+  (void)cfs_path_lexically_normal(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR("/"));
-  cfs_path_filename(&p, &out);
-  cfs_path_stem(&p, &out);
-  cfs_path_parent_path(&p, &out);
-  cfs_path_remove_filename(&p);
-  cfs_path_lexically_normal(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("/"));
+  (void)cfs_path_filename(&p, &out);
+  (void)cfs_path_stem(&p, &out);
+  (void)cfs_path_parent_path(&p, &out);
+  (void)cfs_path_remove_filename(&p);
+  (void)cfs_path_lexically_normal(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR(".a"));
-  cfs_path_filename(&p, &out);
-  cfs_path_stem(&p, &out);
-  cfs_path_extension(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR(".a"));
+  (void)cfs_path_filename(&p, &out);
+  (void)cfs_path_stem(&p, &out);
+  (void)cfs_path_extension(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR("a"));
-  cfs_path_filename(&p, &out);
-  cfs_path_stem(&p, &out);
-  cfs_path_extension(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("a"));
+  (void)cfs_path_filename(&p, &out);
+  (void)cfs_path_stem(&p, &out);
+  (void)cfs_path_extension(&p, &out);
 
-  cfs_path_assign(&p, CFS_STR("ab"));
-  cfs_path_filename(&p, &out);
-  cfs_path_stem(&p, &out);
-  cfs_path_extension(&p, &out);
+  (void)cfs_path_assign(&p, CFS_STR("ab"));
+  (void)cfs_path_filename(&p, &out);
+  (void)cfs_path_stem(&p, &out);
+  (void)cfs_path_extension(&p, &out);
 
   /* realloc failure in path_replace_extension */
-  cfs_path_assign(&p, CFS_STR("file"));
+  (void)cfs_path_assign(&p, CFS_STR("file"));
   g_cfs_realloc_fail = 3;
-  cfs_path_replace_extension(&p, CFS_STR("ext"));
+  (void)cfs_path_replace_extension(&p, CFS_STR("ext"));
   g_cfs_realloc_fail = 4;
-  cfs_path_replace_extension(&p, CFS_STR("ext"));
+  (void)cfs_path_replace_extension(&p, CFS_STR("ext"));
   g_cfs_realloc_fail = 0;
 
   g_cfs_calloc_fail = 0;
 
   g_cfs_calloc_fail = 0;
 
-  cfs_path_destroy(&p);
-  cfs_path_destroy(&out);
+  (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&out);
 
   /* dir iterator */
 #if !defined(CFS_OS_WINDOWS)
-  cfs_path_init_str(&p, CFS_STR("/"));
+  (void)cfs_path_init_str(&p, CFS_STR("/"));
   g_cfs_malloc_fail = 1;
-  cfs_dir_itr_init(&p, &it, &ec);
+  (void)cfs_dir_itr_init(&p, &it, &ec);
   g_cfs_malloc_fail = 2;
-  cfs_rec_dir_itr_init(&p, &rit, &ec);
+  (void)cfs_rec_dir_itr_init(&p, &rit, &ec);
   g_cfs_malloc_fail = 0;
 
-  cfs_dir_itr_init(&p, &it, &ec);
+  (void)cfs_dir_itr_init(&p, &it, &ec);
   if (it) {
     while (cfs_dir_itr_next(it, &entry, &ec) == 0) {
     }
-    cfs_dir_itr_next(it, &entry, &ec);
-    cfs_dir_itr_close(it);
+    (void)cfs_dir_itr_next(it, &entry, &ec);
+    (void)cfs_dir_itr_close(it);
   }
 
-  cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p);
 
   /* non-existent dir */
-  cfs_path_init_str(&p, CFS_STR("/this_dir_does_not_exist_123456"));
-  cfs_dir_itr_init(&p, &it, &ec);
-  cfs_path_destroy(&p);
+  (void)cfs_path_init_str(&p, CFS_STR("/this_dir_does_not_exist_123456"));
+  (void)cfs_dir_itr_init(&p, &it, &ec);
+  (void)cfs_path_destroy(&p);
 
   /* dir_itr_next on empty */
-  cfs_dir_itr_init(NULL, NULL, NULL);
-  cfs_dir_itr_next(NULL, NULL, NULL);
+  (void)cfs_dir_itr_init(NULL, NULL, NULL);
+  (void)cfs_dir_itr_next(NULL, NULL, NULL);
 #endif
 
   /* final missing lines */
-  cfs_path_assign(&p, CFS_STR("/"));
-  cfs_path_relative_path(&p, &out);
-  cfs_path_has_root_directory(&p, &b);
+  (void)cfs_path_assign(&p, CFS_STR("/"));
+  (void)cfs_path_relative_path(&p, &out);
+  (void)cfs_path_has_root_directory(&p, &b);
 
   /* use fresh paths */
   {
     cfs_path p2 = {0};
-    cfs_path_assign(&p2, CFS_STR("C:/root/dir"));
-    cfs_path_has_root_name(&p2, &b);
-    cfs_path_destroy(&p2);
+    (void)cfs_path_assign(&p2, CFS_STR("C:/root/dir"));
+    (void)cfs_path_has_root_name(&p2, &b);
+    (void)cfs_path_destroy(&p2);
   }
   {
     cfs_path p2 = {0};
-    cfs_path_assign(&p2, CFS_STR("/file.ext"));
+    (void)cfs_path_assign(&p2, CFS_STR("/file.ext"));
     g_cfs_malloc_fail = 1;
-    cfs_path_parent_path(&p2, &out);
+    (void)cfs_path_parent_path(&p2, &out);
     g_cfs_malloc_fail = 0;
-    cfs_path_destroy(&p2);
+    (void)cfs_path_destroy(&p2);
   }
   {
     cfs_path p2 = {0};
-    cfs_path_assign(&p2, CFS_STR("/file.ext"));
+    (void)cfs_path_assign(&p2, CFS_STR("/file.ext"));
     g_cfs_realloc_fail = 1;
-    cfs_path_replace_filename(&p2,
-                              CFS_STR("very_long_name_to_exceed_capacity.txt"));
+    (void)cfs_path_replace_filename(
+        &p2, CFS_STR("very_long_name_to_exceed_capacity.txt"));
     g_cfs_realloc_fail = 0;
-    cfs_path_destroy(&p2);
+    (void)cfs_path_destroy(&p2);
   }
   {
     cfs_path p2 = {0};
-    cfs_path_assign(&p2, CFS_STR("file"));
+    (void)cfs_path_assign(&p2, CFS_STR("file"));
     g_cfs_realloc_fail = 1;
-    cfs_path_replace_extension(&p2, CFS_STR("ext"));
-    cfs_path_destroy(&p2);
+    (void)cfs_path_replace_extension(&p2, CFS_STR("ext"));
+    (void)cfs_path_destroy(&p2);
   }
   {
     cfs_path p2 = {0};
-    cfs_path_assign(&p2, CFS_STR("file"));
+    (void)cfs_path_assign(&p2, CFS_STR("file"));
     g_cfs_realloc_fail = 2;
-    cfs_path_replace_extension(&p2, CFS_STR("ext"));
+    (void)cfs_path_replace_extension(&p2, CFS_STR("ext"));
     g_cfs_realloc_fail = 0;
-    cfs_path_destroy(&p2);
+    (void)cfs_path_destroy(&p2);
   }
 
-  cfs_path_init_str(&p, CFS_STR("/"));
+  (void)cfs_path_init_str(&p, CFS_STR("/"));
   g_cfs_malloc_fail = 1;
-  cfs_dir_itr_init(&p, &it, &ec);
+  (void)cfs_dir_itr_init(&p, &it, &ec);
 
-  cfs_path_init_str(&p, CFS_STR("/"));
+  (void)cfs_path_init_str(&p, CFS_STR("/"));
   g_cfs_malloc_fail = 2;
-  cfs_rec_dir_itr_init(&p, &rit, &ec);
+  (void)cfs_rec_dir_itr_init(&p, &rit, &ec);
   g_cfs_malloc_fail = 0;
 
-  cfs_path_assign(&p, CFS_STR("/"));
+  (void)cfs_path_assign(&p, CFS_STR("/"));
   g_cfs_malloc_fail = 2;
-  cfs_rec_dir_itr_init(&p, &rit, &ec);
+  (void)cfs_rec_dir_itr_init(&p, &rit, &ec);
 
-  cfs_path_assign(&p, CFS_STR("/"));
+  (void)cfs_path_assign(&p, CFS_STR("/"));
   g_cfs_malloc_fail = 1;
-  cfs_rec_dir_itr_init(&p, &rit, &ec);
+  (void)cfs_rec_dir_itr_init(&p, &rit, &ec);
   g_cfs_malloc_fail = 0;
 
   PASS();

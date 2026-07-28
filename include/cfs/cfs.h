@@ -16,6 +16,7 @@ extern "C" {
 /* clang-format off */
 #include <stddef.h>
 #include "cfs/log.h"
+#include "cfs/no_discard.h"
 
 #ifdef CFS_IMPLEMENTATION
 #include <stdio.h>
@@ -411,7 +412,7 @@ CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler);
  * \param out Pointer to store the result of the malloc operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_malloc(cfs_size_t size, void **out);
+CFS_API NO_DISCARD cfs_errc cfs_malloc(cfs_size_t size, void **out);
 /**
  * \brief Frees previously allocated memory.
  *
@@ -426,7 +427,8 @@ CFS_API void cfs_free(void *ptr);
  * \param out Pointer to store the result of the realloc operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_realloc(void *ptr, cfs_size_t new_size, void **out);
+CFS_API NO_DISCARD cfs_errc cfs_realloc(void *ptr, cfs_size_t new_size,
+                                        void **out);
 /**
  * \brief Allocates zero-initialized memory for an array of elements.
  *
@@ -435,7 +437,8 @@ CFS_API cfs_errc cfs_realloc(void *ptr, cfs_size_t new_size, void **out);
  * \param out Pointer to store the result of the calloc operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_calloc(cfs_size_t num, cfs_size_t size, void **out);
+CFS_API NO_DISCARD cfs_errc cfs_calloc(cfs_size_t num, cfs_size_t size,
+                                       void **out);
 
 /* Phase 6: String Handling & Charsets */
 
@@ -447,7 +450,7 @@ CFS_API cfs_errc cfs_calloc(cfs_size_t num, cfs_size_t size, void **out);
  * \param out Pointer to store the result of the strlen operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strlen(const cfs_char_t *str, cfs_size_t *out);
+CFS_API NO_DISCARD cfs_errc cfs_strlen(const cfs_char_t *str, cfs_size_t *out);
 /**
  * \brief Copies a string into a destination buffer safely.
  *
@@ -456,8 +459,8 @@ CFS_API cfs_errc cfs_strlen(const cfs_char_t *str, cfs_size_t *out);
  * \param out Pointer to store the result of the strcpy operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
-                            cfs_char_t **out);
+CFS_API NO_DISCARD cfs_errc cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
+                                       cfs_char_t **out);
 /**
  * \brief Copies up to n characters of a string into a destination buffer.
  *
@@ -467,8 +470,8 @@ CFS_API cfs_errc cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
  * \param out Pointer to store the result of the strncpy operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
-                             cfs_size_t n, cfs_char_t **out);
+CFS_API NO_DISCARD cfs_errc cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
+                                        cfs_size_t n, cfs_char_t **out);
 /**
  * \brief Concatenates two strings safely.
  *
@@ -477,8 +480,8 @@ CFS_API cfs_errc cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
  * \param out Pointer to store the result of the strcat operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
-                            cfs_char_t **out);
+CFS_API NO_DISCARD cfs_errc cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
+                                       cfs_char_t **out);
 /**
  * \brief Compares two strings lexicographically.
  *
@@ -487,8 +490,8 @@ CFS_API cfs_errc cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
  * \param out Pointer to store the result of the strcmp operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
-                            int *out);
+CFS_API NO_DISCARD cfs_errc cfs_strcmp(const cfs_char_t *lhs,
+                                       const cfs_char_t *rhs, int *out);
 /**
  * \brief Compares up to a specified count of characters of two strings
  * lexicographically.
@@ -499,8 +502,9 @@ CFS_API cfs_errc cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
  * \param out Pointer to store the result of the strncmp operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
-                             cfs_size_t count, int *out);
+CFS_API NO_DISCARD cfs_errc cfs_strncmp(const cfs_char_t *lhs,
+                                        const cfs_char_t *rhs, cfs_size_t count,
+                                        int *out);
 
 /* 55-59. Charset & Conversion logic */
 #if defined(_MSC_VER)
@@ -514,9 +518,9 @@ CFS_API cfs_errc cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
   strncpy_s((dst), (dst_sz), (src), (n))
 #endif
 #else
-#define CFS_STRCPY_SAFE(dst, dst_sz, src) cfs_strcpy((dst), (src), NULL)
+#define CFS_STRCPY_SAFE(dst, dst_sz, src) (void)cfs_strcpy((dst), (src), NULL)
 #define CFS_STRNCPY_SAFE(dst, dst_sz, src, n)                                  \
-  cfs_strncpy((dst), (src), (n), NULL)
+  (void)cfs_strncpy((dst), (src), (n), NULL)
 #endif
 #if defined(CFS_OS_WINDOWS)
 /* UTF-8 to UTF-16 conversion (Returns required buffer size in chars if dest is
@@ -530,8 +534,10 @@ CFS_API cfs_errc cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
  * \param out_req Pointer to store the required buffer size.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
-                                   cfs_size_t dest_len, cfs_size_t *out_req);
+CFS_API NO_DISCARD cfs_errc cfs_utf8_to_utf16(const char *utf8_str,
+                                              wchar_t *dest,
+                                              cfs_size_t dest_len,
+                                              cfs_size_t *out_req);
 /* UTF-16 to UTF-8 conversion (Returns required buffer size in bytes if dest is
  * NULL) */
 /**
@@ -543,8 +549,9 @@ CFS_API cfs_errc cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
  * \param out_req Pointer to store the required buffer size.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
-                                   cfs_size_t dest_len, cfs_size_t *out_req);
+CFS_API NO_DISCARD cfs_errc cfs_utf16_to_utf8(const wchar_t *utf16_str,
+                                              char *dest, cfs_size_t dest_len,
+                                              cfs_size_t *out_req);
 #endif
 
 /** \brief ANSI to Wide character conversion (Generic Fallbacks) */
@@ -557,8 +564,9 @@ CFS_API cfs_errc cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
  * \param out_req Pointer to store the required buffer size.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
-                                cfs_size_t dest_len, cfs_size_t *out_req);
+CFS_API NO_DISCARD cfs_errc cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
+                                           cfs_size_t dest_len,
+                                           cfs_size_t *out_req);
 /**
  * \brief Converts a wide character string to a multi-byte string.
  *
@@ -568,8 +576,9 @@ CFS_API cfs_errc cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
  * \param out_req Pointer to store the required buffer size.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
-                                cfs_size_t dest_len, cfs_size_t *out_req);
+CFS_API NO_DISCARD cfs_errc cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
+                                           cfs_size_t dest_len,
+                                           cfs_size_t *out_req);
 /* Phase 7: Error Handling & System Codes */
 
 /* 62. Define cfs_errc mapping to std::errc (POSIX states) */
@@ -615,7 +624,7 @@ CFS_API void cfs_clear_error(cfs_error_code *ec);
  * \param out Pointer to store the result of the error_message operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_error_message(cfs_errc err, const char **out);
+CFS_API NO_DISCARD cfs_errc cfs_error_message(cfs_errc err, const char **out);
 
 /** \brief 65-67. OS Translation Hooks */
 /**
@@ -626,7 +635,8 @@ CFS_API cfs_errc cfs_error_message(cfs_errc err, const char **out);
  * \param out Pointer to store the result of the make_error_code_from_os
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_make_error_code_from_os(int os_error, cfs_error_code *out);
+CFS_API NO_DISCARD cfs_errc cfs_make_error_code_from_os(int os_error,
+                                                        cfs_error_code *out);
 /**
  * \brief Retrieves the last thread-local system error (errno or GetLastError)
  * and wraps it into a `cfs_error_code`.
@@ -634,7 +644,7 @@ CFS_API cfs_errc cfs_make_error_code_from_os(int os_error, cfs_error_code *out);
  * \param out Pointer to store the result of the get_last_error operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_get_last_error(cfs_error_code *out);
+CFS_API NO_DISCARD cfs_errc cfs_get_last_error(cfs_error_code *out);
 /* Phase 8: Path Struct Basics */
 
 /* 76. Define platform-specific path separator macros */
@@ -677,7 +687,8 @@ CFS_API void cfs_path_init(cfs_path *p);
  * \param source The null-terminated string to initialize the path with.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_init_str(cfs_path *p, const cfs_char_t *source);
+CFS_API NO_DISCARD cfs_errc cfs_path_init_str(cfs_path *p,
+                                              const cfs_char_t *source);
 /**
  * \brief Destroys a `cfs_path` structure, releasing its allocated memory.
  *
@@ -691,7 +702,7 @@ CFS_API void cfs_path_destroy(cfs_path *p);
  * \param src Pointer to the source buffer or path.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_clone(cfs_path *dest, const cfs_path *src);
+CFS_API NO_DISCARD cfs_errc cfs_path_clone(cfs_path *dest, const cfs_path *src);
 /**
  * \brief Mutates the path in-place, converting all directory separators to the
  * native OS preferred separator.
@@ -699,7 +710,7 @@ CFS_API cfs_errc cfs_path_clone(cfs_path *dest, const cfs_path *src);
  * \param p Pointer to the `cfs_path` object to evaluate or modify.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_make_preferred(cfs_path *p);
+CFS_API NO_DISCARD cfs_errc cfs_path_make_preferred(cfs_path *p);
 /**
  * \brief Retrieves the underlying null-terminated C string from a path.
  *
@@ -707,7 +718,8 @@ CFS_API cfs_errc cfs_path_make_preferred(cfs_path *p);
  * \param out Pointer to store the result of the path_c_str operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_c_str(const cfs_path *p, const cfs_char_t **out);
+CFS_API NO_DISCARD cfs_errc cfs_path_c_str(const cfs_path *p,
+                                           const cfs_char_t **out);
 /* Returns dynamically allocated generic path string (e.g. forward slashes on
  * Windows). Caller must free. */
 /**
@@ -718,7 +730,8 @@ CFS_API cfs_errc cfs_path_c_str(const cfs_path *p, const cfs_char_t **out);
  * \param out Pointer to store the result of the path_generic_string operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_generic_string(const cfs_path *p, cfs_char_t **out);
+CFS_API NO_DISCARD cfs_errc cfs_path_generic_string(const cfs_path *p,
+                                                    cfs_char_t **out);
 /* Phase 9: Path Building */
 
 /** \brief 81-84, 88. Path assignment, concatenation, and manipulation */
@@ -730,7 +743,8 @@ CFS_API cfs_errc cfs_path_generic_string(const cfs_path *p, cfs_char_t **out);
  * \param source The new string to assign to the path.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_assign(cfs_path *p, const cfs_char_t *source);
+CFS_API NO_DISCARD cfs_errc cfs_path_assign(cfs_path *p,
+                                            const cfs_char_t *source);
 /**
  * \brief Appends a source string to the path, resolving directory separators
  * intelligently.
@@ -739,7 +753,8 @@ CFS_API cfs_errc cfs_path_assign(cfs_path *p, const cfs_char_t *source);
  * \param source The string to append to the path.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_append(cfs_path *p, const cfs_char_t *source);
+CFS_API NO_DISCARD cfs_errc cfs_path_append(cfs_path *p,
+                                            const cfs_char_t *source);
 /**
  * \brief Concatenates a string directly to the end of the path without
  * inserting separators.
@@ -748,7 +763,8 @@ CFS_API cfs_errc cfs_path_append(cfs_path *p, const cfs_char_t *source);
  * \param source The string to concatenate.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_concat(cfs_path *p, const cfs_char_t *source);
+CFS_API NO_DISCARD cfs_errc cfs_path_concat(cfs_path *p,
+                                            const cfs_char_t *source);
 /**
  * \brief Clears the contents of the path, rendering it empty without freeing
  * its capacity.
@@ -774,7 +790,8 @@ CFS_API void cfs_path_swap(cfs_path *lhs, cfs_path *rhs);
  * \param out Pointer to store the result of the path_root_name operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_root_name(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_root_name(const cfs_path *p,
+                                               cfs_path *out);
 /** \brief Extracts base root separator. Returns path instance. */
 /**
  * \brief Performs the cfs_path_root_directory filesystem operation.
@@ -783,7 +800,8 @@ CFS_API cfs_errc cfs_path_root_name(const cfs_path *p, cfs_path *out);
  * \param out Pointer to store the result of the path_root_directory operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_root_directory(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_root_directory(const cfs_path *p,
+                                                    cfs_path *out);
 /** \brief Combines root name and root directory. Returns path instance. */
 /**
  * \brief Performs the cfs_path_root_path filesystem operation.
@@ -792,7 +810,8 @@ CFS_API cfs_errc cfs_path_root_directory(const cfs_path *p, cfs_path *out);
  * \param out Pointer to store the result of the path_root_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_root_path(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_root_path(const cfs_path *p,
+                                               cfs_path *out);
 /* Phase 11: Path Decomposition - Elements */
 
 /** \brief 101. Returns path relative to the root path */
@@ -803,7 +822,8 @@ CFS_API cfs_errc cfs_path_root_path(const cfs_path *p, cfs_path *out);
  * \param out Pointer to store the result of the path_relative_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_relative_path(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_relative_path(const cfs_path *p,
+                                                   cfs_path *out);
 /** \brief 102. Returns path of the parent directory */
 /**
  * \brief Performs the cfs_path_parent_path filesystem operation.
@@ -812,7 +832,8 @@ CFS_API cfs_errc cfs_path_relative_path(const cfs_path *p, cfs_path *out);
  * \param out Pointer to store the result of the path_parent_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_parent_path(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_parent_path(const cfs_path *p,
+                                                 cfs_path *out);
 /** \brief 103. Returns the filename component */
 /**
  * \brief Performs the cfs_path_filename filesystem operation.
@@ -821,7 +842,7 @@ CFS_API cfs_errc cfs_path_parent_path(const cfs_path *p, cfs_path *out);
  * \param out Pointer to store the result of the path_filename operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_filename(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_filename(const cfs_path *p, cfs_path *out);
 /** \brief 104. Returns the stem (filename without extension) */
 /**
  * \brief Performs the cfs_path_stem filesystem operation.
@@ -830,7 +851,7 @@ CFS_API cfs_errc cfs_path_filename(const cfs_path *p, cfs_path *out);
  * \param out Pointer to store the result of the path_stem operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out);
 /** \brief 105. Returns the file extension */
 /**
  * \brief Performs the cfs_path_extension filesystem operation.
@@ -839,7 +860,8 @@ CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out);
  * \param out Pointer to store the result of the path_extension operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_extension(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_extension(const cfs_path *p,
+                                               cfs_path *out);
 /* Phase 12: Path Modifiers */
 
 /** \brief 111. Replaces the terminal filename component */
@@ -850,8 +872,8 @@ CFS_API cfs_errc cfs_path_extension(const cfs_path *p, cfs_path *out);
  * \param replacement Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_replace_filename(cfs_path *p,
-                                           const cfs_char_t *replacement);
+CFS_API NO_DISCARD cfs_errc
+cfs_path_replace_filename(cfs_path *p, const cfs_char_t *replacement);
 /** \brief 112. Replaces the extension of the terminal component */
 /**
  * \brief Performs the cfs_path_replace_extension filesystem operation.
@@ -860,8 +882,8 @@ CFS_API cfs_errc cfs_path_replace_filename(cfs_path *p,
  * \param replacement Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_replace_extension(cfs_path *p,
-                                            const cfs_char_t *replacement);
+CFS_API NO_DISCARD cfs_errc
+cfs_path_replace_extension(cfs_path *p, const cfs_char_t *replacement);
 /** \brief 113. Removes the terminal filename component (truncates back to
  * parent) */
 /**
@@ -879,8 +901,8 @@ CFS_API void cfs_path_remove_filename(cfs_path *p);
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
-                              cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
+                                         cfs_error_code *ec);
 
 /* Copy file options mirroring std::filesystem::copy_options */
 /**
@@ -907,8 +929,8 @@ typedef enum cfs_copy_options {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
-                               cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
+                                          cfs_error_code *ec);
 /**
  * \brief Performs the cfs_weakly_canonical filesystem operation.
  *
@@ -917,8 +939,9 @@ CFS_API cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
-                                      cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_weakly_canonical(const cfs_path *p,
+                                                 cfs_path *out,
+                                                 cfs_error_code *ec);
 /**
  * \brief Performs the cfs_read_symlink filesystem operation.
  *
@@ -927,8 +950,8 @@ CFS_API cfs_errc cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
-                                  cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
+                                             cfs_error_code *ec);
 /**
  * \brief Performs the cfs_relative filesystem operation.
  *
@@ -938,8 +961,9 @@ CFS_API cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_relative(const cfs_path *p, const cfs_path *base,
-                              cfs_path *out, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_relative(const cfs_path *p,
+                                         const cfs_path *base, cfs_path *out,
+                                         cfs_error_code *ec);
 /**
  * \brief Performs the cfs_proximate filesystem operation.
  *
@@ -949,8 +973,9 @@ CFS_API cfs_errc cfs_relative(const cfs_path *p, const cfs_path *base,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_proximate(const cfs_path *p, const cfs_path *base,
-                               cfs_path *out, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_proximate(const cfs_path *p,
+                                          const cfs_path *base, cfs_path *out,
+                                          cfs_error_code *ec);
 /**
  * \brief Performs the cfs_copy filesystem operation.
  *
@@ -960,8 +985,9 @@ CFS_API cfs_errc cfs_proximate(const cfs_path *p, const cfs_path *base,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_copy(const cfs_path *from, const cfs_path *to,
-                          cfs_copy_options options, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_copy(const cfs_path *from, const cfs_path *to,
+                                     cfs_copy_options options,
+                                     cfs_error_code *ec);
 /**
  * \brief Performs the cfs_copy_symlink filesystem operation.
  *
@@ -970,9 +996,9 @@ CFS_API cfs_errc cfs_copy(const cfs_path *from, const cfs_path *to,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_copy_symlink(const cfs_path *existing_symlink,
-                                  const cfs_path *new_symlink,
-                                  cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_copy_symlink(const cfs_path *existing_symlink,
+                                             const cfs_path *new_symlink,
+                                             cfs_error_code *ec);
 
 /* Phase 13: Path Observers & Comparisons */
 
@@ -984,7 +1010,7 @@ CFS_API cfs_errc cfs_copy_symlink(const cfs_path *existing_symlink,
  * \param out Pointer to store the result of the path_is_empty operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_is_empty(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_is_empty(const cfs_path *p, cfs_bool *out);
 /**
  * \brief Performs the cfs_path_has_root_path filesystem operation.
  *
@@ -992,7 +1018,8 @@ CFS_API cfs_errc cfs_path_is_empty(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_has_root_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_root_path(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_has_root_path(const cfs_path *p,
+                                                   cfs_bool *out);
 /**
  * \brief Performs the cfs_path_has_root_name filesystem operation.
  *
@@ -1000,7 +1027,8 @@ CFS_API cfs_errc cfs_path_has_root_path(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_has_root_name operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_root_name(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_has_root_name(const cfs_path *p,
+                                                   cfs_bool *out);
 /**
  * \brief Performs the cfs_path_has_root_directory filesystem operation.
  *
@@ -1008,7 +1036,8 @@ CFS_API cfs_errc cfs_path_has_root_name(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_has_root_directory
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_has_root_directory(const cfs_path *p,
+                                                        cfs_bool *out);
 /**
  * \brief Performs the cfs_path_has_relative_path filesystem operation.
  *
@@ -1016,7 +1045,8 @@ CFS_API cfs_errc cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_has_relative_path
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_has_relative_path(const cfs_path *p,
+                                                       cfs_bool *out);
 /**
  * \brief Performs the cfs_path_has_parent_path filesystem operation.
  *
@@ -1024,7 +1054,8 @@ CFS_API cfs_errc cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_has_parent_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_has_parent_path(const cfs_path *p,
+                                                     cfs_bool *out);
 /**
  * \brief Performs the cfs_path_has_filename filesystem operation.
  *
@@ -1032,7 +1063,8 @@ CFS_API cfs_errc cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_has_filename operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_filename(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_has_filename(const cfs_path *p,
+                                                  cfs_bool *out);
 /**
  * \brief Performs the cfs_path_has_stem filesystem operation.
  *
@@ -1040,7 +1072,7 @@ CFS_API cfs_errc cfs_path_has_filename(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_has_stem operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_stem(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_has_stem(const cfs_path *p, cfs_bool *out);
 /**
  * \brief Performs the cfs_path_has_extension filesystem operation.
  *
@@ -1048,7 +1080,8 @@ CFS_API cfs_errc cfs_path_has_stem(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_has_extension operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_extension(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_has_extension(const cfs_path *p,
+                                                   cfs_bool *out);
 /**
  * \brief Performs the cfs_path_is_absolute filesystem operation.
  *
@@ -1056,7 +1089,8 @@ CFS_API cfs_errc cfs_path_has_extension(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_is_absolute operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_is_absolute(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_is_absolute(const cfs_path *p,
+                                                 cfs_bool *out);
 /**
  * \brief Performs the cfs_path_is_relative filesystem operation.
  *
@@ -1064,7 +1098,8 @@ CFS_API cfs_errc cfs_path_is_absolute(const cfs_path *p, cfs_bool *out);
  * \param out Pointer to store the result of the path_is_relative operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_is_relative(const cfs_path *p, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_is_relative(const cfs_path *p,
+                                                 cfs_bool *out);
 
 /** \brief Lexicographical comparison */
 /**
@@ -1074,7 +1109,8 @@ CFS_API cfs_errc cfs_path_is_relative(const cfs_path *p, cfs_bool *out);
  * \param rhs Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs);
+CFS_API NO_DISCARD cfs_errc cfs_path_compare(const cfs_path *lhs,
+                                             const cfs_path *rhs);
 /* Phase 14: Lexical Path Operations */
 
 /** \brief 132. Lexically normalizes the path (resolves . and .. internally) */
@@ -1085,7 +1121,8 @@ CFS_API cfs_errc cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs);
  * \param out Pointer to store the result of the path_lexically_normal
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_lexically_normal(const cfs_path *p,
+                                                      cfs_path *out);
 /** \brief 134. Returns a path representing how to get from base to p */
 /**
  * \brief Performs the cfs_path_lexically_relative filesystem operation.
@@ -1095,9 +1132,9 @@ CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out);
  * \param out Pointer to store the result of the path_lexically_relative
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_lexically_relative(const cfs_path *p,
-                                             const cfs_path *base,
-                                             cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_lexically_relative(const cfs_path *p,
+                                                        const cfs_path *base,
+                                                        cfs_path *out);
 /* 135. Returns relative path if mathematically divergent, otherwise the
  * original path */
 /**
@@ -1108,9 +1145,9 @@ CFS_API cfs_errc cfs_path_lexically_relative(const cfs_path *p,
  * \param out Pointer to store the result of the path_lexically_proximate
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_lexically_proximate(const cfs_path *p,
-                                              const cfs_path *base,
-                                              cfs_path *out);
+CFS_API NO_DISCARD cfs_errc cfs_path_lexically_proximate(const cfs_path *p,
+                                                         const cfs_path *base,
+                                                         cfs_path *out);
 
 /* Internal path element iterator structure */
 /**
@@ -1216,8 +1253,8 @@ typedef struct cfs_file_status {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_status(const cfs_path *p, cfs_file_status *out,
-                            cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_status(const cfs_path *p, cfs_file_status *out,
+                                       cfs_error_code *ec);
 /**
  * \brief Evaluates the file status and type of the given path without
  * traversing symlinks.
@@ -1227,8 +1264,9 @@ CFS_API cfs_errc cfs_status(const cfs_path *p, cfs_file_status *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
-                                    cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_symlink_status(const cfs_path *p,
+                                               cfs_file_status *out,
+                                               cfs_error_code *ec);
 /**
  * \brief Performs the cfs_status_known filesystem operation.
  *
@@ -1236,7 +1274,7 @@ CFS_API cfs_errc cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
  * \param out Pointer to store the result of the status_known operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_status_known(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_status_known(cfs_file_status s, cfs_bool *out);
 
 /** \brief 145. Exists Observer */
 /**
@@ -1247,7 +1285,7 @@ CFS_API cfs_errc cfs_status_known(cfs_file_status s, cfs_bool *out);
  * \param out Pointer to store the result of the exists operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_exists(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_exists(cfs_file_status s, cfs_bool *out);
 /**
  * \brief Checks if a given path corresponds to an existing filesystem node.
  *
@@ -1256,8 +1294,8 @@ CFS_API cfs_errc cfs_exists(cfs_file_status s, cfs_bool *out);
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_exists_path(const cfs_path *p, cfs_bool *out,
-                                 cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_exists_path(const cfs_path *p, cfs_bool *out,
+                                            cfs_error_code *ec);
 
 /** \brief 151-159. Filesystem Type Queries */
 /**
@@ -1267,7 +1305,7 @@ CFS_API cfs_errc cfs_exists_path(const cfs_path *p, cfs_bool *out,
  * \param out Pointer to store the result of the is_block_file operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_block_file(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_is_block_file(cfs_file_status s, cfs_bool *out);
 /**
  * \brief Performs the cfs_is_character_file filesystem operation.
  *
@@ -1275,7 +1313,8 @@ CFS_API cfs_errc cfs_is_block_file(cfs_file_status s, cfs_bool *out);
  * \param out Pointer to store the result of the is_character_file operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_character_file(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_is_character_file(cfs_file_status s,
+                                                  cfs_bool *out);
 /**
  * \brief Performs the cfs_is_directory filesystem operation.
  *
@@ -1283,7 +1322,7 @@ CFS_API cfs_errc cfs_is_character_file(cfs_file_status s, cfs_bool *out);
  * \param out Pointer to store the result of the is_directory operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_directory(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_is_directory(cfs_file_status s, cfs_bool *out);
 /**
  * \brief Performs the cfs_is_fifo filesystem operation.
  *
@@ -1291,7 +1330,7 @@ CFS_API cfs_errc cfs_is_directory(cfs_file_status s, cfs_bool *out);
  * \param out Pointer to store the result of the is_fifo operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_fifo(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_is_fifo(cfs_file_status s, cfs_bool *out);
 /**
  * \brief Performs the cfs_is_other filesystem operation.
  *
@@ -1299,7 +1338,7 @@ CFS_API cfs_errc cfs_is_fifo(cfs_file_status s, cfs_bool *out);
  * \param out Pointer to store the result of the is_other operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_other(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_is_other(cfs_file_status s, cfs_bool *out);
 /**
  * \brief Performs the cfs_is_regular_file filesystem operation.
  *
@@ -1307,7 +1346,8 @@ CFS_API cfs_errc cfs_is_other(cfs_file_status s, cfs_bool *out);
  * \param out Pointer to store the result of the is_regular_file operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_regular_file(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_is_regular_file(cfs_file_status s,
+                                                cfs_bool *out);
 /**
  * \brief Performs the cfs_is_socket filesystem operation.
  *
@@ -1315,7 +1355,7 @@ CFS_API cfs_errc cfs_is_regular_file(cfs_file_status s, cfs_bool *out);
  * \param out Pointer to store the result of the is_socket operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_socket(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_is_socket(cfs_file_status s, cfs_bool *out);
 /**
  * \brief Performs the cfs_is_symlink filesystem operation.
  *
@@ -1323,7 +1363,7 @@ CFS_API cfs_errc cfs_is_socket(cfs_file_status s, cfs_bool *out);
  * \param out Pointer to store the result of the is_symlink operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_symlink(cfs_file_status s, cfs_bool *out);
+CFS_API NO_DISCARD cfs_errc cfs_is_symlink(cfs_file_status s, cfs_bool *out);
 
 /** \brief 154. Is Empty Query (Directory or zero-byte file) */
 /**
@@ -1334,8 +1374,8 @@ CFS_API cfs_errc cfs_is_symlink(cfs_file_status s, cfs_bool *out);
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
-                                   cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
+                                              cfs_error_code *ec);
 /* Phase 17: Filesystem Operations - Creation */
 
 /** \brief 161. Create a single directory node */
@@ -1346,7 +1386,8 @@ CFS_API cfs_errc cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_create_directory(const cfs_path *p, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_create_directory(const cfs_path *p,
+                                                 cfs_error_code *ec);
 /** \brief 162. Recursively create directory nodes */
 /**
  * \brief Recursively creates a directory and any missing parent directories.
@@ -1355,7 +1396,8 @@ CFS_API cfs_errc cfs_create_directory(const cfs_path *p, cfs_error_code *ec);
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_create_directories(const cfs_path *p, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_create_directories(const cfs_path *p,
+                                                   cfs_error_code *ec);
 
 /** \brief 163-165. Create links */
 /**
@@ -1402,8 +1444,10 @@ CFS_API void cfs_create_directory_symlink(const cfs_path *target,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_copy_file(const cfs_path *from, const cfs_path *to,
-                               cfs_copy_options options, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_copy_file(const cfs_path *from,
+                                          const cfs_path *to,
+                                          cfs_copy_options options,
+                                          cfs_error_code *ec);
 /* Phase 18: Filesystem Operations - Modification */
 
 /** \brief 171. Remove single file or empty directory */
@@ -1414,7 +1458,7 @@ CFS_API cfs_errc cfs_copy_file(const cfs_path *from, const cfs_path *to,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec);
 /** \brief 172. Remove all contents recursively. Returns number of removed
  * objects */
 /**
@@ -1425,8 +1469,8 @@ CFS_API cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec);
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_remove_all(const cfs_path *p, cfs_size_t *out,
-                                cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_remove_all(const cfs_path *p, cfs_size_t *out,
+                                           cfs_error_code *ec);
 
 /** \brief 173. Rename/Move node */
 /**
@@ -1466,8 +1510,8 @@ CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
-                               cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
+                                          cfs_error_code *ec);
 
 /* 176. Space Information */
 /**
@@ -1489,8 +1533,8 @@ typedef struct cfs_space_info {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_space(const cfs_path *p, cfs_space_info *out,
-                           cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_space(const cfs_path *p, cfs_space_info *out,
+                                      cfs_error_code *ec);
 
 /** \brief Mapped natively to time_t or system tick representation. */
 #if defined(__GNUC__) || defined(__clang__)
@@ -1508,8 +1552,9 @@ typedef long cfs_file_time_type;
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
-                                     cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_last_write_time(const cfs_path *p,
+                                                cfs_file_time_type *out,
+                                                cfs_error_code *ec);
 
 /** \brief 17X. Permissions and Links */
 /**
@@ -1521,8 +1566,9 @@ CFS_API cfs_errc cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
-                                 cfs_perm_options opts, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
+                                            cfs_perm_options opts,
+                                            cfs_error_code *ec);
 /**
  * \brief Performs the cfs_hard_link_count filesystem operation.
  *
@@ -1531,8 +1577,9 @@ CFS_API cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
-                                     cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_hard_link_count(const cfs_path *p,
+                                                cfs_uintmax_t *out,
+                                                cfs_error_code *ec);
 /**
  * \brief Performs the cfs_equivalent filesystem operation.
  *
@@ -1542,8 +1589,9 @@ CFS_API cfs_errc cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
-                                cfs_bool *out, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_equivalent(const cfs_path *p1,
+                                           const cfs_path *p2, cfs_bool *out,
+                                           cfs_error_code *ec);
 
 /** \brief 178-179. Environment paths */
 /**
@@ -1553,7 +1601,7 @@ CFS_API cfs_errc cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_current_path(cfs_path *out, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_current_path(cfs_path *out, cfs_error_code *ec);
 /**
  * \brief Performs the cfs_current_path_set filesystem operation.
  *
@@ -1569,7 +1617,8 @@ CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec);
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_temp_directory_path(cfs_path *out,
+                                                    cfs_error_code *ec);
 /* Phase 19: Directory Iteration */
 
 /* 181. Directory entry structure caching path and status */
@@ -1596,9 +1645,9 @@ typedef struct cfs_directory_iterator cfs_directory_iterator;
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_dir_itr_init(const cfs_path *p,
-                                  cfs_directory_iterator **out_it,
-                                  cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_dir_itr_init(const cfs_path *p,
+                                             cfs_directory_iterator **out_it,
+                                             cfs_error_code *ec);
 /* Returns 0 on success, with a pointer to the internal entry, or 1 if iteration
  * complete, or -1 on error */
 /**
@@ -1609,9 +1658,9 @@ CFS_API cfs_errc cfs_dir_itr_init(const cfs_path *p,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_dir_itr_next(cfs_directory_iterator *it,
-                                  const cfs_directory_entry **out_entry,
-                                  cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc
+cfs_dir_itr_next(cfs_directory_iterator *it,
+                 const cfs_directory_entry **out_entry, cfs_error_code *ec);
 /**
  * \brief Performs the cfs_dir_itr_close filesystem operation.
  *
@@ -1631,9 +1680,9 @@ typedef struct cfs_recursive_directory_iterator
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_rec_dir_itr_init(const cfs_path *p,
-                                      cfs_recursive_directory_iterator **out_it,
-                                      cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_rec_dir_itr_init(
+    const cfs_path *p, cfs_recursive_directory_iterator **out_it,
+    cfs_error_code *ec);
 /**
  * \brief Performs the cfs_rec_dir_itr_next filesystem operation.
  *
@@ -1642,9 +1691,9 @@ CFS_API cfs_errc cfs_rec_dir_itr_init(const cfs_path *p,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
-                                      const cfs_directory_entry **out_entry,
-                                      cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc
+cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
+                     const cfs_directory_entry **out_entry, cfs_error_code *ec);
 /**
  * \brief Prevents the iterator from descending into the currently evaluated
  * directory node.
@@ -1758,8 +1807,9 @@ struct cfs_request_t {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_runtime_init(const cfs_runtime_config *config,
-                                  cfs_runtime_t **out_rt, cfs_error_code *ec);
+CFS_API NO_DISCARD cfs_errc cfs_runtime_init(const cfs_runtime_config *config,
+                                             cfs_runtime_t **out_rt,
+                                             cfs_error_code *ec);
 
 /** \brief 5. Implement cfs_runtime_destroy() */
 /**
@@ -1849,8 +1899,10 @@ typedef struct cfs_thread_pool_t cfs_thread_pool_t;
  * request. \param user_data Opaque pointer passed back to the user-provided
  * callback. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
-                                  cfs_callback_t cb, void *user_data);
+CFS_API NO_DISCARD cfs_errc cfs_remove_async(cfs_runtime_t *rt,
+                                             const cfs_path *p,
+                                             cfs_callback_t cb,
+                                             void *user_data);
 /**
  * \brief Schedules an asynchronous operation to retrieve a file\'s size.
  *
@@ -1860,8 +1912,10 @@ CFS_API cfs_errc cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
  * request. \param user_data Opaque pointer passed back to the user-provided
  * callback. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
-                                     cfs_callback_t cb, void *user_data);
+CFS_API NO_DISCARD cfs_errc cfs_file_size_async(cfs_runtime_t *rt,
+                                                const cfs_path *p,
+                                                cfs_callback_t cb,
+                                                void *user_data);
 
 /** \brief 19. cfs_runtime_poll() */
 /**
@@ -1871,7 +1925,7 @@ CFS_API cfs_errc cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
  * \param rt Pointer to the active `cfs_runtime_t` execution context.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_runtime_poll(cfs_runtime_t *rt);
+CFS_API NO_DISCARD cfs_errc cfs_runtime_poll(cfs_runtime_t *rt);
 
 /* Phase 3: Platform-Specific Async & Message Passing */
 
@@ -1897,7 +1951,8 @@ CFS_API void cfs_request_release(cfs_request_t *req);
  * \param req Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_cancel_request(cfs_runtime_t *rt, cfs_request_t *req);
+CFS_API NO_DISCARD cfs_errc cfs_cancel_request(cfs_runtime_t *rt,
+                                               cfs_request_t *req);
 
 /** \brief Forward declaration for io_uring context configuration. */
 typedef struct cfs_io_uring_context cfs_io_uring_context;
@@ -1913,8 +1968,8 @@ typedef struct cfs_message_pipe cfs_message_pipe;
  * \param out_pipe Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_message_pipe_create(const cfs_char_t *path,
-                                         cfs_message_pipe **out_pipe);
+CFS_API NO_DISCARD cfs_errc
+cfs_message_pipe_create(const cfs_char_t *path, cfs_message_pipe **out_pipe);
 /**
  * \brief Performs the cfs_message_pipe_destroy filesystem operation.
  *
@@ -1929,8 +1984,9 @@ CFS_API void cfs_message_pipe_destroy(cfs_message_pipe *pipe);
  * \param size Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_serialize_request(const cfs_request_t *req, void **buffer,
-                                       cfs_size_t *size);
+CFS_API NO_DISCARD cfs_errc cfs_serialize_request(const cfs_request_t *req,
+                                                  void **buffer,
+                                                  cfs_size_t *size);
 /**
  * \brief Performs the cfs_deserialize_request filesystem operation.
  *
@@ -1939,8 +1995,9 @@ CFS_API cfs_errc cfs_serialize_request(const cfs_request_t *req, void **buffer,
  * \param req Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_deserialize_request(const void *buffer, cfs_size_t size,
-                                         cfs_request_t **req);
+CFS_API NO_DISCARD cfs_errc cfs_deserialize_request(const void *buffer,
+                                                    cfs_size_t size,
+                                                    cfs_request_t **req);
 
 /* Phase 4: Multiprocessing and Greenthreads */
 
@@ -1953,15 +2010,15 @@ typedef struct cfs_process_t cfs_process_t;
  * \param out_proc Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
-                                   cfs_process_t **out_proc);
+CFS_API NO_DISCARD cfs_errc cfs_process_spawn(const cfs_char_t *executable,
+                                              cfs_process_t **out_proc);
 /**
  * \brief Performs the cfs_process_wait filesystem operation.
  *
  * \param proc Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_process_wait(cfs_process_t *proc);
+CFS_API NO_DISCARD cfs_errc cfs_process_wait(cfs_process_t *proc);
 /**
  * \brief Performs the cfs_process_destroy filesystem operation.
  *
@@ -1979,8 +2036,9 @@ typedef struct cfs_shm_segment cfs_shm_segment;
  * \param out_shm Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
-                                cfs_shm_segment **out_shm);
+CFS_API NO_DISCARD cfs_errc cfs_shm_create(cfs_size_t size,
+                                           const cfs_char_t *name,
+                                           cfs_shm_segment **out_shm);
 /**
  * \brief Performs the cfs_shm_map filesystem operation.
  *
@@ -1988,7 +2046,7 @@ CFS_API cfs_errc cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
  * \param out Pointer to store the result of the shm_map operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_shm_map(cfs_shm_segment *shm, void **out);
+CFS_API NO_DISCARD cfs_errc cfs_shm_map(cfs_shm_segment *shm, void **out);
 /**
  * \brief Performs the cfs_shm_unmap filesystem operation.
  *
@@ -2013,23 +2071,22 @@ typedef struct cfs_named_semaphore cfs_named_semaphore;
  * \param out_sem Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_named_semaphore_create(const cfs_char_t *name,
-                                            int initial_count,
-                                            cfs_named_semaphore **out_sem);
+CFS_API NO_DISCARD cfs_errc cfs_named_semaphore_create(
+    const cfs_char_t *name, int initial_count, cfs_named_semaphore **out_sem);
 /**
  * \brief Performs the cfs_named_semaphore_wait filesystem operation.
  *
  * \param sem Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_named_semaphore_wait(cfs_named_semaphore *sem);
+CFS_API NO_DISCARD cfs_errc cfs_named_semaphore_wait(cfs_named_semaphore *sem);
 /**
  * \brief Performs the cfs_named_semaphore_post filesystem operation.
  *
  * \param sem Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_named_semaphore_post(cfs_named_semaphore *sem);
+CFS_API NO_DISCARD cfs_errc cfs_named_semaphore_post(cfs_named_semaphore *sem);
 /**
  * \brief Performs the cfs_named_semaphore_destroy filesystem operation.
  *
@@ -2050,14 +2107,15 @@ typedef void (*cfs_greenthread_func)(void *);
  * \param out_gt Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_greenthread_spawn(cfs_greenthread_func func, void *arg,
-                                       cfs_greenthread_t **out_gt);
+CFS_API NO_DISCARD cfs_errc cfs_greenthread_spawn(cfs_greenthread_func func,
+                                                  void *arg,
+                                                  cfs_greenthread_t **out_gt);
 /**
  * \brief Performs the cfs_greenthread_yield filesystem operation.
  *
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_greenthread_yield(void);
+CFS_API NO_DISCARD cfs_errc cfs_greenthread_yield(void);
 /**
  * \brief Performs the cfs_greenthread_destroy filesystem operation.
  *
@@ -2073,7 +2131,7 @@ typedef struct cfs_greenthread_scheduler cfs_greenthread_scheduler;
  * \param out_sched Pointer to store the initialized scheduler.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc
+CFS_API NO_DISCARD cfs_errc
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched);
 /**
  * \brief Performs the cfs_greenthread_scheduler_run filesystem operation.
@@ -2081,7 +2139,7 @@ cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched);
  * \param sched Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc
+CFS_API NO_DISCARD cfs_errc
 cfs_greenthread_scheduler_run(cfs_greenthread_scheduler *sched);
 /**
  * \brief Destroys a greenthread scheduler.
@@ -2113,8 +2171,10 @@ typedef struct cfs_directory_iterator_async cfs_directory_iterator_async;
  * request. \param user_data Opaque pointer passed back to the user-provided
  * callback. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_dir_itr_init_async(cfs_runtime_t *rt, const cfs_path *p,
-                                        cfs_callback_t cb, void *user_data);
+CFS_API NO_DISCARD cfs_errc cfs_dir_itr_init_async(cfs_runtime_t *rt,
+                                                   const cfs_path *p,
+                                                   cfs_callback_t cb,
+                                                   void *user_data);
 
 /* 43. Multi-process sandbox config */
 /**
@@ -2134,8 +2194,8 @@ typedef struct cfs_sandbox_config {
  * \param config Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_runtime_set_sandbox(cfs_runtime_t *rt,
-                                         const cfs_sandbox_config *config);
+CFS_API NO_DISCARD cfs_errc
+cfs_runtime_set_sandbox(cfs_runtime_t *rt, const cfs_sandbox_config *config);
 
 #ifdef CFS_IMPLEMENTATION
 
@@ -2213,11 +2273,11 @@ static void cfs_execute_op_inline(cfs_request_t *req) {
 
   switch (req->opcode) {
   case cfs_opcode_remove:
-    cfs_remove(&req->target_path, &req->error);
+    (void)cfs_remove(&req->target_path, &req->error);
     break;
   case cfs_opcode_file_size: {
     cfs_uintmax_t size = 0;
-    cfs_file_size(&req->target_path, &size, &req->error);
+    (void)cfs_file_size(&req->target_path, &size, &req->error);
     if (req->result_buffer && req->result_size >= sizeof(cfs_uintmax_t)) {
       *((cfs_uintmax_t *)req->result_buffer) = size;
     }
@@ -2559,8 +2619,8 @@ static void cfs_queue_init(cfs_queue_t *q) {
   q->head = NULL;
   q->tail = NULL;
   q->shutdown = cfs_false;
-  cfs_mutex_init(&q->lock);
-  cfs_cond_init(&q->cond);
+  (void)cfs_mutex_init(&q->lock);
+  (void)cfs_cond_init(&q->cond);
 }
 
 /**
@@ -2573,10 +2633,10 @@ static void cfs_queue_destroy(cfs_queue_t *q) {
   while (q->head) {
     req = q->head;
     q->head = req->next;
-    cfs_request_release(req);
+    (void)cfs_request_release(req);
   }
-  cfs_mutex_destroy(&q->lock);
-  cfs_cond_destroy(&q->cond);
+  (void)cfs_mutex_destroy(&q->lock);
+  (void)cfs_cond_destroy(&q->cond);
 }
 
 /**
@@ -2586,7 +2646,7 @@ static void cfs_queue_destroy(cfs_queue_t *q) {
  * \param req Argument representing the target resource.
  */
 static void cfs_queue_push(cfs_queue_t *q, cfs_request_t *req) {
-  cfs_mutex_lock(&q->lock);
+  (void)cfs_mutex_lock(&q->lock);
   req->next = NULL;
   req->ref_count = 1;
   req->cancelled = cfs_false;
@@ -2596,8 +2656,8 @@ static void cfs_queue_push(cfs_queue_t *q, cfs_request_t *req) {
     q->head = req;
   }
   q->tail = req;
-  cfs_cond_signal(&q->cond);
-  cfs_mutex_unlock(&q->lock);
+  (void)cfs_cond_signal(&q->cond);
+  (void)cfs_mutex_unlock(&q->lock);
 }
 
 /**
@@ -2612,10 +2672,10 @@ static int cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data,
                          cfs_request_t **out_req) {
   cfs_request_t *req = NULL;
   *out_req = NULL;
-  cfs_mutex_lock(&q->lock);
+  (void)cfs_mutex_lock(&q->lock);
 
   while (q->head == NULL && !q->shutdown && wait_for_data) {
-    cfs_cond_wait(&q->cond, &q->lock);
+    (void)cfs_cond_wait(&q->cond, &q->lock);
   }
 
   if (q->head != NULL) {
@@ -2626,7 +2686,7 @@ static int cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data,
     }
   }
 
-  cfs_mutex_unlock(&q->lock);
+  (void)cfs_mutex_unlock(&q->lock);
   *out_req = req;
   return req ? 0 : -1;
 }
@@ -2637,10 +2697,10 @@ static int cfs_queue_pop(cfs_queue_t *q, cfs_bool wait_for_data,
  * \param q Argument representing the target resource.
  */
 static void cfs_queue_shutdown(cfs_queue_t *q) {
-  cfs_mutex_lock(&q->lock);
+  (void)cfs_mutex_lock(&q->lock);
   q->shutdown = cfs_true;
-  cfs_cond_broadcast(&q->cond);
-  cfs_mutex_unlock(&q->lock);
+  (void)cfs_cond_broadcast(&q->cond);
+  (void)cfs_mutex_unlock(&q->lock);
 }
 
 /* 16. Thread Pool */
@@ -2689,17 +2749,18 @@ static void *cfs_worker_thread(void *arg) {
     if (cfs_queue_pop(pool->work_queue, cfs_true, &req) != 0 || !req) {
       /* Cascade shutdown signal to wake up other waiting threads when using
        * event fallback */
-      cfs_cond_broadcast(&pool->work_queue->cond);
+      (void)cfs_cond_broadcast(&pool->work_queue->cond);
       break; /* Shutdown condition */
     }
 
     if (!req->cancelled) {
-      cfs_execute_op_inline(req);
+      (void)cfs_execute_op_inline(req);
     } else {
-      cfs_make_error_code_from_os(125, &req->error); /* ECANCELED fallback */
+      (void)cfs_make_error_code_from_os(125,
+                                        &req->error); /* ECANCELED fallback */
     }
 
-    cfs_queue_push(pool->completion_queue, req);
+    (void)cfs_queue_push(pool->completion_queue, req);
   }
 
 #if defined(CFS_OS_WINDOWS)
@@ -2727,17 +2788,18 @@ static int cfs_thread_pool_create(cfs_size_t num_threads, cfs_queue_t *work,
   /* return -1; */
   *out_pool = NULL;
 
-  cfs_malloc(sizeof(cfs_thread_pool_t), (void **)&pool);
+  (void)cfs_malloc(sizeof(cfs_thread_pool_t), (void **)&pool);
   if (!pool)
     return -1;
 
   pool->num_threads = num_threads;
   pool->work_queue = work;
   pool->completion_queue = comp;
-  cfs_calloc(num_threads, sizeof(cfs_thread_t), (void **)&(pool->threads));
+  (void)cfs_calloc(num_threads, sizeof(cfs_thread_t),
+                   (void **)&(pool->threads));
 
   if (!pool->threads) {
-    cfs_free(pool);
+    (void)cfs_free(pool);
     return -1;
   }
 
@@ -2766,7 +2828,7 @@ static int cfs_thread_pool_create(cfs_size_t num_threads, cfs_queue_t *work,
 static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
   cfs_size_t i;
 
-  cfs_queue_shutdown(pool->work_queue);
+  (void)cfs_queue_shutdown(pool->work_queue);
 
   for (i = 0; i < pool->num_threads; ++i) {
 #if defined(CFS_OS_WINDOWS)
@@ -2782,8 +2844,8 @@ static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
 #endif
   }
 
-  cfs_free(pool->threads);
-  cfs_free(pool);
+  (void)cfs_free(pool->threads);
+  (void)cfs_free(pool);
 }
 
 /* 13. Non-blocking API variants */
@@ -2797,31 +2859,33 @@ static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
  * request. \param user_data Opaque pointer passed back to the user-provided
  * callback. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
-                                  cfs_callback_t cb, void *user_data) {
+CFS_API NO_DISCARD cfs_errc cfs_remove_async(cfs_runtime_t *rt,
+                                             const cfs_path *p,
+                                             cfs_callback_t cb,
+                                             void *user_data) {
   cfs_request_t *req;
 
   if (!rt || !p)
     return -1;
 
-  cfs_malloc(sizeof(cfs_request_t), (void **)&req);
+  (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return -1;
 
   req->opcode = cfs_opcode_remove;
-  cfs_path_init(&req->target_path);
-  cfs_path_clone(&req->target_path, p);
-  cfs_path_init(&req->dest_path);
+  (void)cfs_path_init(&req->target_path);
+  (void)cfs_path_clone(&req->target_path, p);
+  (void)cfs_path_init(&req->dest_path);
   req->result_buffer = NULL;
   req->result_size = 0;
-  cfs_clear_error(&req->error);
+  (void)cfs_clear_error(&req->error);
   req->callback = cb;
   req->user_data = user_data;
   req->next = NULL;
   req->ref_count = 1;
   req->cancelled = cfs_false;
 
-  cfs_dispatch_request(rt, req, cb, user_data);
+  (void)cfs_dispatch_request(rt, req, cb, user_data);
   return 0;
 }
 
@@ -2834,32 +2898,34 @@ CFS_API cfs_errc cfs_remove_async(cfs_runtime_t *rt, const cfs_path *p,
  * request. \param user_data Opaque pointer passed back to the user-provided
  * callback. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
-                                     cfs_callback_t cb, void *user_data) {
+CFS_API NO_DISCARD cfs_errc cfs_file_size_async(cfs_runtime_t *rt,
+                                                const cfs_path *p,
+                                                cfs_callback_t cb,
+                                                void *user_data) {
   cfs_request_t *req;
 
   if (!rt || !p)
     return -1;
 
-  cfs_malloc(sizeof(cfs_request_t), (void **)&req);
+  (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return -1;
 
   req->opcode = cfs_opcode_file_size;
-  cfs_path_init(&req->target_path);
-  cfs_path_clone(&req->target_path, p);
-  cfs_path_init(&req->dest_path);
+  (void)cfs_path_init(&req->target_path);
+  (void)cfs_path_clone(&req->target_path, p);
+  (void)cfs_path_init(&req->dest_path);
 
   req->result_size = sizeof(cfs_uintmax_t);
-  cfs_malloc(req->result_size, (void **)&req->result_buffer);
-  cfs_clear_error(&req->error);
+  (void)cfs_malloc(req->result_size, (void **)&req->result_buffer);
+  (void)cfs_clear_error(&req->error);
   req->callback = cb;
   req->user_data = user_data;
   req->next = NULL;
   req->ref_count = 1;
   req->cancelled = cfs_false;
 
-  cfs_dispatch_request(rt, req, cb, user_data);
+  (void)cfs_dispatch_request(rt, req, cb, user_data);
   return 0;
 }
 
@@ -2871,28 +2937,29 @@ CFS_API cfs_errc cfs_file_size_async(cfs_runtime_t *rt, const cfs_path *p,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_runtime_init(const cfs_runtime_config *config,
-                                  cfs_runtime_t **out_rt, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_runtime_init(const cfs_runtime_config *config,
+                                             cfs_runtime_t **out_rt,
+                                             cfs_error_code *ec) {
   cfs_runtime_t *rt;
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!out_rt) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return -1;
   }
   *out_rt = NULL;
 
   if (!config) {
     if (ec)
-      cfs_make_error_code_from_os(22, ec); /* EINVAL fallback */
+      (void)cfs_make_error_code_from_os(22, ec); /* EINVAL fallback */
     return -1;
   }
 
-  cfs_malloc(sizeof(cfs_runtime_t), (void **)&rt);
+  (void)cfs_malloc(sizeof(cfs_runtime_t), (void **)&rt);
   if (!rt) {
     if (ec)
-      cfs_make_error_code_from_os(12, ec); /* ENOMEM fallback */
+      (void)cfs_make_error_code_from_os(12, ec); /* ENOMEM fallback */
     return -1;
   }
 
@@ -2904,20 +2971,20 @@ CFS_API cfs_errc cfs_runtime_init(const cfs_runtime_config *config,
   /* TODO: initialize thread pools, IPC, etc based on config->mode */
   if (rt->config.mode == cfs_modality_async ||
       rt->config.mode == cfs_modality_multithread) {
-    cfs_malloc(sizeof(cfs_queue_t), (void **)&(rt->work_queue));
-    cfs_malloc(sizeof(cfs_queue_t), (void **)&(rt->completion_queue));
+    (void)cfs_malloc(sizeof(cfs_queue_t), (void **)&(rt->work_queue));
+    (void)cfs_malloc(sizeof(cfs_queue_t), (void **)&(rt->completion_queue));
     if (!rt->work_queue || !rt->completion_queue) {
       if (rt->work_queue)
-        cfs_free(rt->work_queue);
+        (void)cfs_free(rt->work_queue);
       if (rt->completion_queue)
-        cfs_free(rt->completion_queue);
-      cfs_free(rt);
+        (void)cfs_free(rt->completion_queue);
+      (void)cfs_free(rt);
       return -1;
     }
-    cfs_queue_init(rt->work_queue);
-    cfs_queue_init(rt->completion_queue);
+    (void)cfs_queue_init(rt->work_queue);
+    (void)cfs_queue_init(rt->completion_queue);
 
-    cfs_thread_pool_create(
+    (void)cfs_thread_pool_create(
         rt->config.thread_pool_size > 0 ? rt->config.thread_pool_size : 4,
         rt->work_queue, rt->completion_queue, &rt->thread_pool);
   }
@@ -2936,18 +3003,18 @@ CFS_API void cfs_runtime_destroy(cfs_runtime_t *runtime) {
     return;
 
   if (runtime->thread_pool) {
-    cfs_thread_pool_destroy(runtime->thread_pool);
+    (void)cfs_thread_pool_destroy(runtime->thread_pool);
   }
   if (runtime->work_queue) {
-    cfs_queue_destroy(runtime->work_queue);
-    cfs_free(runtime->work_queue);
+    (void)cfs_queue_destroy(runtime->work_queue);
+    (void)cfs_free(runtime->work_queue);
   }
   if (runtime->completion_queue) {
-    cfs_queue_destroy(runtime->completion_queue);
-    cfs_free(runtime->completion_queue);
+    (void)cfs_queue_destroy(runtime->completion_queue);
+    (void)cfs_free(runtime->completion_queue);
   }
 
-  cfs_free(runtime);
+  (void)cfs_free(runtime);
 }
 
 /**
@@ -2969,16 +3036,16 @@ CFS_API void cfs_dispatch_request(cfs_runtime_t *runtime, cfs_request_t *req,
 
   if (runtime->config.mode == cfs_modality_sync) {
     if (!req->cancelled)
-      cfs_execute_op_inline(req);
+      (void)cfs_execute_op_inline(req);
     if (req->callback) {
       req->callback(req, req->user_data);
     }
-    cfs_request_release(req);
+    (void)cfs_request_release(req);
   } else {
     if (runtime->work_queue) {
-      cfs_queue_push(runtime->work_queue, req);
+      (void)cfs_queue_push(runtime->work_queue, req);
     } else {
-      cfs_request_release(req);
+      (void)cfs_request_release(req);
     }
   }
 }
@@ -2991,7 +3058,7 @@ CFS_API void cfs_dispatch_request(cfs_runtime_t *runtime, cfs_request_t *req,
  * \param rt Pointer to the active `cfs_runtime_t` execution context.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_runtime_poll(cfs_runtime_t *rt) {
+CFS_API NO_DISCARD cfs_errc cfs_runtime_poll(cfs_runtime_t *rt) {
   int processed = 0;
   cfs_request_t *req = NULL;
   if (!rt || !rt->completion_queue)
@@ -3002,7 +3069,7 @@ CFS_API cfs_errc cfs_runtime_poll(cfs_runtime_t *rt) {
     if (req->callback) {
       req->callback(req, req->user_data);
     }
-    cfs_request_release(req);
+    (void)cfs_request_release(req);
     processed++;
   }
   return processed;
@@ -3018,7 +3085,7 @@ CFS_API cfs_errc cfs_runtime_poll(cfs_runtime_t *rt) {
  * \param out Pointer to store the result of the strlen operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strlen(const cfs_char_t *str, cfs_size_t *out) {
+CFS_API NO_DISCARD cfs_errc cfs_strlen(const cfs_char_t *str, cfs_size_t *out) {
   cfs_size_t len = 0;
   if (!out)
     return -1;
@@ -3039,8 +3106,8 @@ CFS_API cfs_errc cfs_strlen(const cfs_char_t *str, cfs_size_t *out) {
  * \param out Pointer to store the result of the strcpy operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
-                            cfs_char_t **out) {
+CFS_API NO_DISCARD cfs_errc cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
+                                       cfs_char_t **out) {
   cfs_size_t i = 0;
   if (out)
     *out = dest;
@@ -3060,8 +3127,8 @@ CFS_API cfs_errc cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
  * \param out Pointer to store the result of the strncpy operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
-                             cfs_size_t n, cfs_char_t **out) {
+CFS_API NO_DISCARD cfs_errc cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
+                                        cfs_size_t n, cfs_char_t **out) {
   cfs_size_t i;
   if (out)
     *out = dest;
@@ -3082,13 +3149,13 @@ CFS_API cfs_errc cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
  * \param out Pointer to store the result of the strcat operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
-                            cfs_char_t **out) {
+CFS_API NO_DISCARD cfs_errc cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
+                                       cfs_char_t **out) {
   cfs_size_t dest_len = 0;
   cfs_size_t i = 0;
   if (out)
     *out = dest;
-  cfs_strlen(dest, &dest_len);
+  (void)cfs_strlen(dest, &dest_len);
   if (!dest || !src)
     return -1;
   while ((dest[dest_len + i] = src[i]) != 0)
@@ -3104,8 +3171,8 @@ CFS_API cfs_errc cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
  * \param out Pointer to store the result of the strcmp operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
-                            int *out) {
+CFS_API NO_DISCARD cfs_errc cfs_strcmp(const cfs_char_t *lhs,
+                                       const cfs_char_t *rhs, int *out) {
   if (!out)
     return -1;
   if (!lhs && !rhs) {
@@ -3138,8 +3205,9 @@ CFS_API cfs_errc cfs_strcmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
  * \param out Pointer to store the result of the strncmp operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
-                             cfs_size_t count, int *out) {
+CFS_API NO_DISCARD cfs_errc cfs_strncmp(const cfs_char_t *lhs,
+                                        const cfs_char_t *rhs, cfs_size_t count,
+                                        int *out) {
   if (!out)
     return -1;
   if (!lhs && !rhs) {
@@ -3172,8 +3240,10 @@ CFS_API cfs_errc cfs_strncmp(const cfs_char_t *lhs, const cfs_char_t *rhs,
  * \param out_req Pointer to store the required buffer size.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
-                                   cfs_size_t dest_len, cfs_size_t *out_req) {
+CFS_API NO_DISCARD cfs_errc cfs_utf8_to_utf16(const char *utf8_str,
+                                              wchar_t *dest,
+                                              cfs_size_t dest_len,
+                                              cfs_size_t *out_req) {
   int req = MultiByteToWideChar(CP_UTF8, 0, utf8_str, -1, dest, (int)dest_len);
   if (out_req) {
     *out_req = (req > 0) ? (cfs_size_t)req : 0;
@@ -3190,8 +3260,9 @@ CFS_API cfs_errc cfs_utf8_to_utf16(const char *utf8_str, wchar_t *dest,
  * \param out_req Pointer to store the required buffer size.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
-                                   cfs_size_t dest_len, cfs_size_t *out_req) {
+CFS_API NO_DISCARD cfs_errc cfs_utf16_to_utf8(const wchar_t *utf16_str,
+                                              char *dest, cfs_size_t dest_len,
+                                              cfs_size_t *out_req) {
   int req = WideCharToMultiByte(CP_UTF8, 0, utf16_str, -1, dest, (int)dest_len,
                                 NULL, NULL);
   if (out_req) {
@@ -3210,8 +3281,9 @@ CFS_API cfs_errc cfs_utf16_to_utf8(const wchar_t *utf16_str, char *dest,
  * \param out_req Pointer to store the required buffer size.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
-                                cfs_size_t dest_len, cfs_size_t *out_req) {
+CFS_API NO_DISCARD cfs_errc cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
+                                           cfs_size_t dest_len,
+                                           cfs_size_t *out_req) {
 #if defined(CFS_OS_WINDOWS)
   return cfs_utf8_to_utf16(mb_str, dest, dest_len, out_req);
 #else
@@ -3234,8 +3306,9 @@ CFS_API cfs_errc cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
  * \param out_req Pointer to store the required buffer size.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
-                                cfs_size_t dest_len, cfs_size_t *out_req) {
+CFS_API NO_DISCARD cfs_errc cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
+                                           cfs_size_t dest_len,
+                                           cfs_size_t *out_req) {
 #if defined(CFS_OS_WINDOWS)
   return cfs_utf16_to_utf8(wide_str, dest, dest_len, out_req);
 #else
@@ -3273,7 +3346,7 @@ CFS_API void cfs_set_error(cfs_error_code *ec, int os_value,
  * errors.
  */
 CFS_API void cfs_clear_error(cfs_error_code *ec) {
-  cfs_set_error(ec, 0, cfs_errc_success);
+  (void)cfs_set_error(ec, 0, cfs_errc_success);
 }
 
 /**
@@ -3284,8 +3357,8 @@ CFS_API void cfs_clear_error(cfs_error_code *ec) {
  * \param out Pointer to store the result of the make_error_code_from_os
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_make_error_code_from_os(int os_error,
-                                             cfs_error_code *out) {
+CFS_API NO_DISCARD cfs_errc cfs_make_error_code_from_os(int os_error,
+                                                        cfs_error_code *out) {
   if (out) {
     out->value = os_error;
     out->errc = os_error == 0 ? cfs_errc_success : cfs_errc_unknown_error;
@@ -3300,7 +3373,7 @@ CFS_API cfs_errc cfs_make_error_code_from_os(int os_error,
  * \param out Pointer to store the result of the get_last_error operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_get_last_error(cfs_error_code *out) {
+CFS_API NO_DISCARD cfs_errc cfs_get_last_error(cfs_error_code *out) {
 #if defined(CFS_OS_WINDOWS)
   return cfs_make_error_code_from_os(GetLastError(), out);
 #else
@@ -3317,7 +3390,7 @@ CFS_API cfs_errc cfs_get_last_error(cfs_error_code *out) {
  * \param out Pointer to store the result of the error_message operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_error_message(cfs_errc err, const char **out) {
+CFS_API NO_DISCARD cfs_errc cfs_error_message(cfs_errc err, const char **out) {
   (void)err;
   if (!out)
     return -1;
@@ -3346,8 +3419,9 @@ CFS_API void cfs_path_init(cfs_path *p) {
  * \param source The null-terminated string to initialize the path with.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_init_str(cfs_path *p, const cfs_char_t *source) {
-  cfs_path_init(p);
+CFS_API NO_DISCARD cfs_errc cfs_path_init_str(cfs_path *p,
+                                              const cfs_char_t *source) {
+  (void)cfs_path_init(p);
   if (source) {
     return cfs_path_assign(p, source);
   }
@@ -3363,7 +3437,7 @@ CFS_API void cfs_path_destroy(cfs_path *p) {
   if (!p)
     return;
   if (p->str)
-    cfs_free(p->str);
+    (void)cfs_free(p->str);
   p->str = NULL;
   p->length = 0;
   p->capacity = 0;
@@ -3376,10 +3450,11 @@ CFS_API void cfs_path_destroy(cfs_path *p) {
  * \param src Pointer to the source buffer or path.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_clone(cfs_path *dest, const cfs_path *src) {
+CFS_API NO_DISCARD cfs_errc cfs_path_clone(cfs_path *dest,
+                                           const cfs_path *src) {
   if (!dest || !src)
     return -1;
-  cfs_path_init(dest);
+  (void)cfs_path_init(dest);
   if (src->str) {
     return cfs_path_assign(dest, src->str);
   }
@@ -3393,7 +3468,8 @@ CFS_API cfs_errc cfs_path_clone(cfs_path *dest, const cfs_path *src) {
  * \param out Pointer to store the result of the path_c_str operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_c_str(const cfs_path *p, const cfs_char_t **out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_c_str(const cfs_path *p,
+                                           const cfs_char_t **out) {
   if (!out)
     return -1;
   *out = (p && p->str) ? p->str : CFS_STR("");
@@ -3407,7 +3483,7 @@ CFS_API cfs_errc cfs_path_c_str(const cfs_path *p, const cfs_char_t **out) {
  * \param p Pointer to the `cfs_path` object to evaluate or modify.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_make_preferred(cfs_path *p) {
+CFS_API NO_DISCARD cfs_errc cfs_path_make_preferred(cfs_path *p) {
   cfs_size_t i;
   if (!p || !p->str)
     return -1;
@@ -3426,7 +3502,8 @@ CFS_API cfs_errc cfs_path_make_preferred(cfs_path *p) {
  * \param out Pointer to store the result of the path_generic_string operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_generic_string(const cfs_path *p, cfs_char_t **out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_generic_string(const cfs_path *p,
+                                                    cfs_char_t **out) {
   cfs_char_t *res;
   cfs_size_t i;
   if (!out)
@@ -3434,7 +3511,7 @@ CFS_API cfs_errc cfs_path_generic_string(const cfs_path *p, cfs_char_t **out) {
   *out = NULL;
   if (!p || !p->str)
     return -1;
-  cfs_malloc((p->length + 1) * sizeof(cfs_char_t), (void **)&res);
+  (void)cfs_malloc((p->length + 1) * sizeof(cfs_char_t), (void **)&res);
   if (!res)
     return -1;
   CFS_STRCPY_SAFE(res, p->length + 1, p->str);
@@ -3485,12 +3562,13 @@ CFS_API void cfs_path_swap(cfs_path *lhs, cfs_path *rhs) {
  * \param source The string to concatenate.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_concat(cfs_path *p, const cfs_char_t *source) {
+CFS_API NO_DISCARD cfs_errc cfs_path_concat(cfs_path *p,
+                                            const cfs_char_t *source) {
   cfs_size_t src_len;
   cfs_size_t new_len;
   if (!p || !source)
     return -1;
-  cfs_strlen(source, &src_len);
+  (void)cfs_strlen(source, &src_len);
   if (src_len == 0)
     return 0;
   new_len = p->length + src_len;
@@ -3510,7 +3588,8 @@ CFS_API cfs_errc cfs_path_concat(cfs_path *p, const cfs_char_t *source) {
  * \param source The string to append to the path.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_append(cfs_path *p, const cfs_char_t *source) {
+CFS_API NO_DISCARD cfs_errc cfs_path_append(cfs_path *p,
+                                            const cfs_char_t *source) {
   cfs_size_t src_len;
   cfs_bool p_has_sep = cfs_false;
   cfs_bool src_has_sep = cfs_false;
@@ -3524,7 +3603,7 @@ CFS_API cfs_errc cfs_path_append(cfs_path *p, const cfs_char_t *source) {
 
   {
     cfs_bool empty;
-    cfs_path_is_empty(p, &empty);
+    (void)cfs_path_is_empty(p, &empty);
     if (empty) {
       return cfs_path_assign(p, source);
     }
@@ -3544,10 +3623,10 @@ CFS_API cfs_errc cfs_path_append(cfs_path *p, const cfs_char_t *source) {
   }
 #endif
 
-  cfs_strlen(source, &src_len);
+  (void)cfs_strlen(source, &src_len);
   if (p->length > 0)
-    cfs_is_separator(p->str[p->length - 1], &p_has_sep);
-  cfs_is_separator(source[0], &src_has_sep);
+    (void)cfs_is_separator(p->str[p->length - 1], &p_has_sep);
+  (void)cfs_is_separator(source[0], &src_has_sep);
 
   new_len = p->length + src_len;
   if (!p_has_sep && !src_has_sep)
@@ -3684,9 +3763,9 @@ static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
     return 0;
 
   if (p->str) {
-    cfs_realloc(p->str, new_cap * sizeof(cfs_char_t), (void **)&new_str);
+    (void)cfs_realloc(p->str, new_cap * sizeof(cfs_char_t), (void **)&new_str);
   } else {
-    cfs_malloc(new_cap * sizeof(cfs_char_t), (void **)&new_str);
+    (void)cfs_malloc(new_cap * sizeof(cfs_char_t), (void **)&new_str);
   }
 
   if (!new_str)
@@ -3704,7 +3783,8 @@ static int cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
  * \param out Pointer to store the result of the path_is_empty operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_is_empty(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_is_empty(const cfs_path *p,
+                                              cfs_bool *out) {
   if (!out)
     return -1;
   *out = (!p || p->length == 0);
@@ -3719,7 +3799,8 @@ CFS_API cfs_errc cfs_path_is_empty(const cfs_path *p, cfs_bool *out) {
  * \param source The new string to assign to the path.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
+CFS_API NO_DISCARD cfs_errc cfs_path_assign(cfs_path *p,
+                                            const cfs_char_t *source) {
   cfs_size_t len;
   int rc;
   if (!p) {
@@ -3727,10 +3808,10 @@ CFS_API cfs_errc cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
     return -1;
   }
   if (!source) {
-    cfs_path_clear(p);
+    (void)cfs_path_clear(p);
     return 0;
   }
-  cfs_strlen(source, &len);
+  (void)cfs_strlen(source, &len);
   rc = cfs_path_reserve(p, len + 1);
   if (rc != 0) {
     LOG_DEBUG("cfs_path_assign: cfs_path_reserve failed with %d", rc);
@@ -3749,7 +3830,7 @@ CFS_API cfs_errc cfs_path_assign(cfs_path *p, const cfs_char_t *source) {
  * \param out Pointer to store the result of the malloc operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_malloc(cfs_size_t size, void **out) {
+CFS_API NO_DISCARD cfs_errc cfs_malloc(cfs_size_t size, void **out) {
   if (out)
     *out = malloc(size);
   return (out && *out) ? 0 : -1;
@@ -3768,7 +3849,8 @@ CFS_API void cfs_free(void *ptr) { free(ptr); }
  * \param out Pointer to store the result of the realloc operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_realloc(void *ptr, cfs_size_t size, void **out) {
+CFS_API NO_DISCARD cfs_errc cfs_realloc(void *ptr, cfs_size_t size,
+                                        void **out) {
   if (out)
     *out = realloc(ptr, size);
   return (out && *out) ? 0 : -1;
@@ -3781,7 +3863,8 @@ CFS_API cfs_errc cfs_realloc(void *ptr, cfs_size_t size, void **out) {
  * \param out Pointer to store the result of the calloc operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_calloc(cfs_size_t num, cfs_size_t size, void **out) {
+CFS_API NO_DISCARD cfs_errc cfs_calloc(cfs_size_t num, cfs_size_t size,
+                                       void **out) {
   if (out)
     *out = calloc(num, size);
   return (out && *out) ? 0 : -1;
@@ -3794,13 +3877,14 @@ CFS_API cfs_errc cfs_calloc(cfs_size_t num, cfs_size_t size, void **out) {
  * \param out Pointer to store the result of the path_filename operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_filename(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_filename(const cfs_path *p,
+                                              cfs_path *out) {
   cfs_size_t root_name_len, root_dir_len, root_len;
   cfs_size_t i, start_idx;
   cfs_bool is_sep = cfs_false;
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p || p->length == 0 || !p->str)
     return 0;
   root_name_len = cfs_get_root_name_len(p);
@@ -3808,12 +3892,12 @@ CFS_API cfs_errc cfs_path_filename(const cfs_path *p, cfs_path *out) {
   root_len = root_name_len + root_dir_len;
   if (p->length == root_len)
     return 0;
-  cfs_is_separator(p->str[p->length - 1], &is_sep);
+  (void)cfs_is_separator(p->str[p->length - 1], &is_sep);
   if (is_sep)
     return 0;
   start_idx = root_len;
   for (i = p->length; i > root_len; i--) {
-    cfs_is_separator(p->str[i - 1], &is_sep);
+    (void)cfs_is_separator(p->str[i - 1], &is_sep);
     if (is_sep) {
       start_idx = i;
       break;
@@ -3826,8 +3910,8 @@ CFS_API cfs_errc cfs_path_filename(const cfs_path *p, cfs_path *out) {
       if (cfs_calloc(fn_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
         return -1;
       CFS_STRNCPY_SAFE(buf, fn_len + 1, p->str + start_idx, fn_len);
-      cfs_path_assign(out, buf);
-      cfs_free(buf);
+      (void)cfs_path_assign(out, buf);
+      (void)cfs_free(buf);
     }
   }
   return 0;
@@ -3840,13 +3924,14 @@ CFS_API cfs_errc cfs_path_filename(const cfs_path *p, cfs_path *out) {
  * \param out Pointer to store the result of the path_extension operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_extension(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_extension(const cfs_path *p,
+                                               cfs_path *out) {
   cfs_path fn;
   cfs_size_t i;
   cfs_size_t dot_idx = (cfs_size_t)-1;
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p)
     return -1;
   if (cfs_path_filename(p, &fn) != 0)
@@ -3854,7 +3939,7 @@ CFS_API cfs_errc cfs_path_extension(const cfs_path *p, cfs_path *out) {
   if (fn.length == 0 || (fn.length == 1 && fn.str[0] == CFS_CHAR('.')) ||
       (fn.length == 2 && fn.str[0] == CFS_CHAR('.') &&
        fn.str[1] == CFS_CHAR('.'))) {
-    cfs_path_destroy(&fn);
+    (void)cfs_path_destroy(&fn);
     return 0;
   }
   for (i = fn.length; i > 0; i--) {
@@ -3867,14 +3952,14 @@ CFS_API cfs_errc cfs_path_extension(const cfs_path *p, cfs_path *out) {
     cfs_size_t ext_len = fn.length - dot_idx;
     cfs_char_t *buf;
     if (cfs_calloc(ext_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0) {
-      cfs_path_destroy(&fn);
+      (void)cfs_path_destroy(&fn);
       return -1;
     }
     CFS_STRNCPY_SAFE(buf, ext_len + 1, fn.str + dot_idx, ext_len);
-    cfs_path_assign(out, buf);
-    cfs_free(buf);
+    (void)cfs_path_assign(out, buf);
+    (void)cfs_free(buf);
   }
-  cfs_path_destroy(&fn);
+  (void)cfs_path_destroy(&fn);
   return 0;
 }
 
@@ -3885,13 +3970,13 @@ CFS_API cfs_errc cfs_path_extension(const cfs_path *p, cfs_path *out) {
  * \param out Pointer to store the result of the path_stem operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out) {
   cfs_path fn;
   cfs_size_t i;
   cfs_size_t dot_idx = (cfs_size_t)-1;
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p)
     return -1;
   if (cfs_path_filename(p, &fn) != 0)
@@ -3899,8 +3984,8 @@ CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out) {
   if (fn.length == 0 || (fn.length == 1 && fn.str[0] == CFS_CHAR('.')) ||
       (fn.length == 2 && fn.str[0] == CFS_CHAR('.') &&
        fn.str[1] == CFS_CHAR('.'))) {
-    cfs_path_assign(out, fn.str);
-    cfs_path_destroy(&fn);
+    (void)cfs_path_assign(out, fn.str);
+    (void)cfs_path_destroy(&fn);
     return 0;
   }
   for (i = fn.length; i > 0; i--) {
@@ -3912,16 +3997,16 @@ CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out) {
   if (dot_idx != (cfs_size_t)-1 && dot_idx > 0) {
     cfs_char_t *buf;
     if (cfs_calloc(dot_idx + 1, sizeof(cfs_char_t), (void **)&buf) != 0) {
-      cfs_path_destroy(&fn);
+      (void)cfs_path_destroy(&fn);
       return -1;
     }
     CFS_STRNCPY_SAFE(buf, dot_idx + 1, fn.str, dot_idx);
-    cfs_path_assign(out, buf);
-    cfs_free(buf);
+    (void)cfs_path_assign(out, buf);
+    (void)cfs_free(buf);
   } else {
-    cfs_path_assign(out, fn.str);
+    (void)cfs_path_assign(out, fn.str);
   }
-  cfs_path_destroy(&fn);
+  (void)cfs_path_destroy(&fn);
   return 0;
 }
 
@@ -3932,9 +4017,9 @@ CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || p->length == 0)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -3954,7 +4039,7 @@ CFS_API cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec) {
     return 0;
 #endif
   if (ec)
-    cfs_get_last_error(ec);
+    (void)cfs_get_last_error(ec);
   return -1;
 }
 
@@ -3966,10 +4051,10 @@ CFS_API cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
-                               cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
+                                          cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || p->length == 0)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -4000,7 +4085,7 @@ CFS_API cfs_errc cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
   }
 #endif
   if (ec)
-    cfs_get_last_error(ec);
+    (void)cfs_get_last_error(ec);
   return -1;
 }
 
@@ -4029,11 +4114,11 @@ CFS_API void cfs_request_retain(cfs_request_t *req) {
  * \param req Argument representing the target resource.
  */
 static void cfs_request_destroy_internal(cfs_request_t *req) {
-  cfs_path_destroy(&req->target_path);
-  cfs_path_destroy(&req->dest_path);
+  (void)cfs_path_destroy(&req->target_path);
+  (void)cfs_path_destroy(&req->dest_path);
   if (req->result_buffer)
-    cfs_free(req->result_buffer);
-  cfs_free(req);
+    (void)cfs_free(req->result_buffer);
+  (void)cfs_free(req);
 }
 
 /**
@@ -4055,7 +4140,7 @@ CFS_API void cfs_request_release(cfs_request_t *req) {
 #endif
 
   if (new_val == 0) {
-    cfs_request_destroy_internal(req);
+    (void)cfs_request_destroy_internal(req);
   }
 }
 
@@ -4066,7 +4151,8 @@ CFS_API void cfs_request_release(cfs_request_t *req) {
  * \param req Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_cancel_request(cfs_runtime_t *rt, cfs_request_t *req) {
+CFS_API NO_DISCARD cfs_errc cfs_cancel_request(cfs_runtime_t *rt,
+                                               cfs_request_t *req) {
   if (!rt || !req)
     return -1;
   /* Basic cancellation just marks it. The worker thread will skip execution if
@@ -4094,11 +4180,11 @@ struct cfs_message_pipe {
  * \param out_pipe Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_message_pipe_create(const cfs_char_t *path,
-                                         cfs_message_pipe **out_pipe) {
+CFS_API NO_DISCARD cfs_errc
+cfs_message_pipe_create(const cfs_char_t *path, cfs_message_pipe **out_pipe) {
   if (!path || !out_pipe)
     return -1;
-  cfs_malloc(sizeof(cfs_message_pipe), (void **)out_pipe);
+  (void)cfs_malloc(sizeof(cfs_message_pipe), (void **)out_pipe);
   if (*out_pipe)
     (*out_pipe)->handle = NULL;
   return (*out_pipe) ? 0 : -1;
@@ -4111,7 +4197,7 @@ CFS_API cfs_errc cfs_message_pipe_create(const cfs_char_t *path,
  */
 CFS_API void cfs_message_pipe_destroy(cfs_message_pipe *pipe) {
   if (pipe)
-    cfs_free(pipe);
+    (void)cfs_free(pipe);
 }
 
 /**
@@ -4122,13 +4208,14 @@ CFS_API void cfs_message_pipe_destroy(cfs_message_pipe *pipe) {
  * \param size Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_serialize_request(const cfs_request_t *req, void **buffer,
-                                       cfs_size_t *size) {
+CFS_API NO_DISCARD cfs_errc cfs_serialize_request(const cfs_request_t *req,
+                                                  void **buffer,
+                                                  cfs_size_t *size) {
   if (!req || !buffer || !size)
     return -1;
   /* Simplistic serialization simulation */
   *size = sizeof(int) + sizeof(cfs_size_t) * 2; /* Opcode + path lengths */
-  cfs_malloc(*size, (void **)buffer);
+  (void)cfs_malloc(*size, (void **)buffer);
   if (!*buffer)
     return -1;
   ((int *)*buffer)[0] = req->opcode;
@@ -4143,11 +4230,12 @@ CFS_API cfs_errc cfs_serialize_request(const cfs_request_t *req, void **buffer,
  * \param req Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_deserialize_request(const void *buffer, cfs_size_t size,
-                                         cfs_request_t **req) {
+CFS_API NO_DISCARD cfs_errc cfs_deserialize_request(const void *buffer,
+                                                    cfs_size_t size,
+                                                    cfs_request_t **req) {
   if (!buffer || !req || size < sizeof(int))
     return -1;
-  cfs_malloc(sizeof(cfs_request_t), (void **)req);
+  (void)cfs_malloc(sizeof(cfs_request_t), (void **)req);
   if (!*req)
     return -1;
   (*req)->opcode = ((int *)buffer)[0];
@@ -4155,8 +4243,8 @@ CFS_API cfs_errc cfs_deserialize_request(const void *buffer, cfs_size_t size,
   (*req)->cancelled = cfs_false;
   (*req)->result_buffer = NULL;
   (*req)->result_size = 0;
-  cfs_path_init(&(*req)->target_path);
-  cfs_path_init(&(*req)->dest_path);
+  (void)cfs_path_init(&(*req)->target_path);
+  (void)cfs_path_init(&(*req)->dest_path);
   (*req)->callback = NULL;
   (*req)->user_data = NULL;
   return 0;
@@ -4186,11 +4274,11 @@ struct cfs_process_t {
  * \param out_proc Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
-                                   cfs_process_t **out_proc) {
+CFS_API NO_DISCARD cfs_errc cfs_process_spawn(const cfs_char_t *executable,
+                                              cfs_process_t **out_proc) {
   if (!executable || !out_proc)
     return -1;
-  cfs_malloc(sizeof(cfs_process_t), (void **)out_proc);
+  (void)cfs_malloc(sizeof(cfs_process_t), (void **)out_proc);
   if (!*out_proc)
     return -1;
 
@@ -4205,10 +4293,10 @@ CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    cfs_strlen(executable, &len);
-    cfs_malloc((len + 1) * sizeof(cfs_char_t), (void **)&exec_copy);
+    (void)cfs_strlen(executable, &len);
+    (void)cfs_malloc((len + 1) * sizeof(cfs_char_t), (void **)&exec_copy);
     if (!exec_copy) {
-      cfs_free(*out_proc);
+      (void)cfs_free(*out_proc);
       *out_proc = NULL;
       return -1;
     }
@@ -4216,12 +4304,12 @@ CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
 
     if (!CreateProcessW(NULL, (LPWSTR)exec_copy, NULL, NULL, FALSE, 0, NULL,
                         NULL, &si, &pi)) {
-      cfs_free(exec_copy);
-      cfs_free(*out_proc);
+      (void)cfs_free(exec_copy);
+      (void)cfs_free(*out_proc);
       *out_proc = NULL;
       return -1;
     }
-    cfs_free(exec_copy);
+    (void)cfs_free(exec_copy);
     (*out_proc)->process_handle = pi.hProcess;
     (*out_proc)->thread_handle = pi.hThread;
   }
@@ -4238,7 +4326,7 @@ CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
  * \param proc Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_process_wait(cfs_process_t *proc) {
+CFS_API NO_DISCARD cfs_errc cfs_process_wait(cfs_process_t *proc) {
   if (!proc)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -4262,7 +4350,7 @@ CFS_API void cfs_process_destroy(cfs_process_t *proc) {
   CloseHandle(proc->process_handle);
   CloseHandle(proc->thread_handle);
 #endif
-  cfs_free(proc);
+  (void)cfs_free(proc);
 }
 
 /**
@@ -4288,11 +4376,12 @@ struct cfs_shm_segment {
  * \param out_shm Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
-                                cfs_shm_segment **out_shm) {
+CFS_API NO_DISCARD cfs_errc cfs_shm_create(cfs_size_t size,
+                                           const cfs_char_t *name,
+                                           cfs_shm_segment **out_shm) {
   if (!name || !out_shm || size == 0)
     return -1;
-  cfs_malloc(sizeof(cfs_shm_segment), (void **)out_shm);
+  (void)cfs_malloc(sizeof(cfs_shm_segment), (void **)out_shm);
   if (!*out_shm)
     return -1;
   (*out_shm)->size = size;
@@ -4307,7 +4396,7 @@ CFS_API cfs_errc cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
       (DWORD)(((cfs_uintmax_t)size) >> 32), (DWORD)(size & 0xFFFFFFFF), name);
 #endif
   if (!(*out_shm)->map_handle) {
-    cfs_free(*out_shm);
+    (void)cfs_free(*out_shm);
     *out_shm = NULL;
     return -1;
   }
@@ -4325,7 +4414,7 @@ CFS_API cfs_errc cfs_shm_create(cfs_size_t size, const cfs_char_t *name,
  * \param out Pointer to store the result of the shm_map operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_shm_map(cfs_shm_segment *shm, void **out) {
+CFS_API NO_DISCARD cfs_errc cfs_shm_map(cfs_shm_segment *shm, void **out) {
   if (!shm || !out)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -4366,7 +4455,7 @@ CFS_API void cfs_shm_destroy(cfs_shm_segment *shm) {
 #else
     /* close stub */
 #endif
-  cfs_free(shm);
+  (void)cfs_free(shm);
 }
 
 /**
@@ -4390,12 +4479,11 @@ struct cfs_named_semaphore {
  * \param out_sem Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_named_semaphore_create(const cfs_char_t *name,
-                                            int initial_count,
-                                            cfs_named_semaphore **out_sem) {
+CFS_API NO_DISCARD cfs_errc cfs_named_semaphore_create(
+    const cfs_char_t *name, int initial_count, cfs_named_semaphore **out_sem) {
   if (!name || !out_sem)
     return -1;
-  cfs_malloc(sizeof(cfs_named_semaphore), (void **)out_sem);
+  (void)cfs_malloc(sizeof(cfs_named_semaphore), (void **)out_sem);
   if (!*out_sem)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -4405,7 +4493,7 @@ CFS_API cfs_errc cfs_named_semaphore_create(const cfs_char_t *name,
   (*out_sem)->handle = CreateSemaphoreA(NULL, initial_count, 0x7FFFFFFF, name);
 #endif
   if (!(*out_sem)->handle) {
-    cfs_free(*out_sem);
+    (void)cfs_free(*out_sem);
     *out_sem = NULL;
     return -1;
   }
@@ -4423,7 +4511,7 @@ CFS_API cfs_errc cfs_named_semaphore_create(const cfs_char_t *name,
  * \param sem Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_named_semaphore_wait(cfs_named_semaphore *sem) {
+CFS_API NO_DISCARD cfs_errc cfs_named_semaphore_wait(cfs_named_semaphore *sem) {
   if (!sem)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -4439,7 +4527,7 @@ CFS_API cfs_errc cfs_named_semaphore_wait(cfs_named_semaphore *sem) {
  * \param sem Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_named_semaphore_post(cfs_named_semaphore *sem) {
+CFS_API NO_DISCARD cfs_errc cfs_named_semaphore_post(cfs_named_semaphore *sem) {
   if (!sem)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -4462,7 +4550,7 @@ CFS_API void cfs_named_semaphore_destroy(cfs_named_semaphore *sem) {
 #else
     /* sem_close stub */
 #endif
-  cfs_free(sem);
+  (void)cfs_free(sem);
 }
 
 /* Greenthread basic stubs (Platform implementation requires assembly/ucontext
@@ -4491,13 +4579,14 @@ struct cfs_greenthread_scheduler {
  * \param out_gt Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_greenthread_spawn(cfs_greenthread_func func, void *arg,
-                                       cfs_greenthread_t **out_gt) {
+CFS_API NO_DISCARD cfs_errc cfs_greenthread_spawn(cfs_greenthread_func func,
+                                                  void *arg,
+                                                  cfs_greenthread_t **out_gt) {
   (void)func;
   (void)arg;
   if (!out_gt)
     return -1;
-  cfs_malloc(sizeof(cfs_greenthread_t), (void **)out_gt);
+  (void)cfs_malloc(sizeof(cfs_greenthread_t), (void **)out_gt);
   if (*out_gt)
     (*out_gt)->context = NULL;
   return (*out_gt) ? 0 : -1;
@@ -4508,7 +4597,7 @@ CFS_API cfs_errc cfs_greenthread_spawn(cfs_greenthread_func func, void *arg,
  *
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_greenthread_yield(void) { return 0; /* stub */ }
+CFS_API NO_DISCARD cfs_errc cfs_greenthread_yield(void) { return 0; /* stub */ }
 
 /**
  * \brief Performs the cfs_greenthread_destroy filesystem operation.
@@ -4517,7 +4606,7 @@ CFS_API cfs_errc cfs_greenthread_yield(void) { return 0; /* stub */ }
  */
 CFS_API void cfs_greenthread_destroy(cfs_greenthread_t *gt) {
   if (gt)
-    cfs_free(gt);
+    (void)cfs_free(gt);
 }
 
 /**
@@ -4526,11 +4615,11 @@ CFS_API void cfs_greenthread_destroy(cfs_greenthread_t *gt) {
  * \param out_sched Pointer to store the initialized scheduler.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc
+CFS_API NO_DISCARD cfs_errc
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched) {
   if (!out_sched)
     return -1;
-  cfs_malloc(sizeof(cfs_greenthread_scheduler), (void **)out_sched);
+  (void)cfs_malloc(sizeof(cfs_greenthread_scheduler), (void **)out_sched);
   if (*out_sched)
     (*out_sched)->current = NULL;
   return (*out_sched) ? 0 : -1;
@@ -4542,7 +4631,7 @@ cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched) {
  * \param sched Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc
+CFS_API NO_DISCARD cfs_errc
 cfs_greenthread_scheduler_run(cfs_greenthread_scheduler *sched) {
   return sched ? 0 : -1;
 }
@@ -4555,7 +4644,7 @@ cfs_greenthread_scheduler_run(cfs_greenthread_scheduler *sched) {
 CFS_API void
 cfs_greenthread_scheduler_destroy(cfs_greenthread_scheduler *sched) {
   if (sched)
-    cfs_free(sched);
+    (void)cfs_free(sched);
 }
 
 /* Phase 5.7: Integration Implementations */
@@ -4569,32 +4658,34 @@ cfs_greenthread_scheduler_destroy(cfs_greenthread_scheduler *sched) {
  * request. \param user_data Opaque pointer passed back to the user-provided
  * callback. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_dir_itr_init_async(cfs_runtime_t *rt, const cfs_path *p,
-                                        cfs_callback_t cb, void *user_data) {
+CFS_API NO_DISCARD cfs_errc cfs_dir_itr_init_async(cfs_runtime_t *rt,
+                                                   const cfs_path *p,
+                                                   cfs_callback_t cb,
+                                                   void *user_data) {
   cfs_request_t *req;
   if (!rt || !p)
     return -1;
 
-  cfs_malloc(sizeof(cfs_request_t), (void **)&req);
+  (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return -1;
 
   /* Reusing a non-existent opcode for iterator init, but in reality we'd add
    * cfs_opcode_dir_itr_init */
   req->opcode = 999;
-  cfs_path_init(&req->target_path);
-  cfs_path_clone(&req->target_path, p);
-  cfs_path_init(&req->dest_path);
+  (void)cfs_path_init(&req->target_path);
+  (void)cfs_path_clone(&req->target_path, p);
+  (void)cfs_path_init(&req->dest_path);
   req->result_buffer = NULL;
   req->result_size = 0;
-  cfs_clear_error(&req->error);
+  (void)cfs_clear_error(&req->error);
   req->callback = cb;
   req->user_data = user_data;
   req->ref_count = 1;
   req->cancelled = cfs_false;
   req->next = NULL;
 
-  cfs_dispatch_request(rt, req, cb, user_data);
+  (void)cfs_dispatch_request(rt, req, cb, user_data);
   return 0;
 }
 
@@ -4605,8 +4696,8 @@ CFS_API cfs_errc cfs_dir_itr_init_async(cfs_runtime_t *rt, const cfs_path *p,
  * \param config Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_runtime_set_sandbox(cfs_runtime_t *rt,
-                                         const cfs_sandbox_config *config) {
+CFS_API NO_DISCARD cfs_errc
+cfs_runtime_set_sandbox(cfs_runtime_t *rt, const cfs_sandbox_config *config) {
   /* 43. Set internal sandbox bounds. This just stubs out the validation
    * structure. */
   if (!rt || !config)
@@ -4620,7 +4711,7 @@ CFS_API cfs_errc cfs_runtime_set_sandbox(cfs_runtime_t *rt,
  * \param out Pointer to store the result of the status_known operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_status_known(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_status_known(cfs_file_status s, cfs_bool *out) {
   if (!out)
     return -1;
   *out = (s.type != cfs_file_type_none);
@@ -4635,13 +4726,14 @@ CFS_API cfs_errc cfs_status_known(cfs_file_status s, cfs_bool *out) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
-                                     cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_hard_link_count(const cfs_path *p,
+                                                cfs_uintmax_t *out,
+                                                cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || p->length == 0 || !out) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return -1;
   }
 #if defined(CFS_OS_WINDOWS)
@@ -4666,7 +4758,7 @@ CFS_API cfs_errc cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
   }
 #endif
   if (ec)
-    cfs_get_last_error(ec);
+    (void)cfs_get_last_error(ec);
   return -1;
 }
 
@@ -4679,13 +4771,14 @@ CFS_API cfs_errc cfs_hard_link_count(const cfs_path *p, cfs_uintmax_t *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
-                                 cfs_perm_options opts, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
+                                            cfs_perm_options opts,
+                                            cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || p->length == 0 || opts != cfs_perm_options_replace) {
     if (ec)
-      cfs_set_error(
+      (void)cfs_set_error(
           ec, 0, cfs_errc_invalid_argument); /* Only support replace for now */
     return -1;
   }
@@ -4703,7 +4796,7 @@ CFS_API cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
   }
 #endif
   if (ec)
-    cfs_get_last_error(ec);
+    (void)cfs_get_last_error(ec);
   return -1;
 }
 
@@ -4716,13 +4809,14 @@ CFS_API cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
-                                cfs_bool *out, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_equivalent(const cfs_path *p1,
+                                           const cfs_path *p2, cfs_bool *out,
+                                           cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p1 || !p2 || p1->length == 0 || p2->length == 0 || !out) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return -1;
   }
 #if defined(CFS_OS_WINDOWS)
@@ -4759,7 +4853,7 @@ CFS_API cfs_errc cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
       }
     }
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
     if (h1 != INVALID_HANDLE_VALUE)
       CloseHandle(h1);
     if (h2 != INVALID_HANDLE_VALUE)
@@ -4771,7 +4865,7 @@ CFS_API cfs_errc cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
     struct stat s1, s2;
     if (stat(p1->str, &s1) != 0 || stat(p2->str, &s2) != 0) {
       if (ec)
-        cfs_get_last_error(ec); /* Or make error from errno */
+        (void)cfs_get_last_error(ec); /* Or make error from errno */
       return -1;
     }
     *out = (s1.st_dev == s2.st_dev && s1.st_ino == s2.st_ino) ? cfs_true
@@ -4789,27 +4883,27 @@ CFS_API cfs_errc cfs_equivalent(const cfs_path *p1, const cfs_path *p2,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
-                                  cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
+                                             cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || !out || p->length == 0) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return -1;
   }
 #if defined(CFS_OS_WINDOWS)
   {
     /* Minimal stub for Windows C89, symlinks require reparse points parsing */
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
     return -1;
   }
 #elif defined(CFS_OS_DOS)
   {
     /* Minimal stub for DOS C89, symlinks require reparse points parsing */
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
     return -1;
   }
 #else
@@ -4819,11 +4913,11 @@ CFS_API cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
     len = readlink(p->str, buf, sizeof(buf) - 1);
     if (len != -1) {
       buf[len] = '\0';
-      cfs_path_assign(out, buf);
+      (void)cfs_path_assign(out, buf);
       return 0;
     }
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
     return -1;
   }
 #endif
@@ -4837,13 +4931,13 @@ CFS_API cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
-                              cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
+                                         cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || !out) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return -1;
   }
 #if defined(CFS_OS_WINDOWS)
@@ -4856,17 +4950,17 @@ CFS_API cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
     len = GetFullPathNameA(p->str, CFS_MAX_PATH, buf, NULL);
 #endif
     if (len > 0 && len < CFS_MAX_PATH) {
-      cfs_path_assign(out, buf);
+      (void)cfs_path_assign(out, buf);
       return 0;
     }
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
     return -1;
   }
 #elif defined(CFS_OS_DOS)
   {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
     return -1;
   }
 #else
@@ -4874,17 +4968,17 @@ CFS_API cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
     cfs_bool is_abs = cfs_false;
     cfs_path cp;
     if (cfs_path_is_absolute(p, &is_abs) == 0 && is_abs) {
-      cfs_path_assign(out, p->str);
+      (void)cfs_path_assign(out, p->str);
       return 0;
     }
-    cfs_path_init(&cp);
+    (void)cfs_path_init(&cp);
     if (cfs_current_path(&cp, ec) == 0) {
-      cfs_path_assign(out, cp.str);
-      cfs_path_append(out, p->str);
-      cfs_path_destroy(&cp);
+      (void)cfs_path_assign(out, cp.str);
+      (void)cfs_path_append(out, p->str);
+      (void)cfs_path_destroy(&cp);
       return 0;
     }
-    cfs_path_destroy(&cp);
+    (void)cfs_path_destroy(&cp);
     return -1;
   }
 #endif
@@ -4898,13 +4992,13 @@ CFS_API cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
-                               cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
+                                          cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || !out) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return -1;
   }
 #if defined(CFS_OS_WINDOWS)
@@ -4917,28 +5011,28 @@ CFS_API cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
     len = GetFullPathNameA(p->str, CFS_MAX_PATH, buf, NULL);
 #endif
     if (len > 0 && len < CFS_MAX_PATH) {
-      cfs_path_assign(out, buf);
+      (void)cfs_path_assign(out, buf);
       return 0;
     }
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
     return -1;
   }
 #elif defined(CFS_OS_DOS)
   {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
     return -1;
   }
 #else
   {
     char buf[CFS_MAX_PATH];
     if (realpath(p->str, buf) != NULL) {
-      cfs_path_assign(out, buf);
+      (void)cfs_path_assign(out, buf);
       return 0;
     }
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
     return -1;
   }
 #endif
@@ -4952,8 +5046,9 @@ CFS_API cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
-                                      cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_weakly_canonical(const cfs_path *p,
+                                                 cfs_path *out,
+                                                 cfs_error_code *ec) {
   return cfs_canonical(p, out, ec); /* Simplified stub */
 }
 
@@ -4966,8 +5061,9 @@ CFS_API cfs_errc cfs_weakly_canonical(const cfs_path *p, cfs_path *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_copy(const cfs_path *from, const cfs_path *to,
-                          cfs_copy_options options, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_copy(const cfs_path *from, const cfs_path *to,
+                                     cfs_copy_options options,
+                                     cfs_error_code *ec) {
   /* Basic wrapper mapping to copy_file for now */
   if (cfs_copy_file(from, to, options, ec) == 0)
     return 0;
@@ -4982,16 +5078,16 @@ CFS_API cfs_errc cfs_copy(const cfs_path *from, const cfs_path *to,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_copy_symlink(const cfs_path *existing_symlink,
-                                  const cfs_path *new_symlink,
-                                  cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_copy_symlink(const cfs_path *existing_symlink,
+                                             const cfs_path *new_symlink,
+                                             cfs_error_code *ec) {
   cfs_path out;
   int res;
-  cfs_path_init(&out);
+  (void)cfs_path_init(&out);
   res = cfs_read_symlink(existing_symlink, &out, ec);
   if (res == 0) {
-    cfs_create_symlink(&out, new_symlink, ec);
-    cfs_path_destroy(&out);
+    (void)cfs_create_symlink(&out, new_symlink, ec);
+    (void)cfs_path_destroy(&out);
     return 0;
   }
   return res;
@@ -5006,13 +5102,14 @@ CFS_API cfs_errc cfs_copy_symlink(const cfs_path *existing_symlink,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_proximate(const cfs_path *p, const cfs_path *base,
-                               cfs_path *out, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_proximate(const cfs_path *p,
+                                          const cfs_path *base, cfs_path *out,
+                                          cfs_error_code *ec) {
   cfs_path tmp;
-  cfs_path_lexically_proximate(p, base, &tmp);
+  (void)cfs_path_lexically_proximate(p, base, &tmp);
   (void)ec;
-  cfs_path_clone(out, &tmp);
-  cfs_path_destroy(&tmp);
+  (void)cfs_path_clone(out, &tmp);
+  (void)cfs_path_destroy(&tmp);
   return 0;
 }
 
@@ -5025,13 +5122,14 @@ CFS_API cfs_errc cfs_proximate(const cfs_path *p, const cfs_path *base,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_relative(const cfs_path *p, const cfs_path *base,
-                              cfs_path *out, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_relative(const cfs_path *p,
+                                         const cfs_path *base, cfs_path *out,
+                                         cfs_error_code *ec) {
   cfs_path tmp;
-  cfs_path_lexically_relative(p, base, &tmp);
+  (void)cfs_path_lexically_relative(p, base, &tmp);
   (void)ec;
-  cfs_path_clone(out, &tmp);
-  cfs_path_destroy(&tmp);
+  (void)cfs_path_clone(out, &tmp);
+  (void)cfs_path_destroy(&tmp);
   return 0;
 }
 
@@ -5044,10 +5142,12 @@ CFS_API cfs_errc cfs_relative(const cfs_path *p, const cfs_path *base,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_copy_file(const cfs_path *from, const cfs_path *to,
-                               cfs_copy_options options, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_copy_file(const cfs_path *from,
+                                          const cfs_path *to,
+                                          cfs_copy_options options,
+                                          cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!from || !to)
     return -1;
 #if defined(CFS_OS_WINDOWS)
@@ -5065,7 +5165,7 @@ CFS_API cfs_errc cfs_copy_file(const cfs_path *from, const cfs_path *to,
   return 0;
 #endif
   if (ec)
-    cfs_get_last_error(ec);
+    (void)cfs_get_last_error(ec);
   return -1;
 }
 
@@ -5080,22 +5180,22 @@ CFS_API cfs_errc cfs_copy_file(const cfs_path *from, const cfs_path *to,
 CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
                                 cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
 #if defined(CFS_OS_WINDOWS)
   (void)target;
   (void)link;
   /* Needs dynamic loading or Vista+ */
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
 #elif defined(CFS_OS_DOS)
   (void)target;
   (void)link;
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
 #else
   if (symlink(target->str, link->str) != 0) {
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
   }
 #endif
 }
@@ -5108,15 +5208,15 @@ CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
  * \param out Pointer to store the result of the path_lexically_relative
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_lexically_relative(const cfs_path *p,
-                                             const cfs_path *base,
-                                             cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_lexically_relative(const cfs_path *p,
+                                                        const cfs_path *base,
+                                                        cfs_path *out) {
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   (void)base;
   if (p)
-    cfs_path_assign(out, p->str);
+    (void)cfs_path_assign(out, p->str);
   return 0; /* simplified stub */
 }
 
@@ -5128,9 +5228,9 @@ CFS_API cfs_errc cfs_path_lexically_relative(const cfs_path *p,
  * \param out Pointer to store the result of the path_lexically_proximate
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_lexically_proximate(const cfs_path *p,
-                                              const cfs_path *base,
-                                              cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_lexically_proximate(const cfs_path *p,
+                                                         const cfs_path *base,
+                                                         cfs_path *out) {
   return cfs_path_lexically_relative(p, base, out); /* simplified stub */
 }
 
@@ -5141,7 +5241,8 @@ CFS_API cfs_errc cfs_path_lexically_proximate(const cfs_path *p,
  * \param out Pointer to store the result of the path_is_absolute operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_is_absolute(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_is_absolute(const cfs_path *p,
+                                                 cfs_bool *out) {
   cfs_size_t root_name_len;
   cfs_size_t root_dir_len;
 
@@ -5174,12 +5275,13 @@ CFS_API cfs_errc cfs_path_is_absolute(const cfs_path *p, cfs_bool *out) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_current_path(cfs_path *out, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_current_path(cfs_path *out,
+                                             cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!out) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return -1;
   }
 #if defined(CFS_OS_WINDOWS)
@@ -5192,28 +5294,28 @@ CFS_API cfs_errc cfs_current_path(cfs_path *out, cfs_error_code *ec) {
     len = GetCurrentDirectoryA(CFS_MAX_PATH, buf);
 #endif
     if (len > 0 && len < CFS_MAX_PATH) {
-      cfs_path_assign(out, buf);
+      (void)cfs_path_assign(out, buf);
       return 0;
     }
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
     return -1;
   }
 #elif defined(CFS_OS_DOS)
   {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
     return -1;
   }
 #else
   {
     char buf[CFS_MAX_PATH];
     if (getcwd(buf, sizeof(buf)) != NULL) {
-      cfs_path_assign(out, buf);
+      (void)cfs_path_assign(out, buf);
       return 0;
     }
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
     return -1;
   }
 #endif
@@ -5228,10 +5330,10 @@ CFS_API cfs_errc cfs_current_path(cfs_path *out, cfs_error_code *ec) {
  */
 CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec) {
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || !p->str) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return;
   }
 #if defined(CFS_OS_WINDOWS)
@@ -5241,15 +5343,15 @@ CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec) {
   if (SetCurrentDirectoryA(p->str) == 0) {
 #endif
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
   }
 #elif defined(CFS_OS_DOS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
 #else
   if (chdir(p->str) != 0) {
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
   }
 #endif
 }
@@ -5270,14 +5372,15 @@ CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler) { (void)handler; }
  * \param out Pointer to store the result of the path_root_name operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_root_name(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_root_name(const cfs_path *p,
+                                               cfs_path *out) {
   cfs_size_t len;
 #if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
   cfs_char_t *buf;
 #endif
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p)
     return -1;
   len = cfs_get_root_name_len(p);
@@ -5288,8 +5391,8 @@ CFS_API cfs_errc cfs_path_root_name(const cfs_path *p, cfs_path *out) {
   if (cfs_calloc(len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return -1;
   CFS_STRNCPY_SAFE(buf, len + 1, p->str, len);
-  cfs_path_assign(out, buf);
-  cfs_free(buf);
+  (void)cfs_path_assign(out, buf);
+  (void)cfs_free(buf);
 #endif
   return 0;
 }
@@ -5301,13 +5404,14 @@ CFS_API cfs_errc cfs_path_root_name(const cfs_path *p, cfs_path *out) {
  * \param out Pointer to store the result of the path_root_directory operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_root_directory(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_root_directory(const cfs_path *p,
+                                                    cfs_path *out) {
   cfs_size_t name_len;
   cfs_size_t dir_len;
   cfs_char_t buf[2];
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p)
     return -1;
   name_len = cfs_get_root_name_len(p);
@@ -5315,7 +5419,7 @@ CFS_API cfs_errc cfs_path_root_directory(const cfs_path *p, cfs_path *out) {
   if (dir_len > 0) {
     buf[0] = p->str[name_len];
     buf[1] = CFS_CHAR('\0');
-    cfs_path_assign(out, buf);
+    (void)cfs_path_assign(out, buf);
   }
   return 0;
 }
@@ -5327,14 +5431,15 @@ CFS_API cfs_errc cfs_path_root_directory(const cfs_path *p, cfs_path *out) {
  * \param out Pointer to store the result of the path_root_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_root_path(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_root_path(const cfs_path *p,
+                                               cfs_path *out) {
   cfs_size_t name_len;
   cfs_size_t dir_len;
   cfs_size_t total_len;
   cfs_char_t *buf;
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p)
     return -1;
   name_len = cfs_get_root_name_len(p);
@@ -5345,8 +5450,8 @@ CFS_API cfs_errc cfs_path_root_path(const cfs_path *p, cfs_path *out) {
   if (cfs_calloc(total_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return -1;
   CFS_STRNCPY_SAFE(buf, total_len + 1, p->str, total_len);
-  cfs_path_assign(out, buf);
-  cfs_free(buf);
+  (void)cfs_path_assign(out, buf);
+  (void)cfs_free(buf);
   return 0;
 }
 
@@ -5357,13 +5462,14 @@ CFS_API cfs_errc cfs_path_root_path(const cfs_path *p, cfs_path *out) {
  * \param out Pointer to store the result of the path_relative_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_relative_path(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_relative_path(const cfs_path *p,
+                                                   cfs_path *out) {
   cfs_size_t root_name_len, root_dir_len, root_len;
   cfs_size_t rel_len;
   cfs_char_t *buf;
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p || p->length == 0 || !p->str)
     return 0;
   root_name_len = cfs_get_root_name_len(p);
@@ -5375,8 +5481,8 @@ CFS_API cfs_errc cfs_path_relative_path(const cfs_path *p, cfs_path *out) {
   if (cfs_calloc(rel_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return -1;
   CFS_STRNCPY_SAFE(buf, rel_len + 1, p->str + root_len, rel_len);
-  cfs_path_assign(out, buf);
-  cfs_free(buf);
+  (void)cfs_path_assign(out, buf);
+  (void)cfs_free(buf);
   return 0;
 }
 
@@ -5387,24 +5493,25 @@ CFS_API cfs_errc cfs_path_relative_path(const cfs_path *p, cfs_path *out) {
  * \param out Pointer to store the result of the path_parent_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_parent_path(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_parent_path(const cfs_path *p,
+                                                 cfs_path *out) {
   cfs_size_t root_name_len, root_dir_len, root_len;
   cfs_size_t out_len;
   cfs_bool is_sep = cfs_false;
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p || p->length == 0 || !p->str)
     return 0;
   if (cfs_path_clone(out, p) != 0)
     return -1;
-  cfs_path_remove_filename(out);
+  (void)cfs_path_remove_filename(out);
   root_name_len = cfs_get_root_name_len(out);
   root_dir_len = cfs_get_root_dir_len(out, root_name_len);
   root_len = root_name_len + root_dir_len;
   out_len = out->length;
   while (out_len > root_len) {
-    cfs_is_separator(out->str[out_len - 1], &is_sep);
+    (void)cfs_is_separator(out->str[out_len - 1], &is_sep);
     if (!is_sep)
       break;
     out_len--;
@@ -5423,11 +5530,11 @@ CFS_API cfs_errc cfs_path_parent_path(const cfs_path *p, cfs_path *out) {
  * \param replacement Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_replace_filename(cfs_path *p,
-                                           const cfs_char_t *replacement) {
+CFS_API NO_DISCARD cfs_errc
+cfs_path_replace_filename(cfs_path *p, const cfs_char_t *replacement) {
   if (!p)
     return -1;
-  cfs_path_remove_filename(p);
+  (void)cfs_path_remove_filename(p);
   if (replacement) {
     if (cfs_path_append(p, replacement) != 0)
       return -1;
@@ -5442,18 +5549,18 @@ CFS_API cfs_errc cfs_path_replace_filename(cfs_path *p,
  * \param replacement Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_replace_extension(cfs_path *p,
-                                            const cfs_char_t *replacement) {
+CFS_API NO_DISCARD cfs_errc
+cfs_path_replace_extension(cfs_path *p, const cfs_char_t *replacement) {
   cfs_path ext;
   if (!p)
     return -1;
-  cfs_path_init(&ext);
+  (void)cfs_path_init(&ext);
   if (cfs_path_extension(p, &ext) == 0) {
     p->length -= ext.length;
     if (p->str) {
       p->str[p->length] = CFS_CHAR('\0');
     }
-    cfs_path_destroy(&ext);
+    (void)cfs_path_destroy(&ext);
   }
   if (replacement && replacement[0] != CFS_CHAR('\0')) {
     if (replacement[0] != CFS_CHAR('.')) {
@@ -5482,12 +5589,12 @@ CFS_API void cfs_path_remove_filename(cfs_path *p) {
   root_len = root_name_len + root_dir_len;
   if (p->length == root_len)
     return;
-  cfs_is_separator(p->str[p->length - 1], &is_sep);
+  (void)cfs_is_separator(p->str[p->length - 1], &is_sep);
   if (is_sep)
     return;
   start_idx = root_len;
   for (i = p->length; i > root_len; i--) {
-    cfs_is_separator(p->str[i - 1], &is_sep);
+    (void)cfs_is_separator(p->str[i - 1], &is_sep);
     if (is_sep) {
       start_idx = i;
       break;
@@ -5504,7 +5611,8 @@ CFS_API void cfs_path_remove_filename(cfs_path *p) {
  * \param out Pointer to store the result of the path_has_root_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_root_path(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_has_root_path(const cfs_path *p,
+                                                   cfs_bool *out) {
   cfs_size_t root_name_len;
   cfs_size_t root_dir_len;
   if (!out)
@@ -5526,7 +5634,8 @@ CFS_API cfs_errc cfs_path_has_root_path(const cfs_path *p, cfs_bool *out) {
  * \param out Pointer to store the result of the path_has_root_name operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_root_name(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_has_root_name(const cfs_path *p,
+                                                   cfs_bool *out) {
   if (!out)
     return -1;
   *out = cfs_false;
@@ -5546,7 +5655,8 @@ CFS_API cfs_errc cfs_path_has_root_name(const cfs_path *p, cfs_bool *out) {
  * \param out Pointer to store the result of the path_has_root_directory
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_has_root_directory(const cfs_path *p,
+                                                        cfs_bool *out) {
   cfs_size_t root_name_len;
   if (!out)
     return -1;
@@ -5566,7 +5676,8 @@ CFS_API cfs_errc cfs_path_has_root_directory(const cfs_path *p, cfs_bool *out) {
  * \param out Pointer to store the result of the path_has_relative_path
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_has_relative_path(const cfs_path *p,
+                                                       cfs_bool *out) {
   cfs_size_t root_name_len, root_dir_len;
   if (!out)
     return -1;
@@ -5587,7 +5698,8 @@ CFS_API cfs_errc cfs_path_has_relative_path(const cfs_path *p, cfs_bool *out) {
  * \param out Pointer to store the result of the path_has_parent_path operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_has_parent_path(const cfs_path *p,
+                                                     cfs_bool *out) {
   cfs_path parent;
   if (!out)
     return -1;
@@ -5597,7 +5709,7 @@ CFS_API cfs_errc cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out) {
   if (cfs_path_parent_path(p, &parent) == 0) {
     if (parent.length > 0)
       *out = cfs_true;
-    cfs_path_destroy(&parent);
+    (void)cfs_path_destroy(&parent);
   }
   return 0;
 }
@@ -5609,7 +5721,8 @@ CFS_API cfs_errc cfs_path_has_parent_path(const cfs_path *p, cfs_bool *out) {
  * \param out Pointer to store the result of the path_has_filename operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_filename(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_has_filename(const cfs_path *p,
+                                                  cfs_bool *out) {
   cfs_path fn;
   if (!out)
     return -1;
@@ -5619,7 +5732,7 @@ CFS_API cfs_errc cfs_path_has_filename(const cfs_path *p, cfs_bool *out) {
   if (cfs_path_filename(p, &fn) == 0) {
     if (fn.length > 0)
       *out = cfs_true;
-    cfs_path_destroy(&fn);
+    (void)cfs_path_destroy(&fn);
   }
   return 0;
 }
@@ -5631,7 +5744,8 @@ CFS_API cfs_errc cfs_path_has_filename(const cfs_path *p, cfs_bool *out) {
  * \param out Pointer to store the result of the path_has_stem operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_stem(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_has_stem(const cfs_path *p,
+                                              cfs_bool *out) {
   cfs_path stem;
   if (!out)
     return -1;
@@ -5641,7 +5755,7 @@ CFS_API cfs_errc cfs_path_has_stem(const cfs_path *p, cfs_bool *out) {
   if (cfs_path_stem(p, &stem) == 0) {
     if (stem.length > 0)
       *out = cfs_true;
-    cfs_path_destroy(&stem);
+    (void)cfs_path_destroy(&stem);
   }
   return 0;
 }
@@ -5653,7 +5767,8 @@ CFS_API cfs_errc cfs_path_has_stem(const cfs_path *p, cfs_bool *out) {
  * \param out Pointer to store the result of the path_has_extension operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_has_extension(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_has_extension(const cfs_path *p,
+                                                   cfs_bool *out) {
   cfs_path ext;
   if (!out)
     return -1;
@@ -5663,7 +5778,7 @@ CFS_API cfs_errc cfs_path_has_extension(const cfs_path *p, cfs_bool *out) {
   if (cfs_path_extension(p, &ext) == 0) {
     if (ext.length > 0)
       *out = cfs_true;
-    cfs_path_destroy(&ext);
+    (void)cfs_path_destroy(&ext);
   }
   return 0;
 }
@@ -5675,7 +5790,8 @@ CFS_API cfs_errc cfs_path_has_extension(const cfs_path *p, cfs_bool *out) {
  * \param out Pointer to store the result of the path_is_relative operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_is_relative(const cfs_path *p, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_is_relative(const cfs_path *p,
+                                                 cfs_bool *out) {
   (void)p;
   (void)out;
   return -1;
@@ -5688,7 +5804,8 @@ CFS_API cfs_errc cfs_path_is_relative(const cfs_path *p, cfs_bool *out) {
  * \param rhs Argument representing the target resource.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs) {
+CFS_API NO_DISCARD cfs_errc cfs_path_compare(const cfs_path *lhs,
+                                             const cfs_path *rhs) {
   (void)lhs;
   (void)rhs;
   return -1;
@@ -5701,7 +5818,8 @@ CFS_API cfs_errc cfs_path_compare(const cfs_path *lhs, const cfs_path *rhs) {
  * \param out Pointer to store the result of the path_lexically_normal
  * operation. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
+CFS_API NO_DISCARD cfs_errc cfs_path_lexically_normal(const cfs_path *p,
+                                                      cfs_path *out) {
   cfs_size_t root_name_len, root_dir_len, root_len;
   cfs_size_t i, start, end;
   cfs_bool is_sep = cfs_false;
@@ -5712,7 +5830,7 @@ CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
 
   if (!out)
     return -1;
-  cfs_path_init(out);
+  (void)cfs_path_init(out);
   if (!p || p->length == 0 || !p->str)
     return 0;
 
@@ -5727,24 +5845,24 @@ CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
         0)
       return -1;
     CFS_STRNCPY_SAFE(rn_buf, root_name_len + 1, p->str, root_name_len);
-    cfs_path_assign(out, rn_buf);
-    cfs_free(rn_buf);
+    (void)cfs_path_assign(out, rn_buf);
+    (void)cfs_free(rn_buf);
   }
 #endif
   if (root_dir_len > 0) {
-    cfs_path_concat(out, PATH_SEP_STR);
+    (void)cfs_path_concat(out, PATH_SEP_STR);
   }
 
   start = root_len;
   while (start < p->length) {
-    cfs_is_separator(p->str[start], &is_sep);
+    (void)cfs_is_separator(p->str[start], &is_sep);
     if (is_sep) {
       start++;
       continue;
     }
     end = start;
     while (end < p->length) {
-      cfs_is_separator(p->str[end], &is_sep);
+      (void)cfs_is_separator(p->str[end], &is_sep);
       if (is_sep)
         break;
       end++;
@@ -5788,17 +5906,17 @@ CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
     cfs_size_t len = comps[i].e - comps[i].s;
     cfs_char_t *buf;
     if (i > 0 || (root_name_len > 0 && root_dir_len == 0)) {
-      cfs_path_concat(out, PATH_SEP_STR);
+      (void)cfs_path_concat(out, PATH_SEP_STR);
     }
     if (cfs_calloc(len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
       return -1;
     CFS_STRNCPY_SAFE(buf, len + 1, p->str + comps[i].s, len);
-    cfs_path_concat(out, buf);
-    cfs_free(buf);
+    (void)cfs_path_concat(out, buf);
+    (void)cfs_free(buf);
   }
 
   if (out->length == 0) {
-    cfs_path_assign(out, CFS_STR("."));
+    (void)cfs_path_assign(out, CFS_STR("."));
   }
 
   return 0;
@@ -5813,8 +5931,8 @@ CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p, cfs_path *out) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_status(const cfs_path *p, cfs_file_status *out,
-                            cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_status(const cfs_path *p, cfs_file_status *out,
+                                       cfs_error_code *ec) {
   (void)p;
   (void)out;
   (void)ec;
@@ -5830,8 +5948,9 @@ CFS_API cfs_errc cfs_status(const cfs_path *p, cfs_file_status *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
-                                    cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_symlink_status(const cfs_path *p,
+                                               cfs_file_status *out,
+                                               cfs_error_code *ec) {
   (void)p;
   (void)out;
   (void)ec;
@@ -5846,7 +5965,7 @@ CFS_API cfs_errc cfs_symlink_status(const cfs_path *p, cfs_file_status *out,
  * \param out Pointer to store the result of the exists operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_exists(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_exists(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5860,8 +5979,8 @@ CFS_API cfs_errc cfs_exists(cfs_file_status s, cfs_bool *out) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_exists_path(const cfs_path *p, cfs_bool *out,
-                                 cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_exists_path(const cfs_path *p, cfs_bool *out,
+                                            cfs_error_code *ec) {
   (void)p;
   (void)out;
   (void)ec;
@@ -5875,7 +5994,8 @@ CFS_API cfs_errc cfs_exists_path(const cfs_path *p, cfs_bool *out,
  * \param out Pointer to store the result of the is_block_file operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_block_file(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_is_block_file(cfs_file_status s,
+                                              cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5888,7 +6008,8 @@ CFS_API cfs_errc cfs_is_block_file(cfs_file_status s, cfs_bool *out) {
  * \param out Pointer to store the result of the is_character_file operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_character_file(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_is_character_file(cfs_file_status s,
+                                                  cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5901,7 +6022,7 @@ CFS_API cfs_errc cfs_is_character_file(cfs_file_status s, cfs_bool *out) {
  * \param out Pointer to store the result of the is_directory operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_directory(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_is_directory(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5914,7 +6035,7 @@ CFS_API cfs_errc cfs_is_directory(cfs_file_status s, cfs_bool *out) {
  * \param out Pointer to store the result of the is_fifo operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_fifo(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_is_fifo(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5927,7 +6048,7 @@ CFS_API cfs_errc cfs_is_fifo(cfs_file_status s, cfs_bool *out) {
  * \param out Pointer to store the result of the is_other operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_other(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_is_other(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5940,7 +6061,8 @@ CFS_API cfs_errc cfs_is_other(cfs_file_status s, cfs_bool *out) {
  * \param out Pointer to store the result of the is_regular_file operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_regular_file(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_is_regular_file(cfs_file_status s,
+                                                cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5953,7 +6075,7 @@ CFS_API cfs_errc cfs_is_regular_file(cfs_file_status s, cfs_bool *out) {
  * \param out Pointer to store the result of the is_socket operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_socket(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_is_socket(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5966,7 +6088,7 @@ CFS_API cfs_errc cfs_is_socket(cfs_file_status s, cfs_bool *out) {
  * \param out Pointer to store the result of the is_symlink operation.
  * \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_symlink(cfs_file_status s, cfs_bool *out) {
+CFS_API NO_DISCARD cfs_errc cfs_is_symlink(cfs_file_status s, cfs_bool *out) {
   (void)s;
   (void)out;
   return -1;
@@ -5980,8 +6102,8 @@ CFS_API cfs_errc cfs_is_symlink(cfs_file_status s, cfs_bool *out) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
-                                   cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
+                                              cfs_error_code *ec) {
   (void)p;
   (void)out;
   (void)ec;
@@ -5995,7 +6117,8 @@ CFS_API cfs_errc cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_create_directory(const cfs_path *p, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_create_directory(const cfs_path *p,
+                                                 cfs_error_code *ec) {
   (void)p;
   (void)ec;
   return -1;
@@ -6008,7 +6131,8 @@ CFS_API cfs_errc cfs_create_directory(const cfs_path *p, cfs_error_code *ec) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_create_directories(const cfs_path *p, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_create_directories(const cfs_path *p,
+                                                   cfs_error_code *ec) {
   (void)p;
   (void)ec;
   return -1;
@@ -6053,8 +6177,8 @@ CFS_API void cfs_create_directory_symlink(const cfs_path *target,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_remove_all(const cfs_path *p, cfs_size_t *out,
-                                cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_remove_all(const cfs_path *p, cfs_size_t *out,
+                                           cfs_error_code *ec) {
   (void)p;
   (void)out;
   (void)ec;
@@ -6099,18 +6223,18 @@ CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_space(const cfs_path *p, cfs_space_info *out,
-                           cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_space(const cfs_path *p, cfs_space_info *out,
+                                      cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)p;
   (void)out;
   return -1;
 #else
   struct statvfs sv;
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || !out)
     return -1;
   if (statvfs(p->str, &sv) == 0) {
@@ -6120,7 +6244,7 @@ CFS_API cfs_errc cfs_space(const cfs_path *p, cfs_space_info *out,
     return 0;
   }
   if (ec)
-    cfs_get_last_error(ec);
+    (void)cfs_get_last_error(ec);
   return -1;
 #endif
 }
@@ -6133,18 +6257,19 @@ CFS_API cfs_errc cfs_space(const cfs_path *p, cfs_space_info *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
-                                     cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_last_write_time(const cfs_path *p,
+                                                cfs_file_time_type *out,
+                                                cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)p;
   (void)out;
   return -1;
 #else
   struct stat st;
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!p || !out)
     return -1;
   if (stat(p->str, &st) == 0) {
@@ -6152,7 +6277,7 @@ CFS_API cfs_errc cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
     return 0;
   }
   if (ec)
-    cfs_get_last_error(ec);
+    (void)cfs_get_last_error(ec);
   return -1;
 #endif
 }
@@ -6164,22 +6289,23 @@ CFS_API cfs_errc cfs_last_write_time(const cfs_path *p, cfs_file_time_type *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_temp_directory_path(cfs_path *out,
+                                                    cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)out;
   return -1;
 #else
   const char *tmp;
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!out)
     return -1;
   tmp = getenv("TMPDIR");
   if (!tmp)
     tmp = "/tmp";
-  cfs_path_init_str(out, tmp);
+  (void)cfs_path_init_str(out, tmp);
   return 0;
 #endif
 }
@@ -6192,12 +6318,12 @@ CFS_API cfs_errc cfs_temp_directory_path(cfs_path *out, cfs_error_code *ec) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_dir_itr_init(const cfs_path *p,
-                                  cfs_directory_iterator **out_it,
-                                  cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_dir_itr_init(const cfs_path *p,
+                                             cfs_directory_iterator **out_it,
+                                             cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)p;
   if (out_it)
     *out_it = NULL;
@@ -6205,23 +6331,23 @@ CFS_API cfs_errc cfs_dir_itr_init(const cfs_path *p,
 #else
   cfs_directory_iterator *it;
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (out_it)
     *out_it = NULL;
   if (!p || !out_it)
     return -1;
   if (cfs_malloc(sizeof(cfs_directory_iterator), (void **)&it) != 0) {
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
+      (void)cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
     return -1;
   }
   it->is_end = cfs_false;
-  cfs_path_init(&it->current.path);
+  (void)cfs_path_init(&it->current.path);
   it->dirp = opendir(p->str);
   if (!it->dirp) {
-    cfs_free(it);
+    (void)cfs_free(it);
     if (ec)
-      cfs_get_last_error(ec);
+      (void)cfs_get_last_error(ec);
     return -1;
   }
   *out_it = it;
@@ -6237,19 +6363,19 @@ CFS_API cfs_errc cfs_dir_itr_init(const cfs_path *p,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_dir_itr_next(cfs_directory_iterator *it,
-                                  const cfs_directory_entry **out_entry,
-                                  cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc
+cfs_dir_itr_next(cfs_directory_iterator *it,
+                 const cfs_directory_entry **out_entry, cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)it;
   (void)out_entry;
   return -1;
 #else
   struct dirent *dp;
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (!it || !out_entry)
     return -1;
   if (it->is_end)
@@ -6259,7 +6385,7 @@ CFS_API cfs_errc cfs_dir_itr_next(cfs_directory_iterator *it,
     it->is_end = cfs_true;
     return 1;
   }
-  cfs_path_init_str(&it->current.path, dp->d_name);
+  (void)cfs_path_init_str(&it->current.path, dp->d_name);
   *out_entry = &it->current;
   return 0;
 #endif
@@ -6278,8 +6404,8 @@ CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) {
     return;
   if (it->dirp)
     closedir(it->dirp);
-  cfs_path_destroy(&it->current.path);
-  cfs_free(it);
+  (void)cfs_path_destroy(&it->current.path);
+  (void)cfs_free(it);
 #endif
 }
 
@@ -6291,12 +6417,12 @@ CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) {
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_rec_dir_itr_init(const cfs_path *p,
-                                      cfs_recursive_directory_iterator **out_it,
-                                      cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_rec_dir_itr_init(
+    const cfs_path *p, cfs_recursive_directory_iterator **out_it,
+    cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)p;
   if (out_it)
     *out_it = NULL;
@@ -6305,7 +6431,7 @@ CFS_API cfs_errc cfs_rec_dir_itr_init(const cfs_path *p,
   cfs_recursive_directory_iterator *it;
   cfs_directory_iterator *base_it;
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (out_it)
     *out_it = NULL;
   if (!p || !out_it)
@@ -6313,13 +6439,13 @@ CFS_API cfs_errc cfs_rec_dir_itr_init(const cfs_path *p,
   if (cfs_dir_itr_init(p, &base_it, ec) != 0)
     return -1;
   if (cfs_malloc(sizeof(cfs_recursive_directory_iterator), (void **)&it) != 0) {
-    cfs_dir_itr_close(base_it);
+    (void)cfs_dir_itr_close(base_it);
     if (ec)
-      cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
+      (void)cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
     return -1;
   }
   it->base = *base_it;
-  cfs_free(base_it);
+  (void)cfs_free(base_it);
   *out_it = it;
   return 0;
 #endif
@@ -6333,12 +6459,12 @@ CFS_API cfs_errc cfs_rec_dir_itr_init(const cfs_path *p,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors. \return 0 on success, or a non-zero system error code on failure.
  */
-CFS_API cfs_errc cfs_rec_dir_itr_next(cfs_recursive_directory_iterator *it,
-                                      const cfs_directory_entry **out_entry,
-                                      cfs_error_code *ec) {
+CFS_API NO_DISCARD cfs_errc cfs_rec_dir_itr_next(
+    cfs_recursive_directory_iterator *it, const cfs_directory_entry **out_entry,
+    cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)it;
   (void)out_entry;
   return -1;
@@ -6377,11 +6503,11 @@ CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
                                  cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
   (void)it;
 #else
   if (ec)
-    cfs_clear_error(ec);
+    (void)cfs_clear_error(ec);
   if (it)
     it->base.is_end = cfs_true;
 #endif
@@ -6400,8 +6526,8 @@ CFS_API void cfs_rec_dir_itr_close(cfs_recursive_directory_iterator *it) {
     return;
   if (it->base.dirp)
     closedir(it->base.dirp);
-  cfs_path_destroy(&it->base.current.path);
-  cfs_free(it);
+  (void)cfs_path_destroy(&it->base.current.path);
+  (void)cfs_free(it);
 #endif
 }
 
