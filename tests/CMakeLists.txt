@@ -2,12 +2,21 @@
 # Brief: CMake build configuration for c-fs tests.
 
 include(FetchContent)
-FetchContent_Declare(
-  greatest
-  URL https://raw.githubusercontent.com/SamuelMarks/greatest/master/greatest.h
-  DOWNLOAD_NO_EXTRACT TRUE
-)
-FetchContent_MakeAvailable(greatest)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../greatest")
+  message(STATUS "Fetching greatest from local directory")
+  FetchContent_Declare(
+    greatest
+    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../greatest"
+  )
+  FetchContent_MakeAvailable(greatest)
+else()
+  FetchContent_Declare(
+    greatest
+    URL https://raw.githubusercontent.com/SamuelMarks/greatest/master/greatest.h
+    DOWNLOAD_NO_EXTRACT TRUE
+  )
+  FetchContent_MakeAvailable(greatest)
+endif()
 
 add_executable(cfs_test test_main.c)
 target_link_libraries(cfs_test PRIVATE cfs)
