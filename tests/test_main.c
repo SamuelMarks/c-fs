@@ -916,7 +916,11 @@ TEST real_file_operations() {
   cfs_bool is_empty;
   cfs_path p_renamed = {0};
 
+  #if defined(_MSC_VER)
+  if(fopen_s(&f, "test_real.txt", "w") != 0) f = NULL;
+#else
   f = fopen("test_real.txt", "w");
+#endif
   if (f) {
     fprintf(f, "test data");
     fclose(f);
@@ -972,7 +976,11 @@ TEST more_coverage() {
   (void)cfs_permissions(&p, perms, cfs_perm_options_replace, &ec);
 
   /* cfs_equivalent success branch */
+  #if defined(_MSC_VER)
+  if(fopen_s(&f, "test_eq.txt", "w") != 0) f = NULL;
+#else
   f = fopen("test_eq.txt", "w");
+#endif
   if (f) {
     fclose(f);
   }
@@ -1018,7 +1026,11 @@ TEST final_coverage() {
   FILE *f;
 
   /* cfs_permissions success branch */
+  #if defined(_MSC_VER)
+  if(fopen_s(&f, "test_perms.txt", "w") != 0) f = NULL;
+#else
   f = fopen("test_perms.txt", "w");
+#endif
   if (f) {
     fclose(f);
   }
@@ -1450,7 +1462,11 @@ TEST missing_lines_coverage() {
 
   /* 3796: cfs_remove fallback success */
   {
-    FILE *f = fopen("test_rem.txt", "w");
+    FILE *#if defined(_MSC_VER)
+  if(fopen_s(&f, "test_rem.txt", "w") != 0) f = NULL;
+#else
+  f = fopen("test_rem.txt", "w");
+#endif
     if (f)
       fclose(f);
     (void)cfs_path_init_str(&p, CFS_STR("test_rem.txt"));
