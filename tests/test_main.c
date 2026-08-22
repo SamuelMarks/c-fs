@@ -32,7 +32,7 @@ static void test_sleep_ms(int ms) {
 #if defined(CFS_OS_WINDOWS)
   Sleep(ms);
 #else
-  usleep(ms * 1000);
+  usleep((unsigned int)ms * 1000);
 #endif
 }
 
@@ -40,7 +40,7 @@ static void test_sleep_ms(int ms) {
  * \brief Test case for path_initialization.
  * \return The test result.
  */
-TEST path_initialization() {
+TEST path_initialization(void) {
   cfs_path p = {0};
   (void)cfs_path_init(&p);
   {
@@ -76,7 +76,7 @@ TEST path_initialization() {
  * \brief Test case for path_appending.
  * \return The test result.
  */
-TEST path_appending() {
+TEST path_appending(void) {
   cfs_path p = {0};
   (void)cfs_path_init_str(&p, CFS_STR("dir"));
   (void)cfs_path_append(&p, CFS_STR("file.txt"));
@@ -103,7 +103,7 @@ TEST path_appending() {
  * \brief Test case for root_path_decomposition.
  * \return The test result.
  */
-TEST root_path_decomposition() {
+TEST root_path_decomposition(void) {
   cfs_path p = {0}, out = {0};
   cfs_bool b;
   int cmp;
@@ -200,7 +200,7 @@ TEST root_path_decomposition() {
   PASS();
 }
 
-TEST path_decomposition() {
+TEST path_decomposition(void) {
   cfs_path p = {0}, res = {0};
   (void)cfs_path_init_str(&p, CFS_STR("dir") PATH_SEP_STR CFS_STR("subdir")
                                   PATH_SEP_STR CFS_STR("file.txt"));
@@ -258,13 +258,13 @@ static void async_callback(cfs_request_t *req, void *user_data) {
  * \brief Test case for thread_pool_async_validation.
  * \return The test result.
  */
-TEST thread_pool_async_validation() {
+TEST thread_pool_async_validation(void) {
   cfs_runtime_config config;
   cfs_runtime_t *rt;
   cfs_path p = {0};
   cfs_error_code ec;
   int i;
-  int res;
+  cfs_errc res;
 
   config.mode = cfs_modality_multithread;
   config.thread_pool_size = 4;
@@ -300,9 +300,9 @@ TEST thread_pool_async_validation() {
 }
 
 /* Step 47. Write greenthread / scheduler stubs test cases */
-TEST greenthread_scheduler_validation() {
+TEST greenthread_scheduler_validation(void) {
   cfs_greenthread_scheduler *sched = NULL;
-  int res;
+  cfs_errc res;
   res = cfs_greenthread_scheduler_init(&sched);
   ASSERT_EQ(0, res);
   ASSERT_NEQ(NULL, sched);
@@ -318,7 +318,7 @@ TEST greenthread_scheduler_validation() {
  * \brief Test case for memory_allocation.
  * \return The test result.
  */
-TEST memory_allocation() {
+TEST memory_allocation(void) {
   void *ptr = NULL;
   ASSERT_EQ(0, cfs_malloc(1024, &ptr));
   ASSERT_NEQ(NULL, ptr);
@@ -336,7 +336,7 @@ TEST memory_allocation() {
  * \brief Test case for string_handling.
  * \return The test result.
  */
-TEST string_handling() {
+TEST string_handling(void) {
   cfs_char_t buf[100];
   cfs_size_t len;
   cfs_char_t *out = NULL;
@@ -362,7 +362,7 @@ TEST string_handling() {
  * \brief Test case for path_utilities.
  * \return The test result.
  */
-TEST path_utilities() {
+TEST path_utilities(void) {
   cfs_path p = {0};
   cfs_path p2 = {0};
   cfs_char_t *gen_str = NULL;
@@ -400,7 +400,7 @@ TEST path_utilities() {
  * \brief Test case for path_decomposition_more.
  * \return The test result.
  */
-TEST path_decomposition_more() {
+TEST path_decomposition_more(void) {
   cfs_path p = {0}, out = {0};
   (void)cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
 
@@ -435,7 +435,7 @@ TEST path_decomposition_more() {
  * \brief Test case for path_queries.
  * \return The test result.
  */
-TEST path_queries() {
+TEST path_queries(void) {
   cfs_path p = {0};
   cfs_bool out_bool;
   (void)cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
@@ -471,7 +471,7 @@ TEST path_queries() {
  * \brief Test case for path_lexical.
  * \return The test result.
  */
-TEST path_lexical() {
+TEST path_lexical(void) {
   cfs_path p = {0}, base = {0}, out = {0};
   (void)cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
   (void)cfs_path_init_str(&base, CFS_STR("/usr/local/"));
@@ -502,7 +502,7 @@ TEST path_lexical() {
  * \brief Test case for dir_iterators.
  * \return The test result.
  */
-TEST dir_iterators() {
+TEST dir_iterators(void) {
   cfs_directory_iterator *itr = NULL;
   cfs_path p = {0};
   const cfs_directory_entry *out_entry = NULL;
@@ -529,7 +529,7 @@ TEST dir_iterators() {
  * \brief Test case for rec_dir_iterators.
  * \return The test result.
  */
-TEST rec_dir_iterators() {
+TEST rec_dir_iterators(void) {
   cfs_recursive_directory_iterator *itr = NULL;
   cfs_path p = {0};
   const cfs_directory_entry *out_entry = NULL;
@@ -560,7 +560,7 @@ TEST rec_dir_iterators() {
  * \brief Test case for file_queries.
  * \return The test result.
  */
-TEST file_queries() {
+TEST file_queries(void) {
   cfs_path p = {0}, p2 = {0}, p_out = {0};
   cfs_file_status s;
   cfs_bool b;
@@ -652,7 +652,7 @@ TEST file_queries() {
  * \brief Test case for string_and_errors.
  * \return The test result.
  */
-TEST string_and_errors() {
+TEST string_and_errors(void) {
   wchar_t dest_w[100];
   char dest_c[100];
   cfs_size_t out_req;
@@ -678,7 +678,7 @@ TEST string_and_errors() {
  * \brief Test case for ipc_and_processes.
  * \return The test result.
  */
-TEST ipc_and_processes() {
+TEST ipc_and_processes(void) {
   cfs_message_pipe *pipe = NULL;
   cfs_process_t *proc = NULL;
   cfs_shm_segment *shm = NULL;
@@ -728,7 +728,7 @@ static void dummy_greenthread(void *arg) { (void)arg; }
  * \brief Test case for greenthreads_and_utils.
  * \return The test result.
  */
-TEST greenthreads_and_utils() {
+TEST greenthreads_and_utils(void) {
   cfs_greenthread_t *gt = NULL;
   cfs_request_t *req = NULL;
   cfs_request_t *req_ptr = NULL;
@@ -738,7 +738,7 @@ TEST greenthreads_and_utils() {
   cfs_runtime_config cfg;
   cfs_error_code ec;
   cfs_path p = {0};
-  cfs_sandbox_config sbox;
+  cfs_sandbox_config sbox = {0};
 
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
@@ -794,7 +794,7 @@ TEST greenthreads_and_utils() {
  * \brief Test case for exhaustive_nulls.
  * \return The test result.
  */
-TEST exhaustive_nulls() {
+TEST exhaustive_nulls(void) {
   cfs_path p = {0};
   int out_int;
   cfs_size_t out_sz;
@@ -903,7 +903,7 @@ TEST exhaustive_nulls() {
  * \brief Test case for real_file_operations.
  * \return The test result.
  */
-TEST real_file_operations() {
+TEST real_file_operations(void) {
   FILE *f;
   cfs_path p = {0};
   cfs_file_status st;
@@ -916,8 +916,9 @@ TEST real_file_operations() {
   cfs_bool is_empty;
   cfs_path p_renamed = {0};
 
-  #if defined(_MSC_VER)
-  if(fopen_s(&f, "test_real.txt", "w") != 0) f = NULL;
+#if defined(_MSC_VER)
+  if (fopen_s(&f, "test_real.txt", "w") != 0)
+    f = NULL;
 #else
   f = fopen("test_real.txt", "w");
 #endif
@@ -950,7 +951,7 @@ TEST real_file_operations() {
  * \brief Test case for more_coverage.
  * \return The test result.
  */
-TEST more_coverage() {
+TEST more_coverage(void) {
   cfs_file_status s;
   cfs_path p = {0}, p2 = {0}, p3 = {0}, p4 = {0}, out = {0};
   cfs_error_code ec;
@@ -975,9 +976,10 @@ TEST more_coverage() {
   (void)cfs_path_init_str(&p, CFS_STR("dummy_nonexistent.txt"));
   (void)cfs_permissions(&p, perms, cfs_perm_options_replace, &ec);
 
-  /* cfs_equivalent success branch */
-  #if defined(_MSC_VER)
-  if(fopen_s(&f, "test_eq.txt", "w") != 0) f = NULL;
+/* cfs_equivalent success branch */
+#if defined(_MSC_VER)
+  if (fopen_s(&f, "test_eq.txt", "w") != 0)
+    f = NULL;
 #else
   f = fopen("test_eq.txt", "w");
 #endif
@@ -1019,15 +1021,16 @@ TEST more_coverage() {
  * \brief Test case for final_coverage.
  * \return The test result.
  */
-TEST final_coverage() {
+TEST final_coverage(void) {
   cfs_path p = {0}, p2 = {0}, out = {0};
   cfs_error_code ec;
   cfs_bool b;
   FILE *f;
 
-  /* cfs_permissions success branch */
-  #if defined(_MSC_VER)
-  if(fopen_s(&f, "test_perms.txt", "w") != 0) f = NULL;
+/* cfs_permissions success branch */
+#if defined(_MSC_VER)
+  if (fopen_s(&f, "test_perms.txt", "w") != 0)
+    f = NULL;
 #else
   f = fopen("test_perms.txt", "w");
 #endif
@@ -1070,7 +1073,7 @@ CFS_API extern int g_cfs_readlink_fail;
  * \brief Test case for out_of_memory.
  * \return The test result.
  */
-TEST out_of_memory() {
+TEST out_of_memory(void) {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
@@ -1147,7 +1150,7 @@ TEST out_of_memory() {
  * \brief Test case for extreme_edge_cases.
  * \return The test result.
  */
-TEST extreme_edge_cases() {
+TEST extreme_edge_cases(void) {
   cfs_path p = {0};
   cfs_path out = {0};
   cfs_error_code ec;
@@ -1174,7 +1177,7 @@ TEST extreme_edge_cases() {
  * \brief Test case for last_mile.
  * \return The test result.
  */
-TEST last_mile() {
+TEST last_mile(void) {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
@@ -1235,7 +1238,7 @@ TEST last_mile() {
  * \brief Test case for cover_everything.
  * \return The test result.
  */
-TEST cover_everything() {
+TEST cover_everything(void) {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
@@ -1277,7 +1280,7 @@ TEST cover_everything() {
  * \brief Test case for out_of_memory_precise.
  * \return The test result.
  */
-TEST out_of_memory_precise() {
+TEST out_of_memory_precise(void) {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
@@ -1321,7 +1324,7 @@ TEST out_of_memory_precise() {
  * \brief Test case for fix_last_missing.
  * \return The test result.
  */
-TEST fix_last_missing() {
+TEST fix_last_missing(void) {
   cfs_runtime_t *rt = NULL;
   cfs_runtime_config cfg;
   cfs_error_code ec;
@@ -1367,7 +1370,7 @@ TEST fix_last_missing() {
  * \brief Test suite for cfs_suite.
  */
 
-TEST missing_lines_coverage() {
+TEST missing_lines_coverage(void) {
   cfs_path p = {0}, res = {0};
   cfs_char_t dest[10];
   cfs_request_t *req_out;
@@ -1462,10 +1465,12 @@ TEST missing_lines_coverage() {
 
   /* 3796: cfs_remove fallback success */
   {
-    FILE *#if defined(_MSC_VER)
-  if(fopen_s(&f, "test_rem.txt", "w") != 0) f = NULL;
+    FILE *f = NULL;
+#if defined(_MSC_VER)
+    if (fopen_s(&f, "test_rem.txt", "w") != 0)
+      f = NULL;
 #else
-  f = fopen("test_rem.txt", "w");
+    f = fopen("test_rem.txt", "w");
 #endif
     if (f)
       fclose(f);
@@ -1513,7 +1518,7 @@ static void dummy_async_callback(cfs_request_t *req, void *user_data) {
   (void)user_data;
 }
 
-TEST missing_lines_coverage_async() {
+TEST missing_lines_coverage_async(void) {
   cfs_runtime_config cfg;
   cfs_runtime_t *rt;
   cfs_path p = {0};
@@ -1567,7 +1572,7 @@ TEST missing_lines_coverage_async() {
   PASS();
 }
 
-TEST branch_coverage_nulls() {
+TEST branch_coverage_nulls(void) {
   cfs_path p = {0};
   cfs_path empty_p = {0};
   cfs_bool b;
@@ -1669,7 +1674,7 @@ TEST branch_coverage_nulls() {
   PASS();
 }
 
-TEST edge_cases_and_oom() {
+TEST edge_cases_and_oom(void) {
   cfs_path p, out;
   cfs_bool b;
   cfs_directory_iterator *it;
