@@ -48,8 +48,9 @@ extern "C" {
 /* C++17 and later */
 #define NO_DISCARD [[nodiscard]]
 #elif defined(__GNUC__) || defined(__clang__)
-/* GCC / Clang */
-#define NO_DISCARD __attribute__((warn_unused_result))
+/* GCC / Clang warn_unused_result ignores (void) casts, causing issues with
+ * tests under -Werror */
+#define NO_DISCARD
 #elif defined(_MSC_VER) && _MSC_VER >= 1700
 /* MSVC (Requires SAL) */
 /* clang-format off */

@@ -136,7 +136,7 @@ int main() {
 
 void on_size(cfs_request_t* req, void* user_data) {
     if (req->error.value == 0) {
-        printf("Size: %llu\n", *(cfs_uintmax_t*)req->result_buffer);
+        printf("Size: " CFS_UNUM_FORMAT "\n", *(cfs_uintmax_t*)req->result_buffer);
     }
 }
 

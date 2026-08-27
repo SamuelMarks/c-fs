@@ -1408,8 +1408,9 @@ NO_DISCARD CFS_API cfs_errc cfs_create_directories(const cfs_path *p,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
-                                  cfs_error_code *ec);
+NO_DISCARD CFS_API cfs_errc cfs_create_hard_link(const cfs_path *target,
+                                                 const cfs_path *link,
+                                                 cfs_error_code *ec);
 /**
  * \brief Performs the cfs_create_symlink filesystem operation.
  *
@@ -1418,8 +1419,9 @@ CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
-                                cfs_error_code *ec);
+NO_DISCARD CFS_API cfs_errc cfs_create_symlink(const cfs_path *target,
+                                               const cfs_path *link,
+                                               cfs_error_code *ec);
 /**
  * \brief Performs the cfs_create_directory_symlink filesystem operation.
  *
@@ -1428,9 +1430,9 @@ CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_create_directory_symlink(const cfs_path *target,
-                                          const cfs_path *link,
-                                          cfs_error_code *ec);
+NO_DISCARD CFS_API cfs_errc cfs_create_directory_symlink(const cfs_path *target,
+                                                         const cfs_path *link,
+                                                         cfs_error_code *ec);
 
 /* Copy file options mirroring std::filesystem::copy_options */
 
@@ -1481,8 +1483,9 @@ NO_DISCARD CFS_API cfs_errc cfs_remove_all(const cfs_path *p, cfs_size_t *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
-                        cfs_error_code *ec);
+NO_DISCARD CFS_API cfs_errc cfs_rename(const cfs_path *old_p,
+                                       const cfs_path *new_p,
+                                       cfs_error_code *ec);
 
 /** \brief Defined as large integer matching std::uintmax_t */
 #if defined(__GNUC__) || defined(__clang__)
@@ -1500,8 +1503,9 @@ typedef unsigned long cfs_uintmax_t;
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
-                             cfs_error_code *ec);
+NO_DISCARD CFS_API cfs_errc cfs_resize_file(const cfs_path *p,
+                                            cfs_uintmax_t size,
+                                            cfs_error_code *ec);
 /**
  * \brief Retrieves the size of a given file in bytes.
  *
@@ -1609,7 +1613,8 @@ NO_DISCARD CFS_API cfs_errc cfs_current_path(cfs_path *out, cfs_error_code *ec);
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec);
+NO_DISCARD CFS_API cfs_errc cfs_current_path_set(const cfs_path *p,
+                                                 cfs_error_code *ec);
 /**
  * \brief Performs the cfs_temp_directory_path filesystem operation.
  *
@@ -1709,8 +1714,8 @@ cfs_rec_dir_itr_disable_recursion_pending(cfs_recursive_directory_iterator *it);
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
-                                 cfs_error_code *ec);
+NO_DISCARD CFS_API cfs_errc
+cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it, cfs_error_code *ec);
 /**
  * \brief Performs the cfs_rec_dir_itr_close filesystem operation.
  *
@@ -5184,8 +5189,9 @@ NO_DISCARD CFS_API cfs_errc cfs_copy_file(const cfs_path *from,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
-                                cfs_error_code *ec) {
+NO_DISCARD CFS_API cfs_errc cfs_create_symlink(const cfs_path *target,
+                                               const cfs_path *link,
+                                               cfs_error_code *ec) {
   if (ec)
     (void)cfs_clear_error(ec);
 #if defined(CFS_OS_WINDOWS)
@@ -5203,8 +5209,10 @@ CFS_API void cfs_create_symlink(const cfs_path *target, const cfs_path *link,
   if (symlink(target->str, link->str) != 0) {
     if (ec)
       (void)cfs_get_last_error(ec);
+    return cfs_errc_unknown_error;
   }
 #endif
+  return cfs_errc_success;
 }
 
 /**
@@ -5335,13 +5343,14 @@ NO_DISCARD CFS_API cfs_errc cfs_current_path(cfs_path *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec) {
+NO_DISCARD CFS_API cfs_errc cfs_current_path_set(const cfs_path *p,
+                                                 cfs_error_code *ec) {
   if (ec)
     (void)cfs_clear_error(ec);
   if (!p || !p->str) {
     if (ec)
       (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
-    return;
+    return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
 #if defined(CFS_UNICODE)
@@ -5359,8 +5368,10 @@ CFS_API void cfs_current_path_set(const cfs_path *p, cfs_error_code *ec) {
   if (chdir(p->str) != 0) {
     if (ec)
       (void)cfs_get_last_error(ec);
+    return cfs_errc_unknown_error;
   }
 #endif
+  return cfs_errc_success;
 }
 
 /* --- Auto-generated stubs for missing functions --- */
@@ -6153,11 +6164,13 @@ NO_DISCARD CFS_API cfs_errc cfs_create_directories(const cfs_path *p,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
-                                  cfs_error_code *ec) {
+NO_DISCARD CFS_API cfs_errc cfs_create_hard_link(const cfs_path *target,
+                                                 const cfs_path *link,
+                                                 cfs_error_code *ec) {
   (void)target;
   (void)link;
   (void)ec;
+  return cfs_errc_not_supported;
 }
 
 /**
@@ -6168,12 +6181,13 @@ CFS_API void cfs_create_hard_link(const cfs_path *target, const cfs_path *link,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_create_directory_symlink(const cfs_path *target,
-                                          const cfs_path *link,
-                                          cfs_error_code *ec) {
+NO_DISCARD CFS_API cfs_errc cfs_create_directory_symlink(const cfs_path *target,
+                                                         const cfs_path *link,
+                                                         cfs_error_code *ec) {
   (void)target;
   (void)link;
   (void)ec;
+  return cfs_errc_not_supported;
 }
 
 /**
@@ -6200,11 +6214,13 @@ NO_DISCARD CFS_API cfs_errc cfs_remove_all(const cfs_path *p, cfs_size_t *out,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
-                        cfs_error_code *ec) {
+NO_DISCARD CFS_API cfs_errc cfs_rename(const cfs_path *old_p,
+                                       const cfs_path *new_p,
+                                       cfs_error_code *ec) {
   (void)old_p;
   (void)new_p;
   (void)ec;
+  return cfs_errc_not_supported;
 }
 
 /**
@@ -6215,11 +6231,13 @@ CFS_API void cfs_rename(const cfs_path *old_p, const cfs_path *new_p,
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_resize_file(const cfs_path *p, cfs_uintmax_t size,
-                             cfs_error_code *ec) {
+NO_DISCARD CFS_API cfs_errc cfs_resize_file(const cfs_path *p,
+                                            cfs_uintmax_t size,
+                                            cfs_error_code *ec) {
   (void)p;
   (void)size;
   (void)ec;
+  return cfs_errc_not_supported;
 }
 
 /**
@@ -6506,8 +6524,8 @@ CFS_API void cfs_rec_dir_itr_disable_recursion_pending(
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
-                                 cfs_error_code *ec) {
+NO_DISCARD CFS_API cfs_errc
+cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it, cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
     (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
@@ -6518,6 +6536,7 @@ CFS_API void cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it,
   if (it)
     it->base.is_end = cfs_true;
 #endif
+  return cfs_errc_success;
 }
 
 /**

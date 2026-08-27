@@ -67,7 +67,7 @@ void check_file(const cfs_char_t* path_str) {
 
     if (cfs_exists_path(&p, &exists, &ec) == 0 && exists) {
         if (cfs_file_size(&p, &size, &ec) == 0) {
-            printf("File size: %llu bytes\n", (unsigned long long)size);
+            printf("File size: " CFS_UNUM_FORMAT " bytes\n", (cfs_uintmax_t)size);
         } else {
             printf("Failed to get file size. (Error: %d)\n", ec.value);
         }
@@ -92,7 +92,7 @@ void check_file(const cfs_char_t* path_str) {
 void on_file_size_complete(cfs_request_t* req, void* user_data) {
     if (req->error.value == 0 && req->result_buffer) {
         cfs_uintmax_t size = *((cfs_uintmax_t*)req->result_buffer);
-        printf("Async Result -> Size: %llu bytes\n", (unsigned long long)size);
+        printf("Async Result -> Size: " CFS_UNUM_FORMAT " bytes\n", (cfs_uintmax_t)size);
     } else {
         printf("Async Operation Failed: %d\n", req->error.value);
     }

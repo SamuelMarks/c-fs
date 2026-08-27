@@ -62,7 +62,7 @@ set(CFS_C_FLAGS "")
 
 if(MSVC)
     # Detect MSVC 2005 to 2022/2026
-    list(APPEND CFS_C_FLAGS "/W4")
+    list(APPEND CFS_C_FLAGS "/W4" "/WX")
     if(MSVC_VERSION LESS 1400) # Pre-2005
         message(WARNING "MSVC version earlier than 2005 is not officially supported.")
     endif()
@@ -76,7 +76,7 @@ if(MSVC)
         list(APPEND CFS_C_FLAGS "/${${PROJECT_PREFIX}_MSVC_RTC}")
     endif()
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    list(APPEND CFS_C_FLAGS "-std=c89" "-pedantic" "-Wall" "-Wextra" "-D_GNU_SOURCE")
+    list(APPEND CFS_C_FLAGS "-std=c89" "-pedantic" "-Wall" "-Wextra" "-Werror" "-D_GNU_SOURCE")
 
     if(MINGW)
         # MinGW specific overrides
