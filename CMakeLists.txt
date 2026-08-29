@@ -67,10 +67,6 @@ if(MSVC)
         message(WARNING "MSVC version earlier than 2005 is not officially supported.")
     endif()
 
-
-    # Disable warning C4996 for standard C functions that MSVC thinks are deprecated
-    list(APPEND CFS_C_FLAGS "/wd4996")
-
     # RTC checks
     if(NOT ${PROJECT_PREFIX}_MSVC_RTC STREQUAL "")
         list(APPEND CFS_C_FLAGS "/${${PROJECT_PREFIX}_MSVC_RTC}")

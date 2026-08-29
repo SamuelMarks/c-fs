@@ -6285,26 +6285,37 @@ NO_DISCARD CFS_API cfs_errc cfs_space(const cfs_path *p, cfs_space_info *out,
 NO_DISCARD CFS_API cfs_errc cfs_last_write_time(const cfs_path *p,
                                                 cfs_file_time_type *out,
                                                 cfs_error_code *ec) {
-#if defined(CFS_OS_WINDOWS)
-  if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-  (void)p;
-  (void)out;
-  return cfs_errc_not_enough_memory;
-#else
-  struct stat st;
   if (ec)
     (void)cfs_clear_error(ec);
   if (!p || !out)
     return cfs_errc_not_enough_memory;
-  if (stat(p->str, &st) == 0) {
-    *out = st.st_mtime;
-    return cfs_errc_success;
+#if defined(CFS_OS_WINDOWS)
+  {
+    struct _stat64 st;
+#if defined(CFS_UNICODE)
+    if (_wstat64(p->str, &st) == 0) {
+      *out = (cfs_file_time_type)st.st_mtime;
+      return cfs_errc_success;
+    }
+#else
+    if (_stat64(p->str, &st) == 0) {
+      *out = (cfs_file_time_type)st.st_mtime;
+      return cfs_errc_success;
+    }
+#endif
   }
+#else
+  {
+    struct stat st;
+    if (stat(p->str, &st) == 0) {
+      *out = (cfs_file_time_type)st.st_mtime;
+      return cfs_errc_success;
+    }
+  }
+#endif
   if (ec)
     (void)cfs_get_last_error(ec);
   return cfs_errc_not_enough_memory;
-#endif
 }
 
 /**
