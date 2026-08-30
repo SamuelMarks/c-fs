@@ -592,7 +592,7 @@ NO_DISCARD CFS_API cfs_errc cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
  * mappings.
  */
 typedef struct cfs_error_code {
-  /** \brief The raw OS specific error code (errno or GetLastError()). */
+  /** \brief The raw OS specific error code (errno or (int)GetLastError()). */
   int value;
   /** \brief The unified POSIX mapping. */
   cfs_errc errc;
@@ -2794,7 +2794,7 @@ static cfs_errc cfs_thread_pool_create(cfs_size_t num_threads,
   /* return cfs_errc_not_enough_memory; */
   *out_pool = NULL;
 
-  (void)cfs_malloc(sizeof(cfs_thread_pool_t), (void **)&pool);
+  (void)cfs_calloc(1, sizeof(cfs_thread_pool_t), (void **)&pool);
   if (!pool)
     return cfs_errc_not_enough_memory;
 
@@ -2808,9 +2808,11 @@ static cfs_errc cfs_thread_pool_create(cfs_size_t num_threads,
     (void)cfs_free(pool);
     return cfs_errc_not_enough_memory;
   }
+  memset(pool->threads, 0, num_threads * sizeof(cfs_thread_t));
 
   for (i = 0; i < num_threads; ++i) {
 #if defined(CFS_OS_WINDOWS)
+    pool->threads[i].h = NULL;
     pool->threads[i].h =
         CreateThread(NULL, 0, cfs_worker_thread, pool, 0, NULL);
 #elif defined(CFS_OS_DOS)
@@ -2831,26 +2833,36 @@ static cfs_errc cfs_thread_pool_create(cfs_size_t num_threads,
  *
  * \param pool Argument representing the target resource.
  */
-static void cfs_thread_pool_destroy(cfs_thread_pool_t *pool) {
+static void cfs_thread_pool_destroy(
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+    _In_
+#endif
+    cfs_thread_pool_t *pool) {
   cfs_size_t i;
+
+  if (!pool)
+    return;
 
   (void)cfs_queue_shutdown(pool->work_queue);
 
-  for (i = 0; i < pool->num_threads; ++i) {
+  if (pool->threads && pool->num_threads > 0) {
+    cfs_thread_t *threads = pool->threads;
+    for (i = 0; i < pool->num_threads; ++i) {
 #if defined(CFS_OS_WINDOWS)
-    if (pool->threads[i].h) {
-      WaitForSingleObject(pool->threads[i].h, INFINITE);
-      CloseHandle(pool->threads[i].h);
-    }
+      if (threads[i].h != NULL) {
+        WaitForSingleObject(threads[i].h, INFINITE);
+        CloseHandle(threads[i].h);
+      }
 #elif defined(CFS_OS_DOS)
-    (void)pool;
-    (void)i;
+      (void)pool;
+      (void)i;
 #else
-    pthread_join(pool->threads[i].t, NULL);
+      pthread_join(threads[i].t, NULL);
 #endif
+    }
+    (void)cfs_free(pool->threads);
   }
 
-  (void)cfs_free(pool->threads);
   (void)cfs_free(pool);
 }
 
@@ -3382,7 +3394,7 @@ NO_DISCARD CFS_API cfs_errc cfs_make_error_code_from_os(int os_error,
  */
 NO_DISCARD CFS_API cfs_errc cfs_get_last_error(cfs_error_code *out) {
 #if defined(CFS_OS_WINDOWS)
-  return cfs_make_error_code_from_os(GetLastError(), out);
+  return cfs_make_error_code_from_os((int)GetLastError(), out);
 #else
   /* missing errno include but simplify for now */
   return cfs_make_error_code_from_os(1, out);
@@ -4245,7 +4257,7 @@ NO_DISCARD CFS_API cfs_errc cfs_deserialize_request(const void *buffer,
   (void)cfs_malloc(sizeof(cfs_request_t), (void **)req);
   if (!*req)
     return cfs_errc_not_enough_memory;
-  (*req)->opcode = ((int *)buffer)[0];
+  (*req)->opcode = ((const int *)buffer)[0];
   (*req)->ref_count = 1;
   (*req)->cancelled = cfs_false;
   (*req)->result_buffer = NULL;
@@ -4445,7 +4457,7 @@ CFS_API void cfs_shm_unmap(cfs_shm_segment *shm, void *addr) {
 #if defined(CFS_OS_WINDOWS)
   UnmapViewOfFile(addr);
 #else
-    /* munmap stub */
+  /* munmap stub */
 #endif
 }
 
@@ -4460,7 +4472,7 @@ CFS_API void cfs_shm_destroy(cfs_shm_segment *shm) {
 #if defined(CFS_OS_WINDOWS)
   CloseHandle(shm->map_handle);
 #else
-    /* close stub */
+  /* close stub */
 #endif
   (void)cfs_free(shm);
 }
@@ -4558,7 +4570,7 @@ CFS_API void cfs_named_semaphore_destroy(cfs_named_semaphore *sem) {
 #if defined(CFS_OS_WINDOWS)
   CloseHandle(sem->handle);
 #else
-    /* sem_close stub */
+  /* sem_close stub */
 #endif
   (void)cfs_free(sem);
 }

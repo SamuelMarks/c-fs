@@ -72,7 +72,7 @@ if(MSVC)
         list(APPEND CFS_C_FLAGS "/${${PROJECT_PREFIX}_MSVC_RTC}")
     endif()
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    list(APPEND CFS_C_FLAGS "-std=c89" "-pedantic" "-Wall" "-Wextra" "-Werror" "-D_GNU_SOURCE")
+    list(APPEND CFS_C_FLAGS "-std=c89" "-pedantic" "-Wall" "-Wextra" "-Werror" "-Wconversion" "-Wsign-conversion" "-Wcast-align" "-Wstrict-prototypes" "-Wmissing-prototypes" "-Wpointer-arith" "-Wcast-qual" "-Wshadow" "-D_GNU_SOURCE")
 
     if(MINGW)
         # MinGW specific overrides
