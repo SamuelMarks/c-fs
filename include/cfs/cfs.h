@@ -4457,7 +4457,7 @@ CFS_API void cfs_shm_unmap(cfs_shm_segment *shm, void *addr) {
 #if defined(CFS_OS_WINDOWS)
   UnmapViewOfFile(addr);
 #else
-  /* munmap stub */
+    /* munmap stub */
 #endif
 }
 
@@ -4472,7 +4472,7 @@ CFS_API void cfs_shm_destroy(cfs_shm_segment *shm) {
 #if defined(CFS_OS_WINDOWS)
   CloseHandle(shm->map_handle);
 #else
-  /* close stub */
+    /* close stub */
 #endif
   (void)cfs_free(shm);
 }
@@ -4570,7 +4570,7 @@ CFS_API void cfs_named_semaphore_destroy(cfs_named_semaphore *sem) {
 #if defined(CFS_OS_WINDOWS)
   CloseHandle(sem->handle);
 #else
-  /* sem_close stub */
+    /* sem_close stub */
 #endif
   (void)cfs_free(sem);
 }

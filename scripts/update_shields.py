@@ -36,7 +36,7 @@ def get_test_coverage():
             return None
         cmd = ["gcovr", "-r", "..", ".", "-f", r".*/cfs\.h$", "-f", r".*/cfs\.c$",
                "--gcov-ignore-parse-errors=negative_hits.warn", "--print-summary"]
-        res = subprocess.run(cmd, cwd="build_precommit", capture_output=True, text=True)
+        res = subprocess.run(cmd, cwd="build_gcc", capture_output=True, text=True)
         if res.returncode != 0:
             print("gcovr failed:\n" + res.stderr)
             return None
