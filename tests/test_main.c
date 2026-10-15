@@ -473,11 +473,19 @@ TEST path_queries(void) {
  */
 TEST path_lexical(void) {
   cfs_path p = {0}, base = {0}, out = {0};
+  int cmp = 0;
   (void)cfs_path_init_str(&p, CFS_STR("/usr/local/bin/test.exe"));
   (void)cfs_path_init_str(&base, CFS_STR("/usr/local/"));
 
-  (void)cfs_path_compare(&p, &base);
+  ASSERT_EQ(cfs_errc_success, cfs_path_compare(&p, &base, &cmp));
+  ASSERT(cmp > 0);
+  ASSERT_EQ(cfs_errc_success, cfs_path_compare(&base, &p, &cmp));
+  ASSERT(cmp < 0);
+  ASSERT_EQ(cfs_errc_success, cfs_path_compare(&p, &p, &cmp));
+  ASSERT_EQ(0, cmp);
   (void)cfs_path_init(&out);
+  ASSERT_EQ(cfs_errc_success, cfs_path_compare(&out, &out, &cmp));
+  ASSERT_EQ(0, cmp);
   (void)cfs_path_lexically_normal(&p, &out);
   (void)cfs_path_destroy(&out);
   (void)cfs_path_init(&out);
@@ -490,7 +498,9 @@ TEST path_lexical(void) {
   (void)cfs_path_destroy(&p);
   (void)cfs_path_destroy(&base);
 
-  (void)cfs_path_compare(NULL, NULL);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_compare(NULL, NULL, &cmp));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_compare(&p, NULL, &cmp));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_compare(&p, &base, NULL));
   (void)cfs_path_lexically_normal(NULL, &out);
   (void)cfs_path_lexically_relative(NULL, &base, &out);
   (void)cfs_path_lexically_proximate(NULL, &base, &out);
@@ -657,19 +667,35 @@ TEST string_and_errors(void) {
   char dest_c[100];
   cfs_size_t out_req;
   cfs_error_code ec;
-  const char *msg;
+  const char *msg = NULL;
 
-  (void)cfs_mb_to_wide("test", dest_w, 100, &out_req);
-  (void)cfs_wide_to_mb(L"test", dest_c, 100, &out_req);
+#if defined(CFS_OS_WINDOWS)
+  ASSERT_EQ(cfs_errc_success, cfs_mb_to_wide("test", dest_w, 100, &out_req));
+  ASSERT(out_req > 0);
+  ASSERT_EQ(cfs_errc_success, cfs_wide_to_mb(L"test", dest_c, 100, &out_req));
+  ASSERT(out_req > 0);
+#else
+  ASSERT_EQ(cfs_errc_operation_not_supported,
+            cfs_mb_to_wide("test", dest_w, 100, &out_req));
+  ASSERT_EQ(0, out_req);
+  ASSERT_EQ(cfs_errc_operation_not_supported,
+            cfs_wide_to_mb(L"test", dest_c, 100, &out_req));
+  ASSERT_EQ(0, out_req);
+#endif
 
-  (void)cfs_make_error_code_from_os(2, &ec);
-  (void)cfs_get_last_error(&ec);
-  (void)cfs_error_message(cfs_errc_no_such_file_or_directory, &msg);
+  ASSERT_EQ(cfs_errc_success, cfs_make_error_code_from_os(2, &ec));
+  ASSERT_EQ(2, ec.value);
+  ASSERT_EQ(cfs_errc_unknown_error, ec.errc);
+  ASSERT_EQ(cfs_errc_success, cfs_get_last_error(&ec));
+  ASSERT_EQ(cfs_errc_success,
+            cfs_error_message(cfs_errc_no_such_file_or_directory, &msg));
+  ASSERT(msg != NULL);
 
   (void)cfs_mb_to_wide(NULL, dest_w, 100, &out_req);
   (void)cfs_wide_to_mb(NULL, dest_c, 100, &out_req);
-  (void)cfs_error_message(cfs_errc_success, NULL);
-  (void)cfs_get_last_error(NULL);
+  ASSERT_EQ(cfs_errc_invalid_argument,
+            cfs_error_message(cfs_errc_success, NULL));
+  ASSERT_EQ(cfs_errc_success, cfs_get_last_error(NULL));
 
   PASS();
 }
@@ -683,37 +709,46 @@ TEST ipc_and_processes(void) {
   cfs_process_t *proc = NULL;
   cfs_shm_segment *shm = NULL;
   cfs_named_semaphore *sem = NULL;
-  void *addr;
+  void *addr = NULL;
 
-  (void)cfs_message_pipe_create(CFS_STR("pipe"), &pipe);
-  (void)cfs_message_pipe_destroy(pipe);
-  (void)cfs_message_pipe_create(NULL, &pipe);
-  (void)cfs_message_pipe_destroy(NULL);
+  ASSERT_EQ(cfs_errc_success, cfs_message_pipe_create(CFS_STR("pipe"), &pipe));
+  ASSERT(pipe != NULL);
+  cfs_message_pipe_destroy(pipe);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_message_pipe_create(NULL, &pipe));
+  cfs_message_pipe_destroy(NULL);
 
   (void)cfs_process_spawn(CFS_STR("dummy"), &proc);
   (void)cfs_process_wait(proc);
-  (void)cfs_process_destroy(proc);
-  (void)cfs_process_spawn(NULL, &proc);
-  (void)cfs_process_wait(NULL);
-  (void)cfs_process_destroy(NULL);
+  cfs_process_destroy(proc);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_process_spawn(NULL, &proc));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_process_wait(NULL));
+  cfs_process_destroy(NULL);
 
-  (void)cfs_shm_create(1024, CFS_STR("shm"), &shm);
-  (void)cfs_shm_map(shm, &addr);
-  (void)cfs_shm_unmap(shm, addr);
-  (void)cfs_shm_destroy(shm);
-  (void)cfs_shm_create(0, NULL, &shm);
-  (void)cfs_shm_map(NULL, &addr);
-  (void)cfs_shm_unmap(NULL, addr);
-  (void)cfs_shm_destroy(NULL);
+  ASSERT_EQ(cfs_errc_success, cfs_shm_create(1024, CFS_STR("shm"), &shm));
+  ASSERT_EQ(cfs_errc_success, cfs_shm_map(shm, &addr));
+  ASSERT(addr != NULL);
+  cfs_shm_unmap(shm, addr);
+  cfs_shm_destroy(shm);
 
-  (void)cfs_named_semaphore_create(CFS_STR("sem"), 1, &sem);
-  (void)cfs_named_semaphore_wait(sem);
-  (void)cfs_named_semaphore_post(sem);
-  (void)cfs_named_semaphore_destroy(sem);
-  (void)cfs_named_semaphore_create(NULL, 1, &sem);
-  (void)cfs_named_semaphore_wait(NULL);
-  (void)cfs_named_semaphore_post(NULL);
-  (void)cfs_named_semaphore_destroy(NULL);
+  ASSERT_EQ(cfs_errc_success, cfs_shm_create(1024, CFS_STR("shm2"), &shm));
+  ASSERT_EQ(cfs_errc_success, cfs_shm_map(shm, &addr));
+  cfs_shm_destroy(shm);
+
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_shm_create(0, NULL, &shm));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_shm_map(NULL, &addr));
+  cfs_shm_unmap(NULL, addr);
+  cfs_shm_destroy(NULL);
+
+  ASSERT_EQ(cfs_errc_success,
+            cfs_named_semaphore_create(CFS_STR("sem"), 1, &sem));
+  ASSERT_EQ(cfs_errc_success, cfs_named_semaphore_wait(sem));
+  ASSERT_EQ(cfs_errc_success, cfs_named_semaphore_post(sem));
+  cfs_named_semaphore_destroy(sem);
+  ASSERT_EQ(cfs_errc_invalid_argument,
+            cfs_named_semaphore_create(NULL, 1, &sem));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_named_semaphore_wait(NULL));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_named_semaphore_post(NULL));
+  cfs_named_semaphore_destroy(NULL);
 
   PASS();
 }
@@ -739,53 +774,78 @@ TEST greenthreads_and_utils(void) {
   cfs_error_code ec;
   cfs_path p = {0};
   cfs_sandbox_config sbox = {0};
+  int cmp = 0;
 
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
   cfg.ipc_path = NULL;
 
-  (void)cfs_runtime_init(&cfg, &rt, &ec);
+  ASSERT_EQ(cfs_errc_success, cfs_runtime_init(&cfg, &rt, &ec));
 
   dummy_greenthread(NULL);
 
-  (void)cfs_greenthread_spawn(dummy_greenthread, NULL, &gt);
-  (void)cfs_greenthread_yield();
-  (void)cfs_greenthread_destroy(gt);
+  ASSERT_EQ(cfs_errc_success,
+            cfs_greenthread_spawn(dummy_greenthread, NULL, &gt));
+  ASSERT_EQ(cfs_errc_success, cfs_greenthread_yield());
+  cfs_greenthread_destroy(gt);
 
-  (void)cfs_greenthread_spawn(NULL, NULL, &gt);
-  (void)cfs_greenthread_destroy(NULL);
-  (void)cfs_greenthread_destroy(gt);
+  ASSERT_EQ(cfs_errc_success, cfs_greenthread_spawn(NULL, NULL, &gt));
+  cfs_greenthread_destroy(NULL);
+  cfs_greenthread_destroy(gt);
 
-  (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req);
+  ASSERT_EQ(cfs_errc_success, cfs_malloc(sizeof(cfs_request_t), (void **)&req));
   if (req) {
     memset(req, 0, sizeof(cfs_request_t));
-    (void)cfs_request_retain(req);
-    (void)cfs_cancel_request(rt, req);
-    (void)cfs_cancel_request(NULL, req);
+    cfs_request_retain(req);
+    ASSERT_EQ(cfs_errc_success, cfs_cancel_request(rt, req));
+    ASSERT_EQ(cfs_true, req->cancelled);
+    ASSERT_EQ(cfs_errc_invalid_argument, cfs_cancel_request(NULL, req));
 
-    (void)cfs_serialize_request(req, &buf, &sz);
-    (void)cfs_deserialize_request(buf, sz, &req_ptr);
-    (void)cfs_free(buf);
-    (void)cfs_request_release(req_ptr);
-    (void)cfs_serialize_request(NULL, &buf, &sz);
-    (void)cfs_deserialize_request(NULL, sz, &req_ptr);
+    /* Test serialization with empty paths */
+    ASSERT_EQ(cfs_errc_success, cfs_serialize_request(req, &buf, &sz));
+    ASSERT_EQ(cfs_errc_success, cfs_deserialize_request(buf, sz, &req_ptr));
+    cfs_free(buf);
+    cfs_request_release(req_ptr);
 
-    (void)cfs_request_release(req);
+    /* Test serialization with non-empty target_path and dest_path */
+    req->opcode = cfs_opcode_copy_file;
+    (void)cfs_path_init_str(&req->target_path, CFS_STR("src_file.txt"));
+    (void)cfs_path_init_str(&req->dest_path, CFS_STR("dst_file.txt"));
+    ASSERT_EQ(cfs_errc_success, cfs_serialize_request(req, &buf, &sz));
+    ASSERT_EQ(cfs_errc_success, cfs_deserialize_request(buf, sz, &req_ptr));
+    ASSERT_EQ(cfs_opcode_copy_file, req_ptr->opcode);
+    ASSERT_EQ(cfs_errc_success,
+              cfs_path_compare(&req->target_path, &req_ptr->target_path, &cmp));
+    ASSERT_EQ(0, cmp);
+    ASSERT_EQ(cfs_errc_success,
+              cfs_path_compare(&req->dest_path, &req_ptr->dest_path, &cmp));
+    ASSERT_EQ(0, cmp);
+    cfs_free(buf);
+    cfs_request_release(req_ptr);
+
+    ASSERT_EQ(cfs_errc_invalid_argument,
+              cfs_serialize_request(NULL, &buf, &sz));
+    ASSERT_EQ(cfs_errc_invalid_argument,
+              cfs_deserialize_request(NULL, sz, &req_ptr));
+
+    cfs_request_release(req);
   }
 
-  (void)cfs_set_oom_handler(NULL);
-  (void)cfs_runtime_set_sandbox(rt, &sbox);
-  (void)cfs_runtime_set_sandbox(NULL, &sbox);
+  cfs_set_oom_handler(NULL);
+  ASSERT_EQ(cfs_errc_success, cfs_runtime_set_sandbox(rt, &sbox));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_runtime_set_sandbox(NULL, &sbox));
 
-  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
-  (void)cfs_file_size_async(rt, &p, NULL, NULL);
-  (void)cfs_dir_itr_init_async(rt, &p, NULL, NULL);
+  ASSERT_EQ(cfs_errc_success, cfs_path_init_str(&p, CFS_STR("dummy")));
+  ASSERT_EQ(cfs_errc_success, cfs_file_size_async(rt, &p, NULL, NULL));
+  ASSERT_EQ(cfs_errc_success, cfs_dir_itr_init_async(rt, &p, NULL, NULL));
 
-  (void)cfs_file_size_async(NULL, &p, NULL, NULL);
-  (void)cfs_dir_itr_init_async(NULL, &p, NULL, NULL);
+  ASSERT_EQ(cfs_errc_invalid_argument,
+            cfs_file_size_async(NULL, &p, NULL, NULL));
+  ASSERT_EQ(cfs_errc_invalid_argument,
+            cfs_dir_itr_init_async(NULL, &p, NULL, NULL));
 
-  (void)cfs_path_destroy(&p);
-  (void)cfs_runtime_destroy(rt);
+  cfs_path_destroy(&p);
+  cfs_runtime_destroy(rt);
 
   PASS();
 }
@@ -808,94 +868,106 @@ TEST exhaustive_nulls(void) {
   cfs_error_code ec;
   cfs_path out_p = {0};
 
-  (void)cfs_path_init_str(&p, CFS_STR("dummy"));
+  ASSERT_EQ(cfs_errc_success, cfs_path_init_str(&p, CFS_STR("dummy")));
 
   /* cfs_path nulls */
-  (void)cfs_path_init(NULL);
-  (void)cfs_path_destroy(NULL);
-  (void)cfs_path_clone(NULL, &p);
-  (void)cfs_path_clone(&p, NULL);
-  (void)cfs_path_c_str(&p, NULL);
-  (void)cfs_path_assign(NULL, CFS_STR(""));
-  (void)cfs_path_append(NULL, CFS_STR(""));
-  (void)cfs_path_is_empty(NULL, &b);
-  (void)cfs_path_is_empty(&p, NULL);
-  (void)cfs_path_filename(NULL, &out_p);
-  (void)cfs_path_extension(NULL, &out_p);
-  (void)cfs_path_stem(NULL, &out_p);
-  (void)cfs_path_remove_filename(NULL);
+  cfs_path_init(NULL);
+  cfs_path_destroy(NULL);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_clone(NULL, &p));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_clone(&p, NULL));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_c_str(&p, NULL));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_assign(NULL, CFS_STR("")));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_append(NULL, CFS_STR("")));
+  ASSERT_EQ(cfs_errc_success, cfs_path_is_empty(NULL, &b));
+  ASSERT_EQ(cfs_true, b);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_is_empty(&p, NULL));
+  ASSERT_EQ(cfs_errc_success, cfs_path_filename(NULL, &out_p));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_extension(NULL, &out_p));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_path_stem(NULL, &out_p));
+  cfs_path_remove_filename(NULL);
 
   /* cfs_string nulls */
-  (void)cfs_strlen(NULL, &out_sz);
-  (void)cfs_strlen(CFS_STR(""), NULL);
-  (void)cfs_strcpy(NULL, CFS_STR(""), &out_str);
-  (void)cfs_strcpy(buf, NULL, &out_str);
-  (void)cfs_strncpy(NULL, CFS_STR(""), 5, &out_str);
-  (void)cfs_strncpy(buf, NULL, 5, &out_str);
-  (void)cfs_strcat(NULL, CFS_STR(""), &out_str);
-  (void)cfs_strcat(buf, NULL, &out_str);
-  (void)cfs_strcmp(NULL, NULL, &out_int);
-  (void)cfs_strcmp(NULL, CFS_STR(""), &out_int);
-  (void)cfs_strcmp(CFS_STR(""), NULL, &out_int);
-  (void)cfs_strncmp(NULL, NULL, 5, &out_int);
-  (void)cfs_strncmp(NULL, CFS_STR(""), 5, &out_int);
-  (void)cfs_strncmp(CFS_STR(""), NULL, 5, &out_int);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_strlen(NULL, &out_sz));
+  ASSERT_EQ(0, out_sz);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_strlen(CFS_STR(""), NULL));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_strcpy(NULL, CFS_STR(""), &out_str));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_strcpy(buf, NULL, &out_str));
+  ASSERT_EQ(cfs_errc_invalid_argument,
+            cfs_strncpy(NULL, CFS_STR(""), 5, &out_str));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_strncpy(buf, NULL, 5, &out_str));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_strcat(NULL, CFS_STR(""), &out_str));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_strcat(buf, NULL, &out_str));
+  ASSERT_EQ(cfs_errc_success, cfs_strcmp(NULL, NULL, &out_int));
+  ASSERT_EQ(0, out_int);
+  ASSERT_EQ(cfs_errc_success, cfs_strcmp(NULL, CFS_STR(""), &out_int));
+  ASSERT_EQ(-1, out_int);
+  ASSERT_EQ(cfs_errc_success, cfs_strcmp(CFS_STR(""), NULL, &out_int));
+  ASSERT_EQ(1, out_int);
+  ASSERT_EQ(cfs_errc_success, cfs_strncmp(NULL, NULL, 5, &out_int));
+  ASSERT_EQ(0, out_int);
+  ASSERT_EQ(cfs_errc_success, cfs_strncmp(NULL, CFS_STR(""), 5, &out_int));
+  ASSERT_EQ(-1, out_int);
+  ASSERT_EQ(cfs_errc_success, cfs_strncmp(CFS_STR(""), NULL, 5, &out_int));
+  ASSERT_EQ(1, out_int);
 
   /* File nulls */
-  (void)cfs_remove(NULL, &ec);
-  (void)cfs_file_size(NULL, &out_u, &ec);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_remove(NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_file_size(NULL, &out_u, &ec));
   (void)cfs_file_size(&p, NULL, &ec);
-  (void)cfs_space(NULL, &out_spc, &ec);
-  (void)cfs_last_write_time(NULL, &out_ft, &ec);
-  (void)cfs_hard_link_count(NULL, &out_u, &ec);
-  (void)cfs_permissions(NULL, 0, 0, &ec);
-  (void)cfs_equivalent(NULL, &p, &b, &ec);
-  (void)cfs_equivalent(&p, NULL, &b, &ec);
-  (void)cfs_status(NULL, NULL, &ec);
-  (void)cfs_symlink_status(NULL, NULL, &ec);
-  (void)cfs_exists_path(NULL, &b, &ec);
-  (void)cfs_is_empty_path(NULL, &b, &ec);
-  (void)cfs_create_directory(NULL, &ec);
-  (void)cfs_create_directories(NULL, &ec);
-  (void)cfs_create_hard_link(NULL, &p, &ec);
-  (void)cfs_create_hard_link(&p, NULL, &ec);
-  (void)cfs_create_directory_symlink(NULL, &p, &ec);
-  (void)cfs_create_directory_symlink(&p, NULL, &ec);
-  (void)cfs_remove_all(NULL, &out_sz, &ec);
-  (void)cfs_rename(NULL, &p, &ec);
-  (void)cfs_rename(&p, NULL, &ec);
-  (void)cfs_resize_file(NULL, 0, &ec);
-  (void)cfs_temp_directory_path(NULL, &ec);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_space(NULL, &out_spc, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_last_write_time(NULL, &out_ft, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_hard_link_count(NULL, &out_u, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_permissions(NULL, 0, 0, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_equivalent(NULL, &p, &b, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_equivalent(&p, NULL, &b, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_status(NULL, NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_symlink_status(NULL, NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_exists_path(NULL, &b, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_is_empty_path(NULL, &b, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_create_directory(NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_create_directories(NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_create_hard_link(NULL, &p, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_create_hard_link(&p, NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument,
+            cfs_create_directory_symlink(NULL, &p, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument,
+            cfs_create_directory_symlink(&p, NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_remove_all(NULL, &out_sz, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_rename(NULL, &p, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_rename(&p, NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_resize_file(NULL, 0, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_temp_directory_path(NULL, &ec));
 
   /* Path copy/abs nulls */
-  (void)cfs_absolute(NULL, &p, &ec);
-  (void)cfs_canonical(NULL, &p, &ec);
-  (void)cfs_weakly_canonical(NULL, &p, &ec);
-  (void)cfs_read_symlink(NULL, &p, &ec);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_absolute(NULL, &p, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_canonical(NULL, &p, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_weakly_canonical(NULL, &p, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_read_symlink(NULL, &p, &ec));
   (void)cfs_relative(NULL, &p, &out_p, &ec);
   (void)cfs_proximate(NULL, &p, &out_p, &ec);
-  (void)cfs_copy(NULL, &p, 0, &ec);
-  (void)cfs_copy_symlink(NULL, &p, &ec);
-  (void)cfs_copy_file(NULL, &p, 0, &ec);
-  (void)cfs_current_path(NULL, &ec);
-  (void)cfs_current_path_set(NULL, &ec);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_copy(NULL, &p, 0, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_copy_symlink(NULL, &p, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_copy_file(NULL, &p, 0, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_current_path(NULL, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_current_path_set(NULL, &ec));
 
   /* Runtime nulls */
-  (void)cfs_runtime_init(NULL, &rt, &ec);
-  (void)cfs_runtime_init(NULL, NULL, &ec);
-  (void)cfs_dispatch_request(NULL, NULL, NULL, NULL);
-  (void)cfs_remove_async(NULL, NULL, NULL, NULL);
-  (void)cfs_runtime_poll(NULL);
-  (void)cfs_request_retain(NULL);
-  (void)cfs_request_release(NULL);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_runtime_init(NULL, &rt, &ec));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_runtime_init(NULL, NULL, &ec));
+  cfs_dispatch_request(NULL, NULL, NULL, NULL);
+  ASSERT_EQ(cfs_errc_invalid_argument,
+            cfs_remove_async(NULL, NULL, NULL, NULL));
+  ASSERT_EQ(cfs_errc_success, cfs_runtime_poll(NULL));
+  cfs_request_retain(NULL);
+  cfs_request_release(NULL);
 
   /* Others */
-  (void)cfs_malloc(0, NULL);
-  (void)cfs_free(NULL);
-  (void)cfs_realloc(NULL, 0, NULL);
-  (void)cfs_calloc(0, 0, NULL);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_malloc(0, NULL));
+  cfs_free(NULL);
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_realloc(NULL, 0, NULL));
+  ASSERT_EQ(cfs_errc_invalid_argument, cfs_calloc(0, 0, NULL));
 
-  (void)cfs_path_destroy(&p);
+  cfs_path_destroy(&p);
   PASS();
 }
 
@@ -906,6 +978,11 @@ TEST exhaustive_nulls(void) {
 TEST real_file_operations(void) {
   FILE *f;
   cfs_path p = {0};
+  cfs_path p_dir = {0};
+  cfs_path p_nested = {0};
+  cfs_path p_copy = {0};
+  cfs_path p_link = {0};
+  cfs_path p_dev = {0};
   cfs_file_status st;
   cfs_error_code ec;
   cfs_uintmax_t size;
@@ -914,7 +991,9 @@ TEST real_file_operations(void) {
   cfs_uintmax_t links;
   cfs_perms perms = 0;
   cfs_bool is_empty;
+  cfs_size_t rem_count = 0;
   cfs_path p_renamed = {0};
+  cfs_recursive_directory_iterator *rit = NULL;
 
 #if defined(_MSC_VER)
   if (fopen_s(&f, "test_real.txt", "w") != 0)
@@ -929,20 +1008,97 @@ TEST real_file_operations(void) {
 
   (void)cfs_path_init_str(&p, CFS_STR("test_real.txt"));
 
-  (void)cfs_status(&p, &st, &ec);
-  (void)cfs_file_size(&p, &size, &ec);
-  (void)cfs_space(&p, &spc, &ec);
-  (void)cfs_last_write_time(&p, &ft, &ec);
-  (void)cfs_hard_link_count(&p, &links, &ec);
+  ASSERT_EQ(cfs_errc_success, cfs_status(&p, &st, &ec));
+  ASSERT_EQ(cfs_file_type_regular, st.type);
+  ASSERT_EQ(cfs_errc_success, cfs_symlink_status(&p, &st, &ec));
+  ASSERT_EQ(cfs_file_type_regular, st.type);
+  ASSERT_EQ(cfs_errc_success, cfs_file_size(&p, &size, &ec));
+  ASSERT_EQ(9, size);
+  ASSERT_EQ(cfs_errc_success, cfs_space(&p, &spc, &ec));
+  ASSERT_EQ(cfs_errc_success, cfs_last_write_time(&p, &ft, &ec));
+  ASSERT_EQ(cfs_errc_success, cfs_hard_link_count(&p, &links, &ec));
   (void)cfs_permissions(&p, perms, 0, &ec);
-  (void)cfs_is_empty_path(&p, &is_empty, &ec);
+  ASSERT_EQ(cfs_errc_success, cfs_is_empty_path(&p, &is_empty, &ec));
+  ASSERT_EQ(cfs_false, is_empty);
+
+  /* Test copy_file and copy_options */
+  (void)cfs_path_init_str(&p_copy, CFS_STR("test_real_copy.txt"));
+  (void)cfs_remove(&p_copy, NULL);
+  ASSERT_EQ(cfs_errc_success,
+            cfs_copy_file(&p, &p_copy, cfs_copy_options_none, &ec));
+  ASSERT_EQ(cfs_errc_file_exists,
+            cfs_copy_file(&p, &p_copy, cfs_copy_options_none, &ec));
+  ASSERT_EQ(cfs_errc_success,
+            cfs_copy_file(&p, &p_copy, cfs_copy_options_skip_existing, &ec));
+  ASSERT_EQ(
+      cfs_errc_success,
+      cfs_copy_file(&p, &p_copy, cfs_copy_options_overwrite_existing, &ec));
+  (void)cfs_remove(&p_copy, NULL);
+
+  /* Test copy_file error paths */
+  (void)cfs_path_init_str(&p_dir, CFS_STR("."));
+  (void)cfs_copy_file(&p, &p_dir, cfs_copy_options_overwrite_existing, &ec);
+  ASSERT_EQ(cfs_errc_success, cfs_status(&p_dir, &st, &ec));
+  ASSERT_EQ(cfs_file_type_directory, st.type);
+  ASSERT_EQ(cfs_errc_success, cfs_is_empty_path(&p_dir, &is_empty, &ec));
+  ASSERT_EQ(cfs_false, is_empty);
+
+#if !defined(CFS_OS_WINDOWS)
+  (void)cfs_path_init_str(&p_dev, CFS_STR("/dev/null"));
+  ASSERT_EQ(cfs_errc_success, cfs_status(&p_dev, &st, &ec));
+  ASSERT_EQ(cfs_file_type_character, st.type);
+  ASSERT_EQ(cfs_errc_success, cfs_is_other(st, &is_empty));
+  ASSERT_EQ(cfs_true, is_empty);
+  (void)cfs_path_destroy(&p_dev);
+
+  /* Test hard link & resize_file */
+  (void)cfs_path_init_str(&p_link, CFS_STR("test_real_hardlink.txt"));
+  (void)cfs_remove(&p_link, NULL);
+  ASSERT_EQ(cfs_errc_success, cfs_create_hard_link(&p, &p_link, &ec));
+  (void)cfs_create_hard_link(&p, &p_link, &ec);
+  (void)cfs_remove(&p_link, NULL);
+  (void)cfs_path_destroy(&p_link);
+
+  ASSERT_EQ(cfs_errc_success, cfs_resize_file(&p, 4, &ec));
+#endif
+
+  /* Test create_directory, create_directories, create_directory_symlink,
+   * remove_all */
+  (void)cfs_path_init_str(&p_nested, CFS_STR("test_dir_a/test_dir_b"));
+  (void)cfs_path_init_str(&p_link, CFS_STR("test_dir_a"));
+  (void)cfs_remove_all(&p_link, &rem_count, NULL);
+  ASSERT_EQ(cfs_errc_success, cfs_create_directories(&p_nested, &ec));
+  ASSERT_EQ(cfs_errc_success, cfs_create_directories(&p_nested, &ec));
+  (void)cfs_create_directory(&p_nested, &ec);
+
+  (void)cfs_path_init_str(&p_dev, CFS_STR("test_dir_sym"));
+  (void)cfs_remove(&p_dev, NULL);
+  (void)cfs_create_directory_symlink(&p_link, &p_dev, &ec);
+  (void)cfs_symlink_status(&p_dev, &st, &ec);
+  (void)cfs_remove(&p_dev, NULL);
+  (void)cfs_path_destroy(&p_dev);
+
+  if (cfs_rec_dir_itr_init(&p_link, &rit, &ec) == cfs_errc_success && rit) {
+    cfs_rec_dir_itr_close(rit);
+  }
+
+  ASSERT_EQ(cfs_errc_success, cfs_remove_all(&p_link, &rem_count, &ec));
+  ASSERT(rem_count >= 2);
+  (void)cfs_remove_all(&p_link, &rem_count, &ec);
 
   (void)cfs_path_init_str(&p_renamed, CFS_STR("test_real_renamed.txt"));
+  ASSERT_EQ(cfs_errc_success, cfs_rename(&p, &p_renamed, &ec));
   (void)cfs_rename(&p, &p_renamed, &ec);
+  (void)cfs_resize_file(&p, 4, &ec);
+  (void)cfs_copy_file(&p, &p_copy, cfs_copy_options_none, &ec);
 
-  (void)cfs_remove(&p_renamed, &ec);
+  ASSERT_EQ(cfs_errc_success, cfs_remove(&p_renamed, &ec));
 
   (void)cfs_path_destroy(&p);
+  (void)cfs_path_destroy(&p_dir);
+  (void)cfs_path_destroy(&p_nested);
+  (void)cfs_path_destroy(&p_copy);
+  (void)cfs_path_destroy(&p_link);
   (void)cfs_path_destroy(&p_renamed);
   PASS();
 }
@@ -1041,16 +1197,40 @@ TEST final_coverage(void) {
   (void)cfs_permissions(&p, 0777, cfs_perm_options_replace, &ec);
 
   /* cfs_copy_symlink success branch */
+  remove("test_perms_sym.txt");
+  remove("test_perms_sym_copy.txt");
   (void)cfs_path_init_str(&p2, CFS_STR("test_perms_sym.txt"));
+  (void)cfs_create_symlink(&p, &p2, &ec);
+  /* test cfs_create_symlink failure when link already exists */
   (void)cfs_create_symlink(&p, &p2, &ec);
   (void)cfs_path_init_str(&out, CFS_STR("test_perms_sym_copy.txt"));
   (void)cfs_copy_symlink(&p2, &out, &ec);
+  remove("test_perms_sym_copy.txt");
   (void)cfs_path_destroy(&out);
 
   /* cfs_path_lexically_relative */
   (void)cfs_path_init(&out);
   (void)cfs_path_lexically_relative(&p, &p2, &out);
   (void)cfs_path_destroy(&out);
+  (void)cfs_path_init(&out);
+  (void)cfs_path_lexically_relative(&p, &p, &out);
+  (void)cfs_path_destroy(&out);
+  (void)cfs_path_init(&out);
+  (void)cfs_path_lexically_relative(&p, NULL, &out);
+  (void)cfs_path_destroy(&out);
+  {
+    cfs_path pa = {0}, pb = {0};
+    (void)cfs_path_init_str(&pa, CFS_STR("/a/b/c"));
+    (void)cfs_path_init_str(&pb, CFS_STR("/a/b"));
+    (void)cfs_path_init(&out);
+    (void)cfs_path_lexically_relative(&pa, &pb, &out);
+    (void)cfs_path_destroy(&out);
+    (void)cfs_path_init(&out);
+    (void)cfs_path_lexically_relative(&pb, &pa, &out);
+    (void)cfs_path_destroy(&out);
+    (void)cfs_path_destroy(&pa);
+    (void)cfs_path_destroy(&pb);
+  }
 
   /* cfs_path_is_absolute */
   (void)cfs_path_is_absolute(&p, &b);
@@ -1068,6 +1248,13 @@ CFS_API extern int g_cfs_realloc_fail;
 CFS_API extern int g_cfs_calloc_fail;
 CFS_API extern int g_cfs_getcwd_fail;
 CFS_API extern int g_cfs_readlink_fail;
+
+static int g_oom_handler_called = 0;
+
+/**
+ * \brief Test OOM handler callback.
+ */
+static void test_oom_handler_cb(void) { g_oom_handler_called++; }
 
 /**
  * \brief Test case for out_of_memory.
@@ -1094,6 +1281,20 @@ TEST out_of_memory(void) {
   cfg.mode = cfs_modality_multithread;
   cfg.thread_pool_size = 1;
   cfg.ipc_path = NULL;
+
+  /* Test cfs_set_oom_handler invocation on malloc, realloc, calloc */
+  g_oom_handler_called = 0;
+  cfs_set_oom_handler(test_oom_handler_cb);
+  g_cfs_malloc_fail = 1;
+  ASSERT_EQ(cfs_errc_not_enough_memory, cfs_malloc(100, &buf));
+  ASSERT_EQ(1, g_oom_handler_called);
+  g_cfs_realloc_fail = 1;
+  ASSERT_EQ(cfs_errc_not_enough_memory, cfs_realloc(NULL, 100, &buf));
+  ASSERT_EQ(2, g_oom_handler_called);
+  g_cfs_calloc_fail = 1;
+  ASSERT_EQ(cfs_errc_not_enough_memory, cfs_calloc(10, 10, &buf));
+  ASSERT_EQ(3, g_oom_handler_called);
+  cfs_set_oom_handler(NULL);
 
   /* Test cfs_malloc OOM */
   g_cfs_malloc_fail = 1;
@@ -1268,10 +1469,43 @@ TEST cover_everything(void) {
   (void)cfs_runtime_destroy(rt);
   g_cfs_calloc_fail = 0;
 
+  g_cfs_calloc_fail = 2;
+  (void)cfs_runtime_init(&cfg, &rt, &ec);
+  (void)cfs_runtime_destroy(rt);
+  g_cfs_calloc_fail = 0;
+
   g_cfs_malloc_fail = 1;
   (void)cfs_runtime_init(&cfg, &rt, &ec);
   (void)cfs_runtime_destroy(rt);
   g_cfs_malloc_fail = 0;
+
+  {
+    cfs_path dot_p = {0};
+    cfs_path tmp_p = {0};
+    (void)cfs_path_init_str(&dot_p, CFS_STR("."));
+    (void)cfs_current_path_set(&dot_p, &ec);
+    (void)cfs_path_destroy(&dot_p);
+
+#if !defined(CFS_OS_WINDOWS) && !defined(CFS_OS_DOS)
+    {
+      const char *old_tmpdir = getenv("TMPDIR");
+      char saved_tmpdir[1024];
+      int had_tmpdir = 0;
+      if (old_tmpdir) {
+        had_tmpdir = 1;
+        strncpy(saved_tmpdir, old_tmpdir, sizeof(saved_tmpdir) - 1);
+        saved_tmpdir[sizeof(saved_tmpdir) - 1] = '\0';
+      }
+      unsetenv("TMPDIR");
+      (void)cfs_path_init(&tmp_p);
+      (void)cfs_temp_directory_path(&tmp_p, &ec);
+      (void)cfs_path_destroy(&tmp_p);
+      if (had_tmpdir) {
+        setenv("TMPDIR", saved_tmpdir, 1);
+      }
+    }
+#endif
+  }
 
   PASS();
 }
@@ -1871,9 +2105,11 @@ TEST edge_cases_and_oom(void) {
 
   (void)cfs_dir_itr_init(&p, &it, &ec);
   if (it) {
-    while (cfs_dir_itr_next(it, &entry, &ec) == 0) {
+    while (cfs_dir_itr_next(it, &entry, &ec) == 0 && entry != NULL) {
     }
-    (void)cfs_dir_itr_next(it, &entry, &ec);
+    ASSERT_EQ((void *)NULL, (void *)entry);
+    ASSERT_EQ(cfs_errc_success, cfs_dir_itr_next(it, &entry, &ec));
+    ASSERT_EQ((void *)NULL, (void *)entry);
     (void)cfs_dir_itr_close(it);
   }
 

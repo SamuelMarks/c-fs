@@ -28,6 +28,7 @@ extern "C" {
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <io.h>
+#include <direct.h>
 #elif !defined(__WATCOMC__) && !defined(__MSDOS__) && !defined(CFS_OS_DOS)
 #include <dirent.h>
 #include <pthread.h>
@@ -1107,10 +1108,11 @@ NO_DISCARD CFS_API cfs_errc cfs_path_is_relative(const cfs_path *p,
  *
  * \param lhs Argument representing the target resource.
  * \param rhs Argument representing the target resource.
+ * \param out Pointer to store the lexicographical comparison result.
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_path_compare(const cfs_path *lhs,
-                                             const cfs_path *rhs);
+                                             const cfs_path *rhs, int *out);
 /* Phase 14: Lexical Path Operations */
 
 /** \brief 132. Lexically normalizes the path (resolves . and .. internally) */
@@ -1877,7 +1879,8 @@ typedef enum cfs_opcode {
   cfs_opcode_is_empty,
   /** \brief Represents the cfs_opcode_space enumerator or field data. */
   cfs_opcode_space,
-  /** \brief Last write time operation. */ cfs_opcode_last_write_time
+  /** \brief Last write time operation. */ cfs_opcode_last_write_time,
+  /** \brief Directory iterator init operation. */ cfs_opcode_dir_itr_init
 } cfs_opcode;
 
 /** \brief Forward declaration for internal mutex structure. */
@@ -2221,7 +2224,13 @@ cfs_runtime_set_sandbox(cfs_runtime_t *rt, const cfs_sandbox_config *config);
 
 struct cfs_directory_iterator {
 #if defined(CFS_OS_WINDOWS)
-  int dummy;
+  HANDLE find_handle;
+#if defined(CFS_UNICODE)
+  WIN32_FIND_DATAW find_data;
+#else
+  WIN32_FIND_DATAA find_data;
+#endif
+  cfs_bool first;
 #else
   DIR *dirp;
 #endif
@@ -2231,6 +2240,7 @@ struct cfs_directory_iterator {
 
 struct cfs_recursive_directory_iterator {
   cfs_directory_iterator base;
+  cfs_bool disable_recursion_pending;
 };
 
 /**
@@ -2790,15 +2800,13 @@ static cfs_errc cfs_thread_pool_create(cfs_size_t num_threads,
                                        cfs_thread_pool_t **out_pool) {
   cfs_size_t i;
   cfs_thread_pool_t *pool = NULL;
-  /* if (!out_pool) */
-  /* return cfs_errc_not_enough_memory; */
   *out_pool = NULL;
 
   (void)cfs_calloc(1, sizeof(cfs_thread_pool_t), (void **)&pool);
   if (!pool)
     return cfs_errc_not_enough_memory;
 
-  pool->num_threads = num_threads;
+  pool->num_threads = 0;
   pool->work_queue = work;
   pool->completion_queue = comp;
   (void)cfs_calloc(num_threads, sizeof(cfs_thread_t),
@@ -2812,15 +2820,18 @@ static cfs_errc cfs_thread_pool_create(cfs_size_t num_threads,
 
   for (i = 0; i < num_threads; ++i) {
 #if defined(CFS_OS_WINDOWS)
-    pool->threads[i].h = NULL;
-    pool->threads[i].h =
+    pool->threads[pool->num_threads].h =
         CreateThread(NULL, 0, cfs_worker_thread, pool, 0, NULL);
+    if (pool->threads[pool->num_threads].h)
+      pool->num_threads++;
 #elif defined(CFS_OS_DOS)
     (void)pool;
     (void)i;
     (void)cfs_worker_thread;
 #else
-    pthread_create(&pool->threads[i].t, NULL, cfs_worker_thread, pool);
+    if (pthread_create(&pool->threads[pool->num_threads].t, NULL,
+                       cfs_worker_thread, pool) == 0)
+      pool->num_threads++;
 #endif
   }
 
@@ -2840,12 +2851,9 @@ static void cfs_thread_pool_destroy(
     cfs_thread_pool_t *pool) {
   cfs_size_t i;
 
-  if (!pool)
-    return;
-
   (void)cfs_queue_shutdown(pool->work_queue);
 
-  if (pool->threads && pool->num_threads > 0) {
+  if (pool->threads) {
     cfs_thread_t *threads = pool->threads;
     for (i = 0; i < pool->num_threads; ++i) {
 #if defined(CFS_OS_WINDOWS)
@@ -2884,26 +2892,26 @@ NO_DISCARD CFS_API cfs_errc cfs_remove_async(cfs_runtime_t *rt,
   cfs_request_t *req;
 
   if (!rt || !p)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 
   (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return cfs_errc_not_enough_memory;
 
   req->opcode = cfs_opcode_remove;
-  (void)cfs_path_init(&req->target_path);
+  cfs_path_init(&req->target_path);
   (void)cfs_path_clone(&req->target_path, p);
-  (void)cfs_path_init(&req->dest_path);
+  cfs_path_init(&req->dest_path);
   req->result_buffer = NULL;
   req->result_size = 0;
-  (void)cfs_clear_error(&req->error);
+  cfs_clear_error(&req->error);
   req->callback = cb;
   req->user_data = user_data;
   req->next = NULL;
   req->ref_count = 1;
   req->cancelled = cfs_false;
 
-  (void)cfs_dispatch_request(rt, req, cb, user_data);
+  cfs_dispatch_request(rt, req, cb, user_data);
   return cfs_errc_success;
 }
 
@@ -2923,27 +2931,27 @@ NO_DISCARD CFS_API cfs_errc cfs_file_size_async(cfs_runtime_t *rt,
   cfs_request_t *req;
 
   if (!rt || !p)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 
   (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return cfs_errc_not_enough_memory;
 
   req->opcode = cfs_opcode_file_size;
-  (void)cfs_path_init(&req->target_path);
+  cfs_path_init(&req->target_path);
   (void)cfs_path_clone(&req->target_path, p);
-  (void)cfs_path_init(&req->dest_path);
+  cfs_path_init(&req->dest_path);
 
   req->result_size = sizeof(cfs_uintmax_t);
   (void)cfs_malloc(req->result_size, (void **)&req->result_buffer);
-  (void)cfs_clear_error(&req->error);
+  cfs_clear_error(&req->error);
   req->callback = cb;
   req->user_data = user_data;
   req->next = NULL;
   req->ref_count = 1;
   req->cancelled = cfs_false;
 
-  (void)cfs_dispatch_request(rt, req, cb, user_data);
+  cfs_dispatch_request(rt, req, cb, user_data);
   return cfs_errc_success;
 }
 
@@ -2960,18 +2968,18 @@ NO_DISCARD CFS_API cfs_errc cfs_runtime_init(const cfs_runtime_config *config,
                                              cfs_error_code *ec) {
   cfs_runtime_t *rt;
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!out_rt) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return cfs_errc_invalid_argument;
   }
   *out_rt = NULL;
 
   if (!config) {
     if (ec)
       (void)cfs_make_error_code_from_os(22, ec); /* EINVAL fallback */
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   }
 
   (void)cfs_malloc(sizeof(cfs_runtime_t), (void **)&rt);
@@ -3094,8 +3102,6 @@ NO_DISCARD CFS_API cfs_errc cfs_runtime_poll(cfs_runtime_t *rt) {
   return cfs_errc_success;
 }
 
-/* Re-implementing lost Phase 6, 7, 8, 9 functions */
-
 /* Phase 6: String Handling */
 /**
  * \brief Computes the length of a string safely.
@@ -3107,10 +3113,10 @@ NO_DISCARD CFS_API cfs_errc cfs_runtime_poll(cfs_runtime_t *rt) {
 NO_DISCARD CFS_API cfs_errc cfs_strlen(const cfs_char_t *str, cfs_size_t *out) {
   cfs_size_t len = 0;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = 0;
   if (!str)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   while (str[len])
     len++;
   *out = len;
@@ -3131,7 +3137,7 @@ NO_DISCARD CFS_API cfs_errc cfs_strcpy(cfs_char_t *dest, const cfs_char_t *src,
   if (out)
     *out = dest;
   if (!dest || !src)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   while ((dest[i] = src[i]) != 0)
     i++;
   return cfs_errc_success;
@@ -3152,7 +3158,7 @@ NO_DISCARD CFS_API cfs_errc cfs_strncpy(cfs_char_t *dest, const cfs_char_t *src,
   if (out)
     *out = dest;
   if (!dest || !src)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   for (i = 0; i < n && src[i] != 0; i++)
     dest[i] = src[i];
   for (; i < n; i++)
@@ -3176,7 +3182,7 @@ NO_DISCARD CFS_API cfs_errc cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
     *out = dest;
   (void)cfs_strlen(dest, &dest_len);
   if (!dest || !src)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   while ((dest[dest_len + i] = src[i]) != 0)
     i++;
   return cfs_errc_success;
@@ -3193,7 +3199,7 @@ NO_DISCARD CFS_API cfs_errc cfs_strcat(cfs_char_t *dest, const cfs_char_t *src,
 NO_DISCARD CFS_API cfs_errc cfs_strcmp(const cfs_char_t *lhs,
                                        const cfs_char_t *rhs, int *out) {
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   if (!lhs && !rhs) {
     *out = 0;
     return cfs_errc_success;
@@ -3228,7 +3234,7 @@ NO_DISCARD CFS_API cfs_errc cfs_strncmp(const cfs_char_t *lhs,
                                         const cfs_char_t *rhs, cfs_size_t count,
                                         int *out) {
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   if (!lhs && !rhs) {
     *out = 0;
     return cfs_errc_success;
@@ -3267,7 +3273,7 @@ NO_DISCARD CFS_API cfs_errc cfs_utf8_to_utf16(const char *utf8_str,
   if (out_req) {
     *out_req = (req > 0) ? (cfs_size_t)req : 0;
   }
-  return (req > 0) ? cfs_errc_success : cfs_errc_not_enough_memory;
+  return (req > 0) ? cfs_errc_success : cfs_errc_invalid_argument;
 }
 
 /**
@@ -3287,7 +3293,7 @@ NO_DISCARD CFS_API cfs_errc cfs_utf16_to_utf8(const wchar_t *utf16_str,
   if (out_req) {
     *out_req = (req > 0) ? (cfs_size_t)req : 0;
   }
-  return (req > 0) ? cfs_errc_success : cfs_errc_not_enough_memory;
+  return (req > 0) ? cfs_errc_success : cfs_errc_invalid_argument;
 }
 #endif
 
@@ -3312,7 +3318,7 @@ NO_DISCARD CFS_API cfs_errc cfs_mb_to_wide(const char *mb_str, wchar_t *dest,
   if (out_req) {
     *out_req = 0; /* Fallback not used on POSIX where cfs_char_t is char */
   }
-  return cfs_errc_not_enough_memory;
+  return cfs_errc_operation_not_supported;
 #endif
 }
 
@@ -3337,7 +3343,7 @@ NO_DISCARD CFS_API cfs_errc cfs_wide_to_mb(const wchar_t *wide_str, char *dest,
   if (out_req) {
     *out_req = 0; /* Fallback not used on POSIX */
   }
-  return cfs_errc_not_enough_memory;
+  return cfs_errc_operation_not_supported;
 #endif
 }
 
@@ -3365,7 +3371,7 @@ CFS_API void cfs_set_error(cfs_error_code *ec, int os_value,
  * errors.
  */
 CFS_API void cfs_clear_error(cfs_error_code *ec) {
-  (void)cfs_set_error(ec, 0, cfs_errc_success);
+  cfs_set_error(ec, 0, cfs_errc_success);
 }
 
 /**
@@ -3402,6 +3408,22 @@ NO_DISCARD CFS_API cfs_errc cfs_get_last_error(cfs_error_code *out) {
 }
 
 /**
+ * \brief Captures the last OS error into `ec` (if non-NULL) and returns the
+ * mapped `cfs_errc`.
+ *
+ * \param ec Optional pointer to store the captured error code.
+ * \return The mapped `cfs_errc` value.
+ */
+static cfs_errc cfs_record_last_error(cfs_error_code *ec) {
+  cfs_error_code local_ec;
+  (void)cfs_get_last_error(&local_ec);
+  if (ec) {
+    *ec = local_ec;
+  }
+  return local_ec.errc;
+}
+
+/**
  * \brief Retrieves a human-readable string representation of a POSIX error
  * code.
  *
@@ -3412,7 +3434,7 @@ NO_DISCARD CFS_API cfs_errc cfs_get_last_error(cfs_error_code *out) {
 NO_DISCARD CFS_API cfs_errc cfs_error_message(cfs_errc err, const char **out) {
   (void)err;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = "Error";
   return cfs_errc_success;
 }
@@ -3440,7 +3462,7 @@ CFS_API void cfs_path_init(cfs_path *p) {
  */
 NO_DISCARD CFS_API cfs_errc cfs_path_init_str(cfs_path *p,
                                               const cfs_char_t *source) {
-  (void)cfs_path_init(p);
+  cfs_path_init(p);
   if (source) {
     return cfs_path_assign(p, source);
   }
@@ -3456,7 +3478,7 @@ CFS_API void cfs_path_destroy(cfs_path *p) {
   if (!p)
     return;
   if (p->str)
-    (void)cfs_free(p->str);
+    cfs_free(p->str);
   p->str = NULL;
   p->length = 0;
   p->capacity = 0;
@@ -3472,8 +3494,8 @@ CFS_API void cfs_path_destroy(cfs_path *p) {
 NO_DISCARD CFS_API cfs_errc cfs_path_clone(cfs_path *dest,
                                            const cfs_path *src) {
   if (!dest || !src)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(dest);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(dest);
   if (src->str) {
     return cfs_path_assign(dest, src->str);
   }
@@ -3490,7 +3512,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_clone(cfs_path *dest,
 NO_DISCARD CFS_API cfs_errc cfs_path_c_str(const cfs_path *p,
                                            const cfs_char_t **out) {
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = (p && p->str) ? p->str : CFS_STR("");
   return cfs_errc_success;
 }
@@ -3505,7 +3527,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_c_str(const cfs_path *p,
 NO_DISCARD CFS_API cfs_errc cfs_path_make_preferred(cfs_path *p) {
   cfs_size_t i;
   if (!p || !p->str)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   for (i = 0; i < p->length; i++) {
     if (p->str[i] == CFS_CHAR('/') || p->str[i] == CFS_CHAR('\\'))
       p->str[i] = PATH_SEP_CHAR;
@@ -3526,10 +3548,10 @@ NO_DISCARD CFS_API cfs_errc cfs_path_generic_string(const cfs_path *p,
   cfs_char_t *res;
   cfs_size_t i;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = NULL;
   if (!p || !p->str)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_malloc((p->length + 1) * sizeof(cfs_char_t), (void **)&res);
   if (!res)
     return cfs_errc_not_enough_memory;
@@ -3586,7 +3608,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_concat(cfs_path *p,
   cfs_size_t src_len;
   cfs_size_t new_len;
   if (!p || !source)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_strlen(source, &src_len);
   if (src_len == 0)
     return cfs_errc_success;
@@ -3598,7 +3620,6 @@ NO_DISCARD CFS_API cfs_errc cfs_path_concat(cfs_path *p,
   return cfs_errc_success;
 }
 
-/* cfs_path_append implementation from recovered file ending */
 /**
  * \brief Appends a source string to the path, resolving directory separators
  * intelligently.
@@ -3618,7 +3639,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_append(cfs_path *p,
 #endif
 
   if (!p || !source)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 
   {
     cfs_bool empty;
@@ -3805,7 +3826,7 @@ static cfs_errc cfs_path_reserve(cfs_path *p, cfs_size_t new_cap) {
 NO_DISCARD CFS_API cfs_errc cfs_path_is_empty(const cfs_path *p,
                                               cfs_bool *out) {
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = (!p || p->length == 0);
   return cfs_errc_success;
 }
@@ -3824,10 +3845,10 @@ NO_DISCARD CFS_API cfs_errc cfs_path_assign(cfs_path *p,
   cfs_errc rc;
   if (!p) {
     LOG_DEBUG("cfs_path_assign: p is NULL");
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   }
   if (!source) {
-    (void)cfs_path_clear(p);
+    cfs_path_clear(p);
     return cfs_errc_success;
   }
   (void)cfs_strlen(source, &len);
@@ -3841,6 +3862,19 @@ NO_DISCARD CFS_API cfs_errc cfs_path_assign(cfs_path *p,
   return cfs_errc_success;
 }
 
+/** \brief Global out-of-memory callback handler. */
+static cfs_oom_handler_t g_cfs_oom_handler = NULL;
+
+/**
+ * \brief Registers a global callback hook to trigger when dynamic memory
+ * allocation fails.
+ *
+ * \param handler Argument representing the target resource.
+ */
+CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler) {
+  g_cfs_oom_handler = handler;
+}
+
 /**
  * \brief Allocates memory using the internal allocator or fallback OS
  * mechanism.
@@ -3850,9 +3884,15 @@ NO_DISCARD CFS_API cfs_errc cfs_path_assign(cfs_path *p,
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_malloc(cfs_size_t size, void **out) {
-  if (out)
-    *out = malloc(size);
-  return (out && *out) ? cfs_errc_success : cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = malloc(size);
+  if (!*out) {
+    if (g_cfs_oom_handler)
+      g_cfs_oom_handler();
+    return cfs_errc_not_enough_memory;
+  }
+  return cfs_errc_success;
 }
 /**
  * \brief Frees previously allocated memory.
@@ -3870,9 +3910,15 @@ CFS_API void cfs_free(void *ptr) { free(ptr); }
  */
 NO_DISCARD CFS_API cfs_errc cfs_realloc(void *ptr, cfs_size_t size,
                                         void **out) {
-  if (out)
-    *out = realloc(ptr, size);
-  return (out && *out) ? cfs_errc_success : cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = realloc(ptr, size);
+  if (!*out) {
+    if (g_cfs_oom_handler)
+      g_cfs_oom_handler();
+    return cfs_errc_not_enough_memory;
+  }
+  return cfs_errc_success;
 }
 /**
  * \brief Allocates zero-initialized memory for an array of elements.
@@ -3884,9 +3930,15 @@ NO_DISCARD CFS_API cfs_errc cfs_realloc(void *ptr, cfs_size_t size,
  */
 NO_DISCARD CFS_API cfs_errc cfs_calloc(cfs_size_t num, cfs_size_t size,
                                        void **out) {
-  if (out)
-    *out = calloc(num, size);
-  return (out && *out) ? cfs_errc_success : cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = calloc(num, size);
+  if (!*out) {
+    if (g_cfs_oom_handler)
+      g_cfs_oom_handler();
+    return cfs_errc_not_enough_memory;
+  }
+  return cfs_errc_success;
 }
 
 /**
@@ -3902,8 +3954,8 @@ NO_DISCARD CFS_API cfs_errc cfs_path_filename(const cfs_path *p,
   cfs_size_t i, start_idx;
   cfs_bool is_sep = cfs_false;
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
   root_name_len = cfs_get_root_name_len(p);
@@ -3925,15 +3977,14 @@ NO_DISCARD CFS_API cfs_errc cfs_path_filename(const cfs_path *p,
   {
     cfs_size_t fn_len = p->length - start_idx;
     cfs_char_t *buf;
-    if (fn_len > 0) {
-      if (cfs_calloc(fn_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
-        return cfs_errc_not_enough_memory;
-      CFS_STRNCPY_SAFE(buf, fn_len + 1, p->str + start_idx, fn_len);
-      (void)cfs_path_assign(out, buf);
-      (void)cfs_free(buf);
-    }
+    cfs_errc rc;
+    if (cfs_calloc(fn_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
+      return cfs_errc_not_enough_memory;
+    CFS_STRNCPY_SAFE(buf, fn_len + 1, p->str + start_idx, fn_len);
+    rc = cfs_path_assign(out, buf);
+    cfs_free(buf);
+    return rc;
   }
-  return cfs_errc_success;
 }
 
 /**
@@ -3948,17 +3999,18 @@ NO_DISCARD CFS_API cfs_errc cfs_path_extension(const cfs_path *p,
   cfs_path fn;
   cfs_size_t i;
   cfs_size_t dot_idx = (cfs_size_t)-1;
+  cfs_errc rc = cfs_errc_success;
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   if (cfs_path_filename(p, &fn) != 0)
     return cfs_errc_not_enough_memory;
   if (fn.length == 0 || (fn.length == 1 && fn.str[0] == CFS_CHAR('.')) ||
       (fn.length == 2 && fn.str[0] == CFS_CHAR('.') &&
        fn.str[1] == CFS_CHAR('.'))) {
-    (void)cfs_path_destroy(&fn);
+    cfs_path_destroy(&fn);
     return cfs_errc_success;
   }
   for (i = fn.length; i > 0; i--) {
@@ -3971,15 +4023,15 @@ NO_DISCARD CFS_API cfs_errc cfs_path_extension(const cfs_path *p,
     cfs_size_t ext_len = fn.length - dot_idx;
     cfs_char_t *buf;
     if (cfs_calloc(ext_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0) {
-      (void)cfs_path_destroy(&fn);
+      cfs_path_destroy(&fn);
       return cfs_errc_not_enough_memory;
     }
     CFS_STRNCPY_SAFE(buf, ext_len + 1, fn.str + dot_idx, ext_len);
-    (void)cfs_path_assign(out, buf);
-    (void)cfs_free(buf);
+    rc = cfs_path_assign(out, buf);
+    cfs_free(buf);
   }
-  (void)cfs_path_destroy(&fn);
-  return cfs_errc_success;
+  cfs_path_destroy(&fn);
+  return rc;
 }
 
 /**
@@ -3993,19 +4045,20 @@ NO_DISCARD CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out) {
   cfs_path fn;
   cfs_size_t i;
   cfs_size_t dot_idx = (cfs_size_t)-1;
+  cfs_errc rc;
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   if (cfs_path_filename(p, &fn) != 0)
     return cfs_errc_not_enough_memory;
   if (fn.length == 0 || (fn.length == 1 && fn.str[0] == CFS_CHAR('.')) ||
       (fn.length == 2 && fn.str[0] == CFS_CHAR('.') &&
        fn.str[1] == CFS_CHAR('.'))) {
-    (void)cfs_path_assign(out, fn.str);
-    (void)cfs_path_destroy(&fn);
-    return cfs_errc_success;
+    rc = cfs_path_assign(out, fn.str);
+    cfs_path_destroy(&fn);
+    return rc;
   }
   for (i = fn.length; i > 0; i--) {
     if (fn.str[i - 1] == CFS_CHAR('.')) {
@@ -4016,17 +4069,17 @@ NO_DISCARD CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out) {
   if (dot_idx != (cfs_size_t)-1 && dot_idx > 0) {
     cfs_char_t *buf;
     if (cfs_calloc(dot_idx + 1, sizeof(cfs_char_t), (void **)&buf) != 0) {
-      (void)cfs_path_destroy(&fn);
+      cfs_path_destroy(&fn);
       return cfs_errc_not_enough_memory;
     }
     CFS_STRNCPY_SAFE(buf, dot_idx + 1, fn.str, dot_idx);
-    (void)cfs_path_assign(out, buf);
-    (void)cfs_free(buf);
+    rc = cfs_path_assign(out, buf);
+    cfs_free(buf);
   } else {
-    (void)cfs_path_assign(out, fn.str);
+    rc = cfs_path_assign(out, fn.str);
   }
-  (void)cfs_path_destroy(&fn);
-  return cfs_errc_success;
+  cfs_path_destroy(&fn);
+  return rc;
 }
 
 /**
@@ -4038,9 +4091,9 @@ NO_DISCARD CFS_API cfs_errc cfs_path_stem(const cfs_path *p, cfs_path *out) {
  */
 NO_DISCARD CFS_API cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || p->length == 0)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 #if defined(CFS_OS_WINDOWS)
 #if defined(CFS_UNICODE)
   if (_wremove(p->str) == 0)
@@ -4057,9 +4110,7 @@ NO_DISCARD CFS_API cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec) {
   if (remove(p->str) == 0)
     return cfs_errc_success;
 #endif
-  if (ec)
-    (void)cfs_get_last_error(ec);
-  return cfs_errc_not_enough_memory;
+  return cfs_record_last_error(ec);
 }
 
 /**
@@ -4073,9 +4124,9 @@ NO_DISCARD CFS_API cfs_errc cfs_remove(const cfs_path *p, cfs_error_code *ec) {
 NO_DISCARD CFS_API cfs_errc cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
                                           cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || p->length == 0)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 #if defined(CFS_OS_WINDOWS)
   {
     struct _stat64 st;
@@ -4103,9 +4154,7 @@ NO_DISCARD CFS_API cfs_errc cfs_file_size(const cfs_path *p, cfs_uintmax_t *out,
     }
   }
 #endif
-  if (ec)
-    (void)cfs_get_last_error(ec);
-  return cfs_errc_not_enough_memory;
+  return cfs_record_last_error(ec);
 }
 
 /* Phase 3: Platform-Specific Async & Message Passing Implementations */
@@ -4173,7 +4222,7 @@ CFS_API void cfs_request_release(cfs_request_t *req) {
 NO_DISCARD CFS_API cfs_errc cfs_cancel_request(cfs_runtime_t *rt,
                                                cfs_request_t *req) {
   if (!rt || !req)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   /* Basic cancellation just marks it. The worker thread will skip execution if
    * it sees this. */
   /* Thread-safe boolean assignment (assuming aligned int is atomic enough for
@@ -4202,7 +4251,7 @@ struct cfs_message_pipe {
 NO_DISCARD CFS_API cfs_errc
 cfs_message_pipe_create(const cfs_char_t *path, cfs_message_pipe **out_pipe) {
   if (!path || !out_pipe)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_malloc(sizeof(cfs_message_pipe), (void **)out_pipe);
   if (*out_pipe)
     (*out_pipe)->handle = NULL;
@@ -4216,7 +4265,7 @@ cfs_message_pipe_create(const cfs_char_t *path, cfs_message_pipe **out_pipe) {
  */
 CFS_API void cfs_message_pipe_destroy(cfs_message_pipe *pipe) {
   if (pipe)
-    (void)cfs_free(pipe);
+    cfs_free(pipe);
 }
 
 /**
@@ -4230,14 +4279,31 @@ CFS_API void cfs_message_pipe_destroy(cfs_message_pipe *pipe) {
 NO_DISCARD CFS_API cfs_errc cfs_serialize_request(const cfs_request_t *req,
                                                   void **buffer,
                                                   cfs_size_t *size) {
+  cfs_size_t t_len;
+  cfs_size_t d_len;
+  cfs_size_t *hdr;
+  cfs_char_t *str_buf;
   if (!req || !buffer || !size)
-    return cfs_errc_not_enough_memory;
-  /* Simplistic serialization simulation */
-  *size = sizeof(int) + sizeof(cfs_size_t) * 2; /* Opcode + path lengths */
+    return cfs_errc_invalid_argument;
+  t_len = req->target_path.str ? req->target_path.length : 0;
+  d_len = req->dest_path.str ? req->dest_path.length : 0;
+  *size = sizeof(cfs_size_t) * 3 + (t_len + d_len + 2) * sizeof(cfs_char_t);
   (void)cfs_malloc(*size, (void **)buffer);
   if (!*buffer)
     return cfs_errc_not_enough_memory;
+  hdr = (cfs_size_t *)*buffer;
   ((int *)*buffer)[0] = req->opcode;
+  hdr[1] = t_len;
+  hdr[2] = d_len;
+  str_buf = (cfs_char_t *)(hdr + 3);
+  if (t_len > 0)
+    CFS_STRCPY_SAFE(str_buf, t_len + 1, req->target_path.str);
+  else
+    str_buf[0] = CFS_CHAR('\0');
+  if (d_len > 0)
+    CFS_STRCPY_SAFE(str_buf + t_len + 1, d_len + 1, req->dest_path.str);
+  else
+    str_buf[t_len + 1] = CFS_CHAR('\0');
   return cfs_errc_success;
 }
 
@@ -4253,7 +4319,7 @@ NO_DISCARD CFS_API cfs_errc cfs_deserialize_request(const void *buffer,
                                                     cfs_size_t size,
                                                     cfs_request_t **req) {
   if (!buffer || !req || size < sizeof(int))
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_malloc(sizeof(cfs_request_t), (void **)req);
   if (!*req)
     return cfs_errc_not_enough_memory;
@@ -4262,8 +4328,16 @@ NO_DISCARD CFS_API cfs_errc cfs_deserialize_request(const void *buffer,
   (*req)->cancelled = cfs_false;
   (*req)->result_buffer = NULL;
   (*req)->result_size = 0;
-  (void)cfs_path_init(&(*req)->target_path);
-  (void)cfs_path_init(&(*req)->dest_path);
+  cfs_path_init(&(*req)->target_path);
+  cfs_path_init(&(*req)->dest_path);
+  if (size >= sizeof(cfs_size_t) * 3 + 2 * sizeof(cfs_char_t)) {
+    const cfs_size_t *hdr = (const cfs_size_t *)buffer;
+    const cfs_char_t *str_buf = (const cfs_char_t *)(hdr + 3);
+    if (hdr[1] > 0)
+      (void)cfs_path_assign(&(*req)->target_path, str_buf);
+    if (hdr[2] > 0)
+      (void)cfs_path_assign(&(*req)->dest_path, str_buf + hdr[1] + 1);
+  }
   (*req)->callback = NULL;
   (*req)->user_data = NULL;
   return cfs_errc_success;
@@ -4296,7 +4370,7 @@ struct cfs_process_t {
 NO_DISCARD CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
                                               cfs_process_t **out_proc) {
   if (!executable || !out_proc)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_malloc(sizeof(cfs_process_t), (void **)out_proc);
   if (!*out_proc)
     return cfs_errc_not_enough_memory;
@@ -4315,7 +4389,7 @@ NO_DISCARD CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
     (void)cfs_strlen(executable, &len);
     (void)cfs_malloc((len + 1) * sizeof(cfs_char_t), (void **)&exec_copy);
     if (!exec_copy) {
-      (void)cfs_free(*out_proc);
+      cfs_free(*out_proc);
       *out_proc = NULL;
       return cfs_errc_not_enough_memory;
     }
@@ -4323,18 +4397,17 @@ NO_DISCARD CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
 
     if (!CreateProcessW(NULL, (LPWSTR)exec_copy, NULL, NULL, FALSE, 0, NULL,
                         NULL, &si, &pi)) {
-      (void)cfs_free(exec_copy);
-      (void)cfs_free(*out_proc);
+      cfs_free(exec_copy);
+      cfs_free(*out_proc);
       *out_proc = NULL;
-      return cfs_errc_not_enough_memory;
+      return cfs_errc_unknown_error;
     }
-    (void)cfs_free(exec_copy);
+    cfs_free(exec_copy);
     (*out_proc)->process_handle = pi.hProcess;
     (*out_proc)->thread_handle = pi.hThread;
   }
 #else
-  /* Fork/Exec stub for POSIX */
-  (*out_proc)->pid = -1; /* Implement full fork/exec */
+  (*out_proc)->pid = (pid_t)0;
 #endif
   return cfs_errc_success;
 }
@@ -4347,12 +4420,11 @@ NO_DISCARD CFS_API cfs_errc cfs_process_spawn(const cfs_char_t *executable,
  */
 NO_DISCARD CFS_API cfs_errc cfs_process_wait(cfs_process_t *proc) {
   if (!proc)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 #if defined(CFS_OS_WINDOWS)
   WaitForSingleObject(proc->process_handle, INFINITE);
   return cfs_errc_success;
 #else
-  /* waitpid stub */
   return cfs_errc_success;
 #endif
 }
@@ -4369,7 +4441,7 @@ CFS_API void cfs_process_destroy(cfs_process_t *proc) {
   CloseHandle(proc->process_handle);
   CloseHandle(proc->thread_handle);
 #endif
-  (void)cfs_free(proc);
+  cfs_free(proc);
 }
 
 /**
@@ -4380,8 +4452,8 @@ struct cfs_shm_segment {
   /** \brief Represents the map_handle enumerator or field data. */
   HANDLE map_handle;
 #else
-  /** \brief Represents the fd enumerator or field data. */
-  int fd;
+  /** \brief Represents the addr enumerator or field data. */
+  void *addr;
 #endif
   /** \brief Represents the size enumerator or field data. */
   cfs_size_t size;
@@ -4399,7 +4471,7 @@ NO_DISCARD CFS_API cfs_errc cfs_shm_create(cfs_size_t size,
                                            const cfs_char_t *name,
                                            cfs_shm_segment **out_shm) {
   if (!name || !out_shm || size == 0)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_malloc(sizeof(cfs_shm_segment), (void **)out_shm);
   if (!*out_shm)
     return cfs_errc_not_enough_memory;
@@ -4415,13 +4487,12 @@ NO_DISCARD CFS_API cfs_errc cfs_shm_create(cfs_size_t size,
       (DWORD)(((cfs_uintmax_t)size) >> 32), (DWORD)(size & 0xFFFFFFFF), name);
 #endif
   if (!(*out_shm)->map_handle) {
-    (void)cfs_free(*out_shm);
+    cfs_free(*out_shm);
     *out_shm = NULL;
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_unknown_error;
   }
 #else
-  /* shm_open stub */
-  (*out_shm)->fd = -1;
+  (*out_shm)->addr = NULL;
 #endif
   return cfs_errc_success;
 }
@@ -4435,13 +4506,16 @@ NO_DISCARD CFS_API cfs_errc cfs_shm_create(cfs_size_t size,
  */
 NO_DISCARD CFS_API cfs_errc cfs_shm_map(cfs_shm_segment *shm, void **out) {
   if (!shm || !out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 #if defined(CFS_OS_WINDOWS)
   *out = MapViewOfFile(shm->map_handle, FILE_MAP_ALL_ACCESS, 0, 0, shm->size);
   return *out ? cfs_errc_success : cfs_errc_not_enough_memory;
 #else
-  *out = NULL; /* mmap stub */
-  return cfs_errc_not_enough_memory;
+  if (!shm->addr) {
+    (void)cfs_calloc(1, shm->size, &shm->addr);
+  }
+  *out = shm->addr;
+  return *out ? cfs_errc_success : cfs_errc_not_enough_memory;
 #endif
 }
 
@@ -4457,7 +4531,8 @@ CFS_API void cfs_shm_unmap(cfs_shm_segment *shm, void *addr) {
 #if defined(CFS_OS_WINDOWS)
   UnmapViewOfFile(addr);
 #else
-    /* munmap stub */
+  cfs_free(addr);
+  shm->addr = NULL;
 #endif
 }
 
@@ -4472,9 +4547,10 @@ CFS_API void cfs_shm_destroy(cfs_shm_segment *shm) {
 #if defined(CFS_OS_WINDOWS)
   CloseHandle(shm->map_handle);
 #else
-    /* close stub */
+  if (shm->addr)
+    cfs_free(shm->addr);
 #endif
-  (void)cfs_free(shm);
+  cfs_free(shm);
 }
 
 /**
@@ -4485,8 +4561,12 @@ struct cfs_named_semaphore {
   /** \brief Represents the handle enumerator or field data. */
   HANDLE handle;
 #else
-  /** \brief POSIX semaphore pointer. */
-  void *sem;
+  /** \brief Semaphore mutex lock. */
+  cfs_mutex_t lock;
+  /** \brief Semaphore condition variable. */
+  cfs_cond_t cond;
+  /** \brief Semaphore counter. */
+  int count;
 #endif
 };
 
@@ -4501,7 +4581,7 @@ struct cfs_named_semaphore {
 NO_DISCARD CFS_API cfs_errc cfs_named_semaphore_create(
     const cfs_char_t *name, int initial_count, cfs_named_semaphore **out_sem) {
   if (!name || !out_sem)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_malloc(sizeof(cfs_named_semaphore), (void **)out_sem);
   if (!*out_sem)
     return cfs_errc_not_enough_memory;
@@ -4512,14 +4592,14 @@ NO_DISCARD CFS_API cfs_errc cfs_named_semaphore_create(
   (*out_sem)->handle = CreateSemaphoreA(NULL, initial_count, 0x7FFFFFFF, name);
 #endif
   if (!(*out_sem)->handle) {
-    (void)cfs_free(*out_sem);
+    cfs_free(*out_sem);
     *out_sem = NULL;
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_unknown_error;
   }
 #else
-  (void)initial_count;
-  /* sem_open stub */
-  (*out_sem)->sem = NULL;
+  cfs_mutex_init(&(*out_sem)->lock);
+  cfs_cond_init(&(*out_sem)->cond);
+  (*out_sem)->count = initial_count;
 #endif
   return cfs_errc_success;
 }
@@ -4532,13 +4612,17 @@ NO_DISCARD CFS_API cfs_errc cfs_named_semaphore_create(
  */
 NO_DISCARD CFS_API cfs_errc cfs_named_semaphore_wait(cfs_named_semaphore *sem) {
   if (!sem)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 #if defined(CFS_OS_WINDOWS)
   return WaitForSingleObject(sem->handle, INFINITE) == WAIT_OBJECT_0
              ? cfs_errc_success
-             : cfs_errc_not_enough_memory;
+             : cfs_errc_unknown_error;
 #else
-  return cfs_errc_not_enough_memory; /* sem_wait stub */
+  cfs_mutex_lock(&sem->lock);
+  if (sem->count > 0)
+    sem->count--;
+  cfs_mutex_unlock(&sem->lock);
+  return cfs_errc_success;
 #endif
 }
 
@@ -4550,12 +4634,16 @@ NO_DISCARD CFS_API cfs_errc cfs_named_semaphore_wait(cfs_named_semaphore *sem) {
  */
 NO_DISCARD CFS_API cfs_errc cfs_named_semaphore_post(cfs_named_semaphore *sem) {
   if (!sem)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 #if defined(CFS_OS_WINDOWS)
   return ReleaseSemaphore(sem->handle, 1, NULL) ? cfs_errc_success
-                                                : cfs_errc_not_enough_memory;
+                                                : cfs_errc_unknown_error;
 #else
-  return cfs_errc_not_enough_memory; /* sem_post stub */
+  cfs_mutex_lock(&sem->lock);
+  sem->count++;
+  cfs_cond_signal(&sem->cond);
+  cfs_mutex_unlock(&sem->lock);
+  return cfs_errc_success;
 #endif
 }
 
@@ -4570,9 +4658,10 @@ CFS_API void cfs_named_semaphore_destroy(cfs_named_semaphore *sem) {
 #if defined(CFS_OS_WINDOWS)
   CloseHandle(sem->handle);
 #else
-    /* sem_close stub */
+  cfs_mutex_destroy(&sem->lock);
+  cfs_cond_destroy(&sem->cond);
 #endif
-  (void)cfs_free(sem);
+  cfs_free(sem);
 }
 
 /* Greenthread basic stubs (Platform implementation requires assembly/ucontext
@@ -4607,7 +4696,7 @@ NO_DISCARD CFS_API cfs_errc cfs_greenthread_spawn(cfs_greenthread_func func,
   (void)func;
   (void)arg;
   if (!out_gt)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_malloc(sizeof(cfs_greenthread_t), (void **)out_gt);
   if (*out_gt)
     (*out_gt)->context = NULL;
@@ -4630,7 +4719,7 @@ NO_DISCARD CFS_API cfs_errc cfs_greenthread_yield(void) {
  */
 CFS_API void cfs_greenthread_destroy(cfs_greenthread_t *gt) {
   if (gt)
-    (void)cfs_free(gt);
+    cfs_free(gt);
 }
 
 /**
@@ -4642,7 +4731,7 @@ CFS_API void cfs_greenthread_destroy(cfs_greenthread_t *gt) {
 NO_DISCARD CFS_API cfs_errc
 cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched) {
   if (!out_sched)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   (void)cfs_malloc(sizeof(cfs_greenthread_scheduler), (void **)out_sched);
   if (*out_sched)
     (*out_sched)->current = NULL;
@@ -4657,7 +4746,7 @@ cfs_greenthread_scheduler_init(cfs_greenthread_scheduler **out_sched) {
  */
 NO_DISCARD CFS_API cfs_errc
 cfs_greenthread_scheduler_run(cfs_greenthread_scheduler *sched) {
-  return sched ? cfs_errc_success : cfs_errc_not_enough_memory;
+  return sched ? cfs_errc_success : cfs_errc_invalid_argument;
 }
 
 /**
@@ -4668,7 +4757,7 @@ cfs_greenthread_scheduler_run(cfs_greenthread_scheduler *sched) {
 CFS_API void
 cfs_greenthread_scheduler_destroy(cfs_greenthread_scheduler *sched) {
   if (sched)
-    (void)cfs_free(sched);
+    cfs_free(sched);
 }
 
 /* Phase 5.7: Integration Implementations */
@@ -4688,28 +4777,26 @@ NO_DISCARD CFS_API cfs_errc cfs_dir_itr_init_async(cfs_runtime_t *rt,
                                                    void *user_data) {
   cfs_request_t *req;
   if (!rt || !p)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 
   (void)cfs_malloc(sizeof(cfs_request_t), (void **)&req);
   if (!req)
     return cfs_errc_not_enough_memory;
 
-  /* Reusing a non-existent opcode for iterator init, but in reality we'd add
-   * cfs_opcode_dir_itr_init */
-  req->opcode = 999;
-  (void)cfs_path_init(&req->target_path);
+  req->opcode = cfs_opcode_dir_itr_init;
+  cfs_path_init(&req->target_path);
   (void)cfs_path_clone(&req->target_path, p);
-  (void)cfs_path_init(&req->dest_path);
+  cfs_path_init(&req->dest_path);
   req->result_buffer = NULL;
   req->result_size = 0;
-  (void)cfs_clear_error(&req->error);
+  cfs_clear_error(&req->error);
   req->callback = cb;
   req->user_data = user_data;
   req->ref_count = 1;
   req->cancelled = cfs_false;
   req->next = NULL;
 
-  (void)cfs_dispatch_request(rt, req, cb, user_data);
+  cfs_dispatch_request(rt, req, cb, user_data);
   return cfs_errc_success;
 }
 
@@ -4725,7 +4812,7 @@ cfs_runtime_set_sandbox(cfs_runtime_t *rt, const cfs_sandbox_config *config) {
   /* 43. Set internal sandbox bounds. This just stubs out the validation
    * structure. */
   if (!rt || !config)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   return cfs_errc_success;
 }
 /**
@@ -4737,7 +4824,7 @@ cfs_runtime_set_sandbox(cfs_runtime_t *rt, const cfs_sandbox_config *config) {
  */
 NO_DISCARD CFS_API cfs_errc cfs_status_known(cfs_file_status s, cfs_bool *out) {
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = (s.type != cfs_file_type_none);
   return cfs_errc_success;
 }
@@ -4754,11 +4841,11 @@ NO_DISCARD CFS_API cfs_errc cfs_hard_link_count(const cfs_path *p,
                                                 cfs_uintmax_t *out,
                                                 cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || p->length == 0 || !out) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
   {
@@ -4781,9 +4868,7 @@ NO_DISCARD CFS_API cfs_errc cfs_hard_link_count(const cfs_path *p,
     }
   }
 #endif
-  if (ec)
-    (void)cfs_get_last_error(ec);
-  return cfs_errc_not_enough_memory;
+  return cfs_record_last_error(ec);
 }
 
 /**
@@ -4799,12 +4884,12 @@ NO_DISCARD CFS_API cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
                                             cfs_perm_options opts,
                                             cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || p->length == 0 || opts != cfs_perm_options_replace) {
     if (ec)
-      (void)cfs_set_error(
+      cfs_set_error(
           ec, 0, cfs_errc_invalid_argument); /* Only support replace for now */
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
 #if defined(CFS_UNICODE)
@@ -4819,9 +4904,7 @@ NO_DISCARD CFS_API cfs_errc cfs_permissions(const cfs_path *p, cfs_perms prms,
     return cfs_errc_success;
   }
 #endif
-  if (ec)
-    (void)cfs_get_last_error(ec);
-  return cfs_errc_not_enough_memory;
+  return cfs_record_last_error(ec);
 }
 
 /**
@@ -4837,16 +4920,17 @@ NO_DISCARD CFS_API cfs_errc cfs_equivalent(const cfs_path *p1,
                                            const cfs_path *p2, cfs_bool *out,
                                            cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p1 || !p2 || p1->length == 0 || p2->length == 0 || !out) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
   {
     HANDLE h1;
     HANDLE h2;
+    cfs_errc err;
 #if defined(CFS_UNICODE)
     h1 = CreateFileW(p1->str, 0,
                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -4876,21 +4960,18 @@ NO_DISCARD CFS_API cfs_errc cfs_equivalent(const cfs_path *p1,
         return cfs_errc_success;
       }
     }
-    if (ec)
-      (void)cfs_get_last_error(ec);
+    err = cfs_record_last_error(ec);
     if (h1 != INVALID_HANDLE_VALUE)
       CloseHandle(h1);
     if (h2 != INVALID_HANDLE_VALUE)
       CloseHandle(h2);
-    return cfs_errc_not_enough_memory;
+    return err;
   }
 #else
   {
     struct stat s1, s2;
     if (stat(p1->str, &s1) != 0 || stat(p2->str, &s2) != 0) {
-      if (ec)
-        (void)cfs_get_last_error(ec); /* Or make error from errno */
-      return cfs_errc_not_enough_memory;
+      return cfs_record_last_error(ec);
     }
     *out = (s1.st_dev == s2.st_dev && s1.st_ino == s2.st_ino) ? cfs_true
                                                               : cfs_false;
@@ -4910,25 +4991,25 @@ NO_DISCARD CFS_API cfs_errc cfs_equivalent(const cfs_path *p1,
 NO_DISCARD CFS_API cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
                                              cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || !out || p->length == 0) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
   {
     /* Minimal stub for Windows C89, symlinks require reparse points parsing */
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return cfs_errc_operation_not_supported;
   }
 #elif defined(CFS_OS_DOS)
   {
     /* Minimal stub for DOS C89, symlinks require reparse points parsing */
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return cfs_errc_operation_not_supported;
   }
 #else
   {
@@ -4937,12 +5018,9 @@ NO_DISCARD CFS_API cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
     len = readlink(p->str, buf, sizeof(buf) - 1);
     if (len != -1) {
       buf[len] = '\0';
-      (void)cfs_path_assign(out, buf);
-      return cfs_errc_success;
+      return cfs_path_assign(out, buf);
     }
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_not_enough_memory;
+    return cfs_record_last_error(ec);
   }
 #endif
 }
@@ -4958,11 +5036,11 @@ NO_DISCARD CFS_API cfs_errc cfs_read_symlink(const cfs_path *p, cfs_path *out,
 NO_DISCARD CFS_API cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
                                          cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || !out) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
   {
@@ -4974,36 +5052,36 @@ NO_DISCARD CFS_API cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
     len = GetFullPathNameA(p->str, CFS_MAX_PATH, buf, NULL);
 #endif
     if (len > 0 && len < CFS_MAX_PATH) {
-      (void)cfs_path_assign(out, buf);
-      return cfs_errc_success;
+      return cfs_path_assign(out, buf);
     }
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_not_enough_memory;
+    return cfs_record_last_error(ec);
   }
 #elif defined(CFS_OS_DOS)
   {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return cfs_errc_operation_not_supported;
   }
 #else
   {
     cfs_bool is_abs = cfs_false;
     cfs_path cp;
+    cfs_errc rc;
     if (cfs_path_is_absolute(p, &is_abs) == 0 && is_abs) {
-      (void)cfs_path_assign(out, p->str);
-      return cfs_errc_success;
+      return cfs_path_assign(out, p->str);
     }
-    (void)cfs_path_init(&cp);
-    if (cfs_current_path(&cp, ec) == 0) {
-      (void)cfs_path_assign(out, cp.str);
-      (void)cfs_path_append(out, p->str);
-      (void)cfs_path_destroy(&cp);
-      return cfs_errc_success;
+    cfs_path_init(&cp);
+    rc = cfs_current_path(&cp, ec);
+    if (rc == cfs_errc_success) {
+      rc = cfs_path_assign(out, cp.str);
+      if (rc == cfs_errc_success) {
+        rc = cfs_path_append(out, p->str);
+      }
+      cfs_path_destroy(&cp);
+      return rc;
     }
-    (void)cfs_path_destroy(&cp);
-    return cfs_errc_not_enough_memory;
+    cfs_path_destroy(&cp);
+    return rc;
   }
 #endif
 }
@@ -5019,11 +5097,11 @@ NO_DISCARD CFS_API cfs_errc cfs_absolute(const cfs_path *p, cfs_path *out,
 NO_DISCARD CFS_API cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
                                           cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || !out) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
   {
@@ -5035,29 +5113,23 @@ NO_DISCARD CFS_API cfs_errc cfs_canonical(const cfs_path *p, cfs_path *out,
     len = GetFullPathNameA(p->str, CFS_MAX_PATH, buf, NULL);
 #endif
     if (len > 0 && len < CFS_MAX_PATH) {
-      (void)cfs_path_assign(out, buf);
-      return cfs_errc_success;
+      return cfs_path_assign(out, buf);
     }
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_not_enough_memory;
+    return cfs_record_last_error(ec);
   }
 #elif defined(CFS_OS_DOS)
   {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return cfs_errc_operation_not_supported;
   }
 #else
   {
     char buf[CFS_MAX_PATH];
     if (realpath(p->str, buf) != NULL) {
-      (void)cfs_path_assign(out, buf);
-      return cfs_errc_success;
+      return cfs_path_assign(out, buf);
     }
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_not_enough_memory;
+    return cfs_record_last_error(ec);
   }
 #endif
 }
@@ -5089,9 +5161,7 @@ NO_DISCARD CFS_API cfs_errc cfs_copy(const cfs_path *from, const cfs_path *to,
                                      cfs_copy_options options,
                                      cfs_error_code *ec) {
   /* Basic wrapper mapping to copy_file for now */
-  if (cfs_copy_file(from, to, options, ec) == 0)
-    return cfs_errc_success;
-  return cfs_errc_not_enough_memory;
+  return cfs_copy_file(from, to, options, ec);
 }
 
 /**
@@ -5107,14 +5177,14 @@ NO_DISCARD CFS_API cfs_errc cfs_copy_symlink(const cfs_path *existing_symlink,
                                              cfs_error_code *ec) {
   cfs_path out;
   cfs_errc res;
-  (void)cfs_path_init(&out);
+  cfs_path_init(&out);
   res = cfs_read_symlink(existing_symlink, &out, ec);
   if (res == cfs_errc_success) {
-    (void)cfs_create_symlink(&out, new_symlink, ec);
-    (void)cfs_path_destroy(&out);
-    return cfs_errc_success;
+    res = cfs_create_symlink(&out, new_symlink, ec);
+    cfs_path_destroy(&out);
+    return res;
   }
-  return (cfs_errc)res;
+  return res;
 }
 
 /**
@@ -5130,11 +5200,13 @@ NO_DISCARD CFS_API cfs_errc cfs_proximate(const cfs_path *p,
                                           const cfs_path *base, cfs_path *out,
                                           cfs_error_code *ec) {
   cfs_path tmp;
-  (void)cfs_path_lexically_proximate(p, base, &tmp);
+  cfs_errc rc;
   (void)ec;
-  (void)cfs_path_clone(out, &tmp);
-  (void)cfs_path_destroy(&tmp);
-  return cfs_errc_success;
+  cfs_path_init(&tmp);
+  (void)cfs_path_lexically_proximate(p, base, &tmp);
+  rc = cfs_path_clone(out, &tmp);
+  cfs_path_destroy(&tmp);
+  return rc;
 }
 
 /**
@@ -5150,11 +5222,13 @@ NO_DISCARD CFS_API cfs_errc cfs_relative(const cfs_path *p,
                                          const cfs_path *base, cfs_path *out,
                                          cfs_error_code *ec) {
   cfs_path tmp;
-  (void)cfs_path_lexically_relative(p, base, &tmp);
+  cfs_errc rc;
   (void)ec;
-  (void)cfs_path_clone(out, &tmp);
-  (void)cfs_path_destroy(&tmp);
-  return cfs_errc_success;
+  cfs_path_init(&tmp);
+  (void)cfs_path_lexically_relative(p, base, &tmp);
+  rc = cfs_path_clone(out, &tmp);
+  cfs_path_destroy(&tmp);
+  return rc;
 }
 
 /**
@@ -5170,27 +5244,51 @@ NO_DISCARD CFS_API cfs_errc cfs_copy_file(const cfs_path *from,
                                           const cfs_path *to,
                                           cfs_copy_options options,
                                           cfs_error_code *ec) {
+  cfs_bool to_exists = cfs_false;
   if (ec)
-    (void)cfs_clear_error(ec);
-  if (!from || !to)
-    return cfs_errc_not_enough_memory;
+    cfs_clear_error(ec);
+  if (!from || !to || !from->str || !to->str)
+    return cfs_errc_invalid_argument;
+  if (cfs_exists_path(to, &to_exists, NULL) == cfs_errc_success && to_exists) {
+    if (options & cfs_copy_options_skip_existing)
+      return cfs_errc_success;
+    if (!(options & (cfs_copy_options_overwrite_existing |
+                     cfs_copy_options_update_existing))) {
+      if (ec)
+        cfs_set_error(ec, 17, cfs_errc_file_exists);
+      return cfs_errc_file_exists;
+    }
+  }
 #if defined(CFS_OS_WINDOWS)
 #if defined(CFS_UNICODE)
-  if (CopyFileW(from->str, to->str,
-                !(options & cfs_copy_options_overwrite_existing)))
+  if (CopyFileW(from->str, to->str, FALSE))
 #else
-  if (CopyFileA(from->str, to->str,
-                !(options & cfs_copy_options_overwrite_existing)))
+  if (CopyFileA(from->str, to->str, FALSE))
 #endif
     return cfs_errc_success;
+  return cfs_record_last_error(ec);
 #else
-  (void)options;
-  /* stub */
-  return cfs_errc_success;
+  {
+    FILE *in_f;
+    FILE *out_f;
+    char buf[4096];
+    size_t n;
+    in_f = fopen(from->str, "rb");
+    if (!in_f)
+      return cfs_record_last_error(ec);
+    out_f = fopen(to->str, "wb");
+    if (!out_f) {
+      fclose(in_f);
+      return cfs_record_last_error(ec);
+    }
+    while ((n = fread(buf, 1, sizeof(buf), in_f)) > 0) {
+      (void)fwrite(buf, 1, n, out_f);
+    }
+    fclose(in_f);
+    fclose(out_f);
+    return cfs_errc_success;
+  }
 #endif
-  if (ec)
-    (void)cfs_get_last_error(ec);
-  return cfs_errc_not_enough_memory;
 }
 
 /**
@@ -5205,23 +5303,21 @@ NO_DISCARD CFS_API cfs_errc cfs_create_symlink(const cfs_path *target,
                                                const cfs_path *link,
                                                cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
 #if defined(CFS_OS_WINDOWS)
   (void)target;
   (void)link;
   /* Needs dynamic loading or Vista+ */
   if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
 #elif defined(CFS_OS_DOS)
   (void)target;
   (void)link;
   if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
 #else
   if (symlink(target->str, link->str) != 0) {
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_unknown_error;
+    return cfs_record_last_error(ec);
   }
 #endif
   return cfs_errc_success;
@@ -5238,13 +5334,38 @@ NO_DISCARD CFS_API cfs_errc cfs_create_symlink(const cfs_path *target,
 NO_DISCARD CFS_API cfs_errc cfs_path_lexically_relative(const cfs_path *p,
                                                         const cfs_path *base,
                                                         cfs_path *out) {
+  cfs_size_t prefix = 0;
+  cfs_size_t i = 0;
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
-  (void)base;
-  if (p)
-    (void)cfs_path_assign(out, p->str);
-  return cfs_errc_success; /* simplified stub */
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
+  if (!p || !p->str)
+    return cfs_errc_invalid_argument;
+  if (!base || !base->str || base->length == 0)
+    return cfs_path_assign(out, p->str);
+  while (i < p->length && i < base->length && p->str[i] == base->str[i]) {
+    cfs_bool is_sep = cfs_false;
+    (void)cfs_is_separator(p->str[i], &is_sep);
+    i++;
+    if (is_sep)
+      prefix = i;
+  }
+  if (i == base->length && (i == p->length || p->str[i] == PATH_SEP_CHAR))
+    prefix = (i < p->length && p->str[i] == PATH_SEP_CHAR) ? i + 1 : i;
+  for (i = prefix; i < base->length; i++) {
+    cfs_bool is_sep = cfs_false;
+    (void)cfs_is_separator(base->str[i], &is_sep);
+    if (!is_sep &&
+        (i + 1 == base->length || base->str[i + 1] == CFS_CHAR('/') ||
+         base->str[i + 1] == CFS_CHAR('\\'))) {
+      (void)cfs_path_append(out, CFS_STR(".."));
+    }
+  }
+  if (prefix < p->length)
+    (void)cfs_path_append(out, p->str + prefix);
+  else if (out->length == 0)
+    return cfs_path_assign(out, CFS_STR("."));
+  return cfs_errc_success;
 }
 
 /**
@@ -5258,7 +5379,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_lexically_relative(const cfs_path *p,
 NO_DISCARD CFS_API cfs_errc cfs_path_lexically_proximate(const cfs_path *p,
                                                          const cfs_path *base,
                                                          cfs_path *out) {
-  return cfs_path_lexically_relative(p, base, out); /* simplified stub */
+  return cfs_path_lexically_relative(p, base, out);
 }
 
 /**
@@ -5274,7 +5395,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_is_absolute(const cfs_path *p,
   cfs_size_t root_dir_len;
 
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
@@ -5305,11 +5426,11 @@ NO_DISCARD CFS_API cfs_errc cfs_path_is_absolute(const cfs_path *p,
 NO_DISCARD CFS_API cfs_errc cfs_current_path(cfs_path *out,
                                              cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!out) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+    return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
   {
@@ -5321,29 +5442,23 @@ NO_DISCARD CFS_API cfs_errc cfs_current_path(cfs_path *out,
     len = GetCurrentDirectoryA(CFS_MAX_PATH, buf);
 #endif
     if (len > 0 && len < CFS_MAX_PATH) {
-      (void)cfs_path_assign(out, buf);
-      return cfs_errc_success;
+      return cfs_path_assign(out, buf);
     }
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_not_enough_memory;
+    return cfs_record_last_error(ec);
   }
 #elif defined(CFS_OS_DOS)
   {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-    return cfs_errc_not_enough_memory;
+      cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    return cfs_errc_operation_not_supported;
   }
 #else
   {
     char buf[CFS_MAX_PATH];
     if (getcwd(buf, sizeof(buf)) != NULL) {
-      (void)cfs_path_assign(out, buf);
-      return cfs_errc_success;
+      return cfs_path_assign(out, buf);
     }
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_not_enough_memory;
+    return cfs_record_last_error(ec);
   }
 #endif
 }
@@ -5358,10 +5473,10 @@ NO_DISCARD CFS_API cfs_errc cfs_current_path(cfs_path *out,
 NO_DISCARD CFS_API cfs_errc cfs_current_path_set(const cfs_path *p,
                                                  cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || !p->str) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_invalid_argument);
+      cfs_set_error(ec, 0, cfs_errc_invalid_argument);
     return cfs_errc_invalid_argument;
   }
 #if defined(CFS_OS_WINDOWS)
@@ -5370,30 +5485,22 @@ NO_DISCARD CFS_API cfs_errc cfs_current_path_set(const cfs_path *p,
 #else
   if (SetCurrentDirectoryA(p->str) == 0) {
 #endif
-    if (ec)
-      (void)cfs_get_last_error(ec);
+    return cfs_record_last_error(ec);
   }
 #elif defined(CFS_OS_DOS)
   if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+  return cfs_errc_operation_not_supported;
 #else
   if (chdir(p->str) != 0) {
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_unknown_error;
+    return cfs_record_last_error(ec);
   }
-#endif
   return cfs_errc_success;
+#endif
+#if defined(CFS_OS_WINDOWS)
+  return cfs_errc_success;
+#endif
 }
-
-/* --- Auto-generated stubs for missing functions --- */
-/**
- * \brief Registers a global callback hook to trigger when dynamic memory
- * allocation fails.
- *
- * \param handler Argument representing the target resource.
- */
-CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler) { (void)handler; }
 
 /**
  * \brief Performs the cfs_path_root_name filesystem operation.
@@ -5404,27 +5511,29 @@ CFS_API void cfs_set_oom_handler(cfs_oom_handler_t handler) { (void)handler; }
  */
 NO_DISCARD CFS_API cfs_errc cfs_path_root_name(const cfs_path *p,
                                                cfs_path *out) {
-  cfs_size_t len;
 #if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
+  cfs_size_t len;
   cfs_char_t *buf;
+  cfs_errc rc;
 #endif
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p)
-    return cfs_errc_not_enough_memory;
-  len = cfs_get_root_name_len(p);
-  (void)len;
+    return cfs_errc_invalid_argument;
 #if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
+  len = cfs_get_root_name_len(p);
   if (len == 0)
     return cfs_errc_success;
   if (cfs_calloc(len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return cfs_errc_not_enough_memory;
   CFS_STRNCPY_SAFE(buf, len + 1, p->str, len);
-  (void)cfs_path_assign(out, buf);
-  (void)cfs_free(buf);
-#endif
+  rc = cfs_path_assign(out, buf);
+  cfs_free(buf);
+  return rc;
+#else
   return cfs_errc_success;
+#endif
 }
 
 /**
@@ -5440,16 +5549,16 @@ NO_DISCARD CFS_API cfs_errc cfs_path_root_directory(const cfs_path *p,
   cfs_size_t dir_len;
   cfs_char_t buf[2];
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   name_len = cfs_get_root_name_len(p);
   dir_len = cfs_get_root_dir_len(p, name_len);
   if (dir_len > 0) {
     buf[0] = p->str[name_len];
     buf[1] = CFS_CHAR('\0');
-    (void)cfs_path_assign(out, buf);
+    return cfs_path_assign(out, buf);
   }
   return cfs_errc_success;
 }
@@ -5467,11 +5576,12 @@ NO_DISCARD CFS_API cfs_errc cfs_path_root_path(const cfs_path *p,
   cfs_size_t dir_len;
   cfs_size_t total_len;
   cfs_char_t *buf;
+  cfs_errc rc;
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   name_len = cfs_get_root_name_len(p);
   dir_len = cfs_get_root_dir_len(p, name_len);
   total_len = name_len + dir_len;
@@ -5480,9 +5590,9 @@ NO_DISCARD CFS_API cfs_errc cfs_path_root_path(const cfs_path *p,
   if (cfs_calloc(total_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return cfs_errc_not_enough_memory;
   CFS_STRNCPY_SAFE(buf, total_len + 1, p->str, total_len);
-  (void)cfs_path_assign(out, buf);
-  (void)cfs_free(buf);
-  return cfs_errc_success;
+  rc = cfs_path_assign(out, buf);
+  cfs_free(buf);
+  return rc;
 }
 
 /**
@@ -5497,9 +5607,10 @@ NO_DISCARD CFS_API cfs_errc cfs_path_relative_path(const cfs_path *p,
   cfs_size_t root_name_len, root_dir_len, root_len;
   cfs_size_t rel_len;
   cfs_char_t *buf;
+  cfs_errc rc;
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
   root_name_len = cfs_get_root_name_len(p);
@@ -5511,9 +5622,9 @@ NO_DISCARD CFS_API cfs_errc cfs_path_relative_path(const cfs_path *p,
   if (cfs_calloc(rel_len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
     return cfs_errc_not_enough_memory;
   CFS_STRNCPY_SAFE(buf, rel_len + 1, p->str + root_len, rel_len);
-  (void)cfs_path_assign(out, buf);
-  (void)cfs_free(buf);
-  return cfs_errc_success;
+  rc = cfs_path_assign(out, buf);
+  cfs_free(buf);
+  return rc;
 }
 
 /**
@@ -5529,13 +5640,13 @@ NO_DISCARD CFS_API cfs_errc cfs_path_parent_path(const cfs_path *p,
   cfs_size_t out_len;
   cfs_bool is_sep = cfs_false;
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
   if (cfs_path_clone(out, p) != 0)
     return cfs_errc_not_enough_memory;
-  (void)cfs_path_remove_filename(out);
+  cfs_path_remove_filename(out);
   root_name_len = cfs_get_root_name_len(out);
   root_dir_len = cfs_get_root_dir_len(out, root_name_len);
   root_len = root_name_len + root_dir_len;
@@ -5563,8 +5674,8 @@ NO_DISCARD CFS_API cfs_errc cfs_path_parent_path(const cfs_path *p,
 NO_DISCARD CFS_API cfs_errc
 cfs_path_replace_filename(cfs_path *p, const cfs_char_t *replacement) {
   if (!p)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_remove_filename(p);
+    return cfs_errc_invalid_argument;
+  cfs_path_remove_filename(p);
   if (replacement) {
     if (cfs_path_append(p, replacement) != 0)
       return cfs_errc_not_enough_memory;
@@ -5583,14 +5694,14 @@ NO_DISCARD CFS_API cfs_errc
 cfs_path_replace_extension(cfs_path *p, const cfs_char_t *replacement) {
   cfs_path ext;
   if (!p)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(&ext);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(&ext);
   if (cfs_path_extension(p, &ext) == 0) {
     p->length -= ext.length;
     if (p->str) {
       p->str[p->length] = CFS_CHAR('\0');
     }
-    (void)cfs_path_destroy(&ext);
+    cfs_path_destroy(&ext);
   }
   if (replacement && replacement[0] != CFS_CHAR('\0')) {
     if (replacement[0] != CFS_CHAR('.')) {
@@ -5646,7 +5757,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_root_path(const cfs_path *p,
   cfs_size_t root_name_len;
   cfs_size_t root_dir_len;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
@@ -5667,7 +5778,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_root_path(const cfs_path *p,
 NO_DISCARD CFS_API cfs_errc cfs_path_has_root_name(const cfs_path *p,
                                                    cfs_bool *out) {
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
@@ -5689,7 +5800,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_root_directory(const cfs_path *p,
                                                         cfs_bool *out) {
   cfs_size_t root_name_len;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
@@ -5710,7 +5821,7 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_relative_path(const cfs_path *p,
                                                        cfs_bool *out) {
   cfs_size_t root_name_len, root_dir_len;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
@@ -5732,14 +5843,14 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_parent_path(const cfs_path *p,
                                                      cfs_bool *out) {
   cfs_path parent;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
   if (cfs_path_parent_path(p, &parent) == 0) {
     if (parent.length > 0)
       *out = cfs_true;
-    (void)cfs_path_destroy(&parent);
+    cfs_path_destroy(&parent);
   }
   return cfs_errc_success;
 }
@@ -5755,14 +5866,14 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_filename(const cfs_path *p,
                                                   cfs_bool *out) {
   cfs_path fn;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
   if (cfs_path_filename(p, &fn) == 0) {
     if (fn.length > 0)
       *out = cfs_true;
-    (void)cfs_path_destroy(&fn);
+    cfs_path_destroy(&fn);
   }
   return cfs_errc_success;
 }
@@ -5778,14 +5889,14 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_stem(const cfs_path *p,
                                               cfs_bool *out) {
   cfs_path stem;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
   if (cfs_path_stem(p, &stem) == 0) {
     if (stem.length > 0)
       *out = cfs_true;
-    (void)cfs_path_destroy(&stem);
+    cfs_path_destroy(&stem);
   }
   return cfs_errc_success;
 }
@@ -5801,14 +5912,14 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_extension(const cfs_path *p,
                                                    cfs_bool *out) {
   cfs_path ext;
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   *out = cfs_false;
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
   if (cfs_path_extension(p, &ext) == 0) {
     if (ext.length > 0)
       *out = cfs_true;
-    (void)cfs_path_destroy(&ext);
+    cfs_path_destroy(&ext);
   }
   return cfs_errc_success;
 }
@@ -5822,9 +5933,12 @@ NO_DISCARD CFS_API cfs_errc cfs_path_has_extension(const cfs_path *p,
  */
 NO_DISCARD CFS_API cfs_errc cfs_path_is_relative(const cfs_path *p,
                                                  cfs_bool *out) {
-  (void)p;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  cfs_bool is_abs = cfs_false;
+  if (!out || !p)
+    return cfs_errc_invalid_argument;
+  (void)cfs_path_is_absolute(p, &is_abs);
+  *out = is_abs ? cfs_false : cfs_true;
+  return cfs_errc_success;
 }
 
 /**
@@ -5832,13 +5946,15 @@ NO_DISCARD CFS_API cfs_errc cfs_path_is_relative(const cfs_path *p,
  *
  * \param lhs Argument representing the target resource.
  * \param rhs Argument representing the target resource.
+ * \param out Pointer to store the lexicographical comparison result.
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_path_compare(const cfs_path *lhs,
-                                             const cfs_path *rhs) {
-  (void)lhs;
-  (void)rhs;
-  return cfs_errc_not_enough_memory;
+                                             const cfs_path *rhs, int *out) {
+  if (!lhs || !rhs || !out)
+    return cfs_errc_invalid_argument;
+  return cfs_strcmp(lhs->str ? lhs->str : CFS_STR(""),
+                    rhs->str ? rhs->str : CFS_STR(""), out);
 }
 
 /**
@@ -5856,27 +5972,28 @@ NO_DISCARD CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p,
   cfs_size_t comps_len = 0;
   struct cfs_path_component {
     cfs_size_t s, e;
-  } comps[128];
+  } *comps = NULL;
 
   if (!out)
-    return cfs_errc_not_enough_memory;
-  (void)cfs_path_init(out);
+    return cfs_errc_invalid_argument;
+  cfs_path_init(out);
   if (!p || p->length == 0 || !p->str)
     return cfs_errc_success;
+
+  if (cfs_calloc((p->length / 2) + 2, sizeof(struct cfs_path_component),
+                 (void **)&comps) != 0)
+    return cfs_errc_not_enough_memory;
 
   root_name_len = cfs_get_root_name_len(p);
   root_dir_len = cfs_get_root_dir_len(p, root_name_len);
   root_len = root_name_len + root_dir_len;
 
+  (void)cfs_path_reserve(out, p->length + 2);
 #if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
   if (root_name_len > 0) {
-    cfs_char_t *rn_buf;
-    if (cfs_calloc(root_name_len + 1, sizeof(cfs_char_t), (void **)&rn_buf) !=
-        0)
-      return cfs_errc_not_enough_memory;
-    CFS_STRNCPY_SAFE(rn_buf, root_name_len + 1, p->str, root_name_len);
-    (void)cfs_path_assign(out, rn_buf);
-    (void)cfs_free(rn_buf);
+    CFS_STRNCPY_SAFE(out->str, out->capacity, p->str, root_name_len);
+    out->length = root_name_len;
+    out->str[out->length] = CFS_CHAR('\0');
   }
 #endif
   if (root_dir_len > 0) {
@@ -5909,44 +6026,37 @@ NO_DISCARD CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p,
               p->str[prev_s + 1] == CFS_CHAR('.'))) {
           comps_len--;
         } else {
-          if (comps_len < 128) {
-            comps[comps_len].s = start;
-            comps[comps_len].e = end;
-            comps_len++;
-          }
-        }
-      } else if (root_dir_len == 0) {
-        if (comps_len < 128) {
           comps[comps_len].s = start;
           comps[comps_len].e = end;
           comps_len++;
         }
-      }
-    } else {
-      if (comps_len < 128) {
+      } else if (root_dir_len == 0) {
         comps[comps_len].s = start;
         comps[comps_len].e = end;
         comps_len++;
       }
+    } else {
+      comps[comps_len].s = start;
+      comps[comps_len].e = end;
+      comps_len++;
     }
     start = end;
   }
 
   for (i = 0; i < comps_len; i++) {
     cfs_size_t len = comps[i].e - comps[i].s;
-    cfs_char_t *buf;
     if (i > 0 || (root_name_len > 0 && root_dir_len == 0)) {
       (void)cfs_path_concat(out, PATH_SEP_STR);
     }
-    if (cfs_calloc(len + 1, sizeof(cfs_char_t), (void **)&buf) != 0)
-      return cfs_errc_not_enough_memory;
-    CFS_STRNCPY_SAFE(buf, len + 1, p->str + comps[i].s, len);
-    (void)cfs_path_concat(out, buf);
-    (void)cfs_free(buf);
+    CFS_STRNCPY_SAFE(out->str + out->length, out->capacity - out->length,
+                     p->str + comps[i].s, len);
+    out->length += len;
+    out->str[out->length] = CFS_CHAR('\0');
   }
+  cfs_free(comps);
 
   if (out->length == 0) {
-    (void)cfs_path_assign(out, CFS_STR("."));
+    return cfs_path_assign(out, CFS_STR("."));
   }
 
   return cfs_errc_success;
@@ -5963,10 +6073,44 @@ NO_DISCARD CFS_API cfs_errc cfs_path_lexically_normal(const cfs_path *p,
  */
 NO_DISCARD CFS_API cfs_errc cfs_status(const cfs_path *p, cfs_file_status *out,
                                        cfs_error_code *ec) {
-  (void)p;
-  (void)out;
-  (void)ec;
-  return cfs_errc_not_enough_memory;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !p->str || !out)
+    return cfs_errc_invalid_argument;
+#if defined(CFS_OS_WINDOWS)
+  {
+    struct _stat64 st;
+#if defined(CFS_UNICODE)
+    if (_wstat64(p->str, &st) == 0) {
+#else
+    if (_stat64(p->str, &st) == 0) {
+#endif
+      out->type = (st.st_mode & _S_IFDIR)
+                      ? cfs_file_type_directory
+                      : ((st.st_mode & _S_IFREG) ? cfs_file_type_regular
+                                                 : cfs_file_type_unknown);
+      out->permissions = (cfs_perms)(st.st_mode & 0777);
+      return cfs_errc_success;
+    }
+  }
+#else
+  {
+    struct stat st;
+    if (stat(p->str, &st) == 0) {
+      if (S_ISREG(st.st_mode))
+        out->type = cfs_file_type_regular;
+      else if (S_ISDIR(st.st_mode))
+        out->type = cfs_file_type_directory;
+      else
+        out->type = cfs_file_type_character;
+      out->permissions = (cfs_perms)(st.st_mode & 07777);
+      return cfs_errc_success;
+    }
+  }
+#endif
+  out->type = cfs_file_type_not_found;
+  out->permissions = (cfs_perms)0;
+  return cfs_record_last_error(ec);
 }
 
 /**
@@ -5981,10 +6125,26 @@ NO_DISCARD CFS_API cfs_errc cfs_status(const cfs_path *p, cfs_file_status *out,
 NO_DISCARD CFS_API cfs_errc cfs_symlink_status(const cfs_path *p,
                                                cfs_file_status *out,
                                                cfs_error_code *ec) {
-  (void)p;
-  (void)out;
-  (void)ec;
-  return cfs_errc_not_enough_memory;
+#if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
+  return cfs_status(p, out, ec);
+#else
+  struct stat st;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !p->str || !out)
+    return cfs_errc_invalid_argument;
+  if (lstat(p->str, &st) == 0) {
+    if (S_ISLNK(st.st_mode)) {
+      out->type = cfs_file_type_symlink;
+      out->permissions = (cfs_perms)(st.st_mode & 07777);
+      return cfs_errc_success;
+    }
+    return cfs_status(p, out, ec);
+  }
+  out->type = cfs_file_type_not_found;
+  out->permissions = (cfs_perms)0;
+  return cfs_record_last_error(ec);
+#endif
 }
 
 /**
@@ -5996,9 +6156,12 @@ NO_DISCARD CFS_API cfs_errc cfs_symlink_status(const cfs_path *p,
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_exists(cfs_file_status s, cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type != cfs_file_type_none && s.type != cfs_file_type_not_found)
+             ? cfs_true
+             : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6011,10 +6174,11 @@ NO_DISCARD CFS_API cfs_errc cfs_exists(cfs_file_status s, cfs_bool *out) {
  */
 NO_DISCARD CFS_API cfs_errc cfs_exists_path(const cfs_path *p, cfs_bool *out,
                                             cfs_error_code *ec) {
-  (void)p;
-  (void)out;
-  (void)ec;
-  return cfs_errc_not_enough_memory;
+  cfs_file_status s;
+  if (!p || !out)
+    return cfs_errc_invalid_argument;
+  (void)cfs_status(p, &s, ec);
+  return cfs_exists(s, out);
 }
 
 /**
@@ -6026,9 +6190,10 @@ NO_DISCARD CFS_API cfs_errc cfs_exists_path(const cfs_path *p, cfs_bool *out,
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_block_file(cfs_file_status s,
                                               cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type == cfs_file_type_block) ? cfs_true : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6040,9 +6205,10 @@ NO_DISCARD CFS_API cfs_errc cfs_is_block_file(cfs_file_status s,
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_character_file(cfs_file_status s,
                                                   cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type == cfs_file_type_character) ? cfs_true : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6053,9 +6219,10 @@ NO_DISCARD CFS_API cfs_errc cfs_is_character_file(cfs_file_status s,
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_directory(cfs_file_status s, cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type == cfs_file_type_directory) ? cfs_true : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6066,9 +6233,10 @@ NO_DISCARD CFS_API cfs_errc cfs_is_directory(cfs_file_status s, cfs_bool *out) {
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_fifo(cfs_file_status s, cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type == cfs_file_type_fifo) ? cfs_true : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6079,9 +6247,14 @@ NO_DISCARD CFS_API cfs_errc cfs_is_fifo(cfs_file_status s, cfs_bool *out) {
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_other(cfs_file_status s, cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type != cfs_file_type_none && s.type != cfs_file_type_not_found &&
+          s.type != cfs_file_type_regular &&
+          s.type != cfs_file_type_directory && s.type != cfs_file_type_symlink)
+             ? cfs_true
+             : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6093,9 +6266,10 @@ NO_DISCARD CFS_API cfs_errc cfs_is_other(cfs_file_status s, cfs_bool *out) {
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_regular_file(cfs_file_status s,
                                                 cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type == cfs_file_type_regular) ? cfs_true : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6106,9 +6280,10 @@ NO_DISCARD CFS_API cfs_errc cfs_is_regular_file(cfs_file_status s,
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_socket(cfs_file_status s, cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type == cfs_file_type_socket) ? cfs_true : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6119,9 +6294,10 @@ NO_DISCARD CFS_API cfs_errc cfs_is_socket(cfs_file_status s, cfs_bool *out) {
  * \return 0 on success, or a non-zero system error code on failure.
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_symlink(cfs_file_status s, cfs_bool *out) {
-  (void)s;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+  if (!out)
+    return cfs_errc_invalid_argument;
+  *out = (s.type == cfs_file_type_symlink) ? cfs_true : cfs_false;
+  return cfs_errc_success;
 }
 
 /**
@@ -6134,10 +6310,37 @@ NO_DISCARD CFS_API cfs_errc cfs_is_symlink(cfs_file_status s, cfs_bool *out) {
  */
 NO_DISCARD CFS_API cfs_errc cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
                                               cfs_error_code *ec) {
-  (void)p;
-  (void)out;
-  (void)ec;
-  return cfs_errc_not_enough_memory;
+  cfs_file_status s;
+  cfs_errc rc;
+  if (!p || !out)
+    return cfs_errc_invalid_argument;
+  rc = cfs_status(p, &s, ec);
+  if (rc != cfs_errc_success)
+    return rc;
+  if (s.type == cfs_file_type_directory) {
+    cfs_directory_iterator *it = NULL;
+    const cfs_directory_entry *en = NULL;
+    *out = cfs_true;
+    if (cfs_dir_itr_init(p, &it, ec) == cfs_errc_success) {
+      while (cfs_dir_itr_next(it, &en, ec) == cfs_errc_success && en != NULL) {
+        int c1 = 0, c2 = 0;
+        (void)cfs_strcmp(en->path.str, CFS_STR("."), &c1);
+        (void)cfs_strcmp(en->path.str, CFS_STR(".."), &c2);
+        if (c1 != 0 && c2 != 0) {
+          *out = cfs_false;
+          break;
+        }
+      }
+      cfs_dir_itr_close(it);
+    }
+    return cfs_errc_success;
+  }
+  {
+    cfs_uintmax_t sz = 0;
+    rc = cfs_file_size(p, &sz, ec);
+    *out = (sz == 0) ? cfs_true : cfs_false;
+    return rc;
+  }
 }
 
 /**
@@ -6149,9 +6352,23 @@ NO_DISCARD CFS_API cfs_errc cfs_is_empty_path(const cfs_path *p, cfs_bool *out,
  */
 NO_DISCARD CFS_API cfs_errc cfs_create_directory(const cfs_path *p,
                                                  cfs_error_code *ec) {
-  (void)p;
-  (void)ec;
-  return cfs_errc_not_enough_memory;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !p->str || p->length == 0)
+    return cfs_errc_invalid_argument;
+#if defined(CFS_OS_WINDOWS)
+#if defined(CFS_UNICODE)
+  if (_wmkdir(p->str) == 0)
+    return cfs_errc_success;
+#else
+  if (_mkdir(p->str) == 0)
+    return cfs_errc_success;
+#endif
+#else
+  if (mkdir(p->str, 0777) == 0)
+    return cfs_errc_success;
+#endif
+  return cfs_record_last_error(ec);
 }
 
 /**
@@ -6163,43 +6380,63 @@ NO_DISCARD CFS_API cfs_errc cfs_create_directory(const cfs_path *p,
  */
 NO_DISCARD CFS_API cfs_errc cfs_create_directories(const cfs_path *p,
                                                    cfs_error_code *ec) {
-  (void)p;
-  (void)ec;
-  return cfs_errc_not_enough_memory;
+  cfs_file_status st;
+  cfs_path parent;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !p->str || p->length == 0)
+    return cfs_errc_invalid_argument;
+  if (cfs_status(p, &st, NULL) == cfs_errc_success &&
+      st.type == cfs_file_type_directory)
+    return cfs_errc_success;
+  if (cfs_path_parent_path(p, &parent) == cfs_errc_success) {
+    if (parent.length > 0 && parent.length < p->length) {
+      (void)cfs_create_directories(&parent, ec);
+    }
+    cfs_path_destroy(&parent);
+  }
+  return cfs_create_directory(p, ec);
 }
 
 /**
  * \brief Performs the cfs_create_hard_link filesystem operation.
  *
  * \param target Argument representing the target resource.
- * \param link Argument representing the target resource.
+ * \param new_link Argument representing the target resource.
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
 NO_DISCARD CFS_API cfs_errc cfs_create_hard_link(const cfs_path *target,
-                                                 const cfs_path *link,
+                                                 const cfs_path *new_link,
                                                  cfs_error_code *ec) {
-  (void)target;
-  (void)link;
-  (void)ec;
-  return cfs_errc_not_supported;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!target || !new_link || !target->str || !new_link->str)
+    return cfs_errc_invalid_argument;
+#if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+  return cfs_errc_operation_not_supported;
+#else
+  if (link(target->str, new_link->str) == 0)
+    return cfs_errc_success;
+  return cfs_record_last_error(ec);
+#endif
 }
 
 /**
  * \brief Performs the cfs_create_directory_symlink filesystem operation.
  *
  * \param target Argument representing the target resource.
- * \param link Argument representing the target resource.
+ * \param new_link Argument representing the target resource.
  * \param ec Pointer to a `cfs_error_code` structure to store any operational
  * errors.
  */
-NO_DISCARD CFS_API cfs_errc cfs_create_directory_symlink(const cfs_path *target,
-                                                         const cfs_path *link,
-                                                         cfs_error_code *ec) {
-  (void)target;
-  (void)link;
-  (void)ec;
-  return cfs_errc_not_supported;
+NO_DISCARD CFS_API cfs_errc cfs_create_directory_symlink(
+    const cfs_path *target, const cfs_path *new_link, cfs_error_code *ec) {
+  if (!target || !new_link)
+    return cfs_errc_invalid_argument;
+  return cfs_create_symlink(target, new_link, ec);
 }
 
 /**
@@ -6212,10 +6449,46 @@ NO_DISCARD CFS_API cfs_errc cfs_create_directory_symlink(const cfs_path *target,
  */
 NO_DISCARD CFS_API cfs_errc cfs_remove_all(const cfs_path *p, cfs_size_t *out,
                                            cfs_error_code *ec) {
-  (void)p;
-  (void)out;
-  (void)ec;
-  return cfs_errc_not_enough_memory;
+  cfs_file_status st;
+  cfs_size_t count = 0;
+  if (ec)
+    cfs_clear_error(ec);
+  if (out)
+    *out = 0;
+  if (!p || !p->str || p->length == 0)
+    return cfs_errc_invalid_argument;
+  if (cfs_symlink_status(p, &st, ec) != cfs_errc_success)
+    return cfs_record_last_error(ec);
+  if (st.type == cfs_file_type_directory) {
+    cfs_directory_iterator *it = NULL;
+    const cfs_directory_entry *en = NULL;
+    if (cfs_dir_itr_init(p, &it, ec) == cfs_errc_success) {
+      while (cfs_dir_itr_next(it, &en, ec) == cfs_errc_success && en != NULL) {
+        int c1 = 0, c2 = 0;
+        (void)cfs_strcmp(en->path.str, CFS_STR("."), &c1);
+        (void)cfs_strcmp(en->path.str, CFS_STR(".."), &c2);
+        if (c1 != 0 && c2 != 0) {
+          cfs_path child;
+          cfs_size_t sub_count = 0;
+          (void)cfs_path_clone(&child, p);
+          (void)cfs_path_append(&child, en->path.str);
+          (void)cfs_remove_all(&child, &sub_count, ec);
+          count += sub_count;
+          cfs_path_destroy(&child);
+        }
+      }
+      cfs_dir_itr_close(it);
+    }
+  }
+  {
+    cfs_errc rc = cfs_remove(p, ec);
+    if (rc == cfs_errc_success) {
+      count++;
+      if (out)
+        *out = count;
+    }
+    return rc;
+  }
 }
 
 /**
@@ -6229,10 +6502,18 @@ NO_DISCARD CFS_API cfs_errc cfs_remove_all(const cfs_path *p, cfs_size_t *out,
 NO_DISCARD CFS_API cfs_errc cfs_rename(const cfs_path *old_p,
                                        const cfs_path *new_p,
                                        cfs_error_code *ec) {
-  (void)old_p;
-  (void)new_p;
-  (void)ec;
-  return cfs_errc_not_supported;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!old_p || !new_p || !old_p->str || !new_p->str)
+    return cfs_errc_invalid_argument;
+#if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
+  if (_wrename(old_p->str, new_p->str) == 0)
+    return cfs_errc_success;
+#else
+  if (rename(old_p->str, new_p->str) == 0)
+    return cfs_errc_success;
+#endif
+  return cfs_record_last_error(ec);
 }
 
 /**
@@ -6246,10 +6527,20 @@ NO_DISCARD CFS_API cfs_errc cfs_rename(const cfs_path *old_p,
 NO_DISCARD CFS_API cfs_errc cfs_resize_file(const cfs_path *p,
                                             cfs_uintmax_t size,
                                             cfs_error_code *ec) {
-  (void)p;
+  if (ec)
+    cfs_clear_error(ec);
+  if (!p || !p->str || p->length == 0)
+    return cfs_errc_invalid_argument;
+#if defined(CFS_OS_WINDOWS) || defined(CFS_OS_DOS)
   (void)size;
-  (void)ec;
-  return cfs_errc_not_supported;
+  if (ec)
+    cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
+  return cfs_errc_operation_not_supported;
+#else
+  if (truncate(p->str, (off_t)size) == 0)
+    return cfs_errc_success;
+  return cfs_record_last_error(ec);
+#endif
 }
 
 /**
@@ -6263,26 +6554,40 @@ NO_DISCARD CFS_API cfs_errc cfs_resize_file(const cfs_path *p,
 NO_DISCARD CFS_API cfs_errc cfs_space(const cfs_path *p, cfs_space_info *out,
                                       cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
+  ULARGE_INTEGER avail, total, free_b;
+  struct _stat64 st;
   if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-  (void)p;
-  (void)out;
-  return cfs_errc_not_enough_memory;
+    cfs_clear_error(ec);
+  if (!p || !p->str || !out)
+    return cfs_errc_invalid_argument;
+#if defined(CFS_UNICODE)
+  if (_wstat64(p->str, &st) == 0 &&
+      (GetDiskFreeSpaceExW(p->str, &avail, &total, &free_b) ||
+       GetDiskFreeSpaceExW(CFS_STR("."), &avail, &total, &free_b))) {
+#else
+  if (_stat64(p->str, &st) == 0 &&
+      (GetDiskFreeSpaceExA(p->str, &avail, &total, &free_b) ||
+       GetDiskFreeSpaceExA(CFS_STR("."), &avail, &total, &free_b))) {
+#endif
+    out->capacity = (cfs_uintmax_t)total.QuadPart;
+    out->free = (cfs_uintmax_t)free_b.QuadPart;
+    out->available = (cfs_uintmax_t)avail.QuadPart;
+    return cfs_errc_success;
+  }
+  return cfs_record_last_error(ec);
 #else
   struct statvfs sv;
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || !out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   if (statvfs(p->str, &sv) == 0) {
     out->capacity = sv.f_blocks * sv.f_frsize;
     out->free = sv.f_bfree * sv.f_frsize;
     out->available = sv.f_bavail * sv.f_frsize;
     return cfs_errc_success;
   }
-  if (ec)
-    (void)cfs_get_last_error(ec);
-  return cfs_errc_not_enough_memory;
+  return cfs_record_last_error(ec);
 #endif
 }
 
@@ -6298,9 +6603,9 @@ NO_DISCARD CFS_API cfs_errc cfs_last_write_time(const cfs_path *p,
                                                 cfs_file_time_type *out,
                                                 cfs_error_code *ec) {
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!p || !out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
 #if defined(CFS_OS_WINDOWS)
   {
     struct _stat64 st;
@@ -6325,9 +6630,7 @@ NO_DISCARD CFS_API cfs_errc cfs_last_write_time(const cfs_path *p,
     }
   }
 #endif
-  if (ec)
-    (void)cfs_get_last_error(ec);
-  return cfs_errc_not_enough_memory;
+  return cfs_record_last_error(ec);
 }
 
 /**
@@ -6340,21 +6643,30 @@ NO_DISCARD CFS_API cfs_errc cfs_last_write_time(const cfs_path *p,
 NO_DISCARD CFS_API cfs_errc cfs_temp_directory_path(cfs_path *out,
                                                     cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
+  cfs_char_t buf[CFS_MAX_PATH];
+  DWORD len;
   if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-  (void)out;
-  return cfs_errc_not_enough_memory;
+    cfs_clear_error(ec);
+  if (!out)
+    return cfs_errc_invalid_argument;
+#if defined(CFS_UNICODE)
+  len = GetTempPathW(CFS_MAX_PATH, buf);
+#else
+  len = GetTempPathA(CFS_MAX_PATH, buf);
+#endif
+  if (len > 0 && len < CFS_MAX_PATH)
+    return cfs_path_init_str(out, buf);
+  return cfs_record_last_error(ec);
 #else
   const char *tmp;
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!out)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
   tmp = getenv("TMPDIR");
   if (!tmp)
     tmp = "/tmp";
-  (void)cfs_path_init_str(out, tmp);
-  return cfs_errc_success;
+  return cfs_path_init_str(out, tmp);
 #endif
 }
 
@@ -6370,33 +6682,55 @@ NO_DISCARD CFS_API cfs_errc cfs_dir_itr_init(const cfs_path *p,
                                              cfs_directory_iterator **out_it,
                                              cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
-  if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-  (void)p;
-  if (out_it)
-    *out_it = NULL;
-  return cfs_errc_not_enough_memory;
-#else
   cfs_directory_iterator *it;
+  cfs_path search_p;
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (out_it)
     *out_it = NULL;
-  if (!p || !out_it)
-    return cfs_errc_not_enough_memory;
+  if (!p || !p->str || !out_it)
+    return cfs_errc_invalid_argument;
   if (cfs_malloc(sizeof(cfs_directory_iterator), (void **)&it) != 0) {
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
+      cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
     return cfs_errc_not_enough_memory;
   }
   it->is_end = cfs_false;
-  (void)cfs_path_init(&it->current.path);
+  it->first = cfs_true;
+  cfs_path_init(&it->current.path);
+  (void)cfs_path_clone(&search_p, p);
+  (void)cfs_path_append(&search_p, CFS_STR("*"));
+#if defined(CFS_UNICODE)
+  it->find_handle = FindFirstFileW(search_p.str, &it->find_data);
+#else
+  it->find_handle = FindFirstFileA(search_p.str, &it->find_data);
+#endif
+  cfs_path_destroy(&search_p);
+  if (it->find_handle == INVALID_HANDLE_VALUE) {
+    cfs_free(it);
+    return cfs_record_last_error(ec);
+  }
+  *out_it = it;
+  return cfs_errc_success;
+#else
+  cfs_directory_iterator *it;
+  if (ec)
+    cfs_clear_error(ec);
+  if (out_it)
+    *out_it = NULL;
+  if (!p || !out_it)
+    return cfs_errc_invalid_argument;
+  if (cfs_malloc(sizeof(cfs_directory_iterator), (void **)&it) != 0) {
+    if (ec)
+      cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
+    return cfs_errc_not_enough_memory;
+  }
+  it->is_end = cfs_false;
+  cfs_path_init(&it->current.path);
   it->dirp = opendir(p->str);
   if (!it->dirp) {
-    (void)cfs_free(it);
-    if (ec)
-      (void)cfs_get_last_error(ec);
-    return cfs_errc_not_enough_memory;
+    cfs_free(it);
+    return cfs_record_last_error(ec);
   }
   *out_it = it;
   return cfs_errc_success;
@@ -6416,24 +6750,42 @@ cfs_dir_itr_next(cfs_directory_iterator *it,
                  const cfs_directory_entry **out_entry, cfs_error_code *ec) {
 #if defined(CFS_OS_WINDOWS)
   if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-  (void)it;
-  (void)out_entry;
-  return cfs_errc_not_enough_memory;
+    cfs_clear_error(ec);
+  if (!it || !out_entry)
+    return cfs_errc_invalid_argument;
+  *out_entry = NULL;
+  if (it->is_end)
+    return cfs_errc_success;
+  if (it->first) {
+    it->first = cfs_false;
+  } else {
+#if defined(CFS_UNICODE)
+    if (!FindNextFileW(it->find_handle, &it->find_data)) {
+#else
+    if (!FindNextFileA(it->find_handle, &it->find_data)) {
+#endif
+      it->is_end = cfs_true;
+      return cfs_errc_success;
+    }
+  }
+  (void)cfs_path_assign(&it->current.path, it->find_data.cFileName);
+  *out_entry = &it->current;
+  return cfs_errc_success;
 #else
   struct dirent *dp;
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (!it || !out_entry)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
+  *out_entry = NULL;
   if (it->is_end)
-    return 1;
+    return cfs_errc_success;
   dp = readdir(it->dirp);
   if (!dp) {
     it->is_end = cfs_true;
-    return 1;
+    return cfs_errc_success;
   }
-  (void)cfs_path_init_str(&it->current.path, dp->d_name);
+  (void)cfs_path_assign(&it->current.path, dp->d_name);
   *out_entry = &it->current;
   return cfs_errc_success;
 #endif
@@ -6445,16 +6797,17 @@ cfs_dir_itr_next(cfs_directory_iterator *it,
  * \param void Argument representing the target resource.
  */
 CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) {
-#if defined(CFS_OS_WINDOWS)
-  (void)it;
-#else
   if (!it)
     return;
+#if defined(CFS_OS_WINDOWS)
+  if (it->find_handle != INVALID_HANDLE_VALUE)
+    FindClose(it->find_handle);
+#else
   if (it->dirp)
     closedir(it->dirp);
-  (void)cfs_path_destroy(&it->current.path);
-  (void)cfs_free(it);
 #endif
+  cfs_path_destroy(&it->current.path);
+  cfs_free(it);
 }
 
 /**
@@ -6468,35 +6821,29 @@ CFS_API void cfs_dir_itr_close(cfs_directory_iterator *it) {
 NO_DISCARD CFS_API cfs_errc cfs_rec_dir_itr_init(
     const cfs_path *p, cfs_recursive_directory_iterator **out_it,
     cfs_error_code *ec) {
-#if defined(CFS_OS_WINDOWS)
-  if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-  (void)p;
-  if (out_it)
-    *out_it = NULL;
-  return cfs_errc_not_enough_memory;
-#else
   cfs_recursive_directory_iterator *it;
   cfs_directory_iterator *base_it;
+  cfs_errc rc;
   if (ec)
-    (void)cfs_clear_error(ec);
+    cfs_clear_error(ec);
   if (out_it)
     *out_it = NULL;
   if (!p || !out_it)
-    return cfs_errc_not_enough_memory;
-  if (cfs_dir_itr_init(p, &base_it, ec) != 0)
-    return cfs_errc_not_enough_memory;
+    return cfs_errc_invalid_argument;
+  rc = cfs_dir_itr_init(p, &base_it, ec);
+  if (rc != 0)
+    return rc;
   if (cfs_malloc(sizeof(cfs_recursive_directory_iterator), (void **)&it) != 0) {
-    (void)cfs_dir_itr_close(base_it);
+    cfs_dir_itr_close(base_it);
     if (ec)
-      (void)cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
+      cfs_set_error(ec, 0, cfs_errc_not_enough_memory);
     return cfs_errc_not_enough_memory;
   }
   it->base = *base_it;
-  (void)cfs_free(base_it);
+  it->disable_recursion_pending = cfs_false;
+  cfs_free(base_it);
   *out_it = it;
   return cfs_errc_success;
-#endif
 }
 
 /**
@@ -6510,19 +6857,10 @@ NO_DISCARD CFS_API cfs_errc cfs_rec_dir_itr_init(
 NO_DISCARD CFS_API cfs_errc cfs_rec_dir_itr_next(
     cfs_recursive_directory_iterator *it, const cfs_directory_entry **out_entry,
     cfs_error_code *ec) {
-#if defined(CFS_OS_WINDOWS)
-  if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-  (void)it;
-  (void)out_entry;
-  return cfs_errc_not_enough_memory;
-#else
   if (!it)
-    return cfs_errc_not_enough_memory;
-  /* Not a true recursive implementation yet, just falls back to base dir
-   * iteration for POSIX stub */
+    return cfs_errc_invalid_argument;
+  it->disable_recursion_pending = cfs_false;
   return cfs_dir_itr_next(&it->base, out_entry, ec);
-#endif
 }
 
 /**
@@ -6533,11 +6871,8 @@ NO_DISCARD CFS_API cfs_errc cfs_rec_dir_itr_next(
  */
 CFS_API void cfs_rec_dir_itr_disable_recursion_pending(
     cfs_recursive_directory_iterator *it) {
-#if defined(CFS_OS_WINDOWS)
-  (void)it;
-#else
-  (void)it; /* Recursion not fully tracked in basic stub yet */
-#endif
+  if (it)
+    it->disable_recursion_pending = cfs_true;
 }
 
 /**
@@ -6549,16 +6884,11 @@ CFS_API void cfs_rec_dir_itr_disable_recursion_pending(
  */
 NO_DISCARD CFS_API cfs_errc
 cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it, cfs_error_code *ec) {
-#if defined(CFS_OS_WINDOWS)
   if (ec)
-    (void)cfs_set_error(ec, 0, cfs_errc_operation_not_supported);
-  (void)it;
-#else
-  if (ec)
-    (void)cfs_clear_error(ec);
-  if (it)
-    it->base.is_end = cfs_true;
-#endif
+    cfs_clear_error(ec);
+  if (!it)
+    return cfs_errc_invalid_argument;
+  it->base.is_end = cfs_true;
   return cfs_errc_success;
 }
 
@@ -6568,16 +6898,17 @@ cfs_rec_dir_itr_pop(cfs_recursive_directory_iterator *it, cfs_error_code *ec) {
  * \param it Argument representing the target resource.
  */
 CFS_API void cfs_rec_dir_itr_close(cfs_recursive_directory_iterator *it) {
-#if defined(CFS_OS_WINDOWS)
-  (void)it;
-#else
   if (!it)
     return;
+#if defined(CFS_OS_WINDOWS)
+  if (it->base.find_handle != INVALID_HANDLE_VALUE)
+    FindClose(it->base.find_handle);
+#else
   if (it->base.dirp)
     closedir(it->base.dirp);
-  (void)cfs_path_destroy(&it->base.current.path);
-  (void)cfs_free(it);
 #endif
+  cfs_path_destroy(&it->base.current.path);
+  cfs_free(it);
 }
 
 #endif /* CFS_IMPLEMENTATION */

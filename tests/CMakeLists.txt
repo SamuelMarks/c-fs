@@ -19,6 +19,11 @@ else()
 endif()
 
 add_executable(cfs_test test_main.c)
+if(CFS_HEADER_ONLY)
+    target_compile_definitions(cfs INTERFACE CFS_ENABLE_FAULT_INJECTION)
+else()
+    target_compile_definitions(cfs PUBLIC CFS_ENABLE_FAULT_INJECTION)
+endif()
 target_link_libraries(cfs_test PRIVATE cfs)
 
 if(EMSCRIPTEN)

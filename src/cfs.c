@@ -18,6 +18,7 @@
 #include <direct.h>
 #endif
 
+#if defined(CFS_ENABLE_FAULT_INJECTION)
 /* Implement CFS_API for external declarations to match definitions */
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
 #if defined(CFS_BUILD_SHARED)
@@ -58,6 +59,7 @@ extern CFS_API_FWD int g_cfs_readlink_fail;
 /** \brief Internal Macro _getcwd */
 #define _getcwd(b, s) (g_cfs_getcwd_fail ? NULL : _getcwd(b, s))
 #endif
+#endif /* CFS_ENABLE_FAULT_INJECTION */
 
 #include "cfs/cfs.h"
 #include "cfs/log.h"
@@ -65,6 +67,7 @@ extern CFS_API_FWD int g_cfs_readlink_fail;
 #include <stdio.h>
 /* clang-format on */
 
+#if defined(CFS_ENABLE_FAULT_INJECTION)
 /** \brief Global flag to simulate cfs_malloc failure in tests. */
 CFS_API int g_cfs_malloc_fail = 0;
 /** \brief Global flag to simulate cfs_realloc failure in tests. */
@@ -75,6 +78,7 @@ CFS_API int g_cfs_calloc_fail = 0;
 CFS_API int g_cfs_getcwd_fail = 0;
 /** \brief Global flag to simulate readlink failure in tests. */
 CFS_API int g_cfs_readlink_fail = 0;
+#endif /* CFS_ENABLE_FAULT_INJECTION */
 
 /**
  * \brief Submits a formatted message to the internal debug log.
