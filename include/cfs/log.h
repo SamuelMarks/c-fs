@@ -13,17 +13,22 @@ extern "C" {
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
 #if defined(CFS_BUILD_SHARED)
 #if defined(CFS_EXPORTS)
+/** @brief Symbol export attribute for shared Windows builds. */
 #define CFS_API __declspec(dllexport)
 #else
+/** @brief Symbol import attribute for shared Windows builds. */
 #define CFS_API __declspec(dllimport)
 #endif
 #else
+/** @brief Symbol visibility macro for static Windows builds. */
 #define CFS_API
 #endif
 #else
 #if defined(CFS_BUILD_SHARED) && defined(__GNUC__) && __GNUC__ >= 4
+/** @brief Default visibility attribute for shared GCC/Clang builds. */
 #define CFS_API __attribute__((visibility("default")))
 #else
+/** @brief Symbol visibility macro for static builds. */
 #define CFS_API
 #endif
 #endif

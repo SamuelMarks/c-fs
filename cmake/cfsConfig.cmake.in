@@ -1,0 +1,26 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+if(@_CFS_NEEDS_THREADS_DEPENDENCY@)
+    set(_cfs_prev_prefer_pthread_defined FALSE)
+    if(DEFINED THREADS_PREFER_PTHREAD_FLAG)
+        set(_cfs_prev_prefer_pthread_defined TRUE)
+        set(_cfs_prev_prefer_pthread "${THREADS_PREFER_PTHREAD_FLAG}")
+    endif()
+
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_dependency(Threads)
+
+    if(_cfs_prev_prefer_pthread_defined)
+        set(THREADS_PREFER_PTHREAD_FLAG "${_cfs_prev_prefer_pthread}")
+    else()
+        unset(THREADS_PREFER_PTHREAD_FLAG)
+    endif()
+    unset(_cfs_prev_prefer_pthread_defined)
+    unset(_cfs_prev_prefer_pthread)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/cfs-targets.cmake")
+
+check_required_components(cfs)

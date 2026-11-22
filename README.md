@@ -13,14 +13,14 @@ Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling
 
 ## Core Features
 
-- **Zero External Dependencies:** Depends solely on the host OS native API (`GetFileAttributesW`, `stat`, `dirent`, etc.) and the C standard library.
+- **Zero External Dependencies:** Depends solely on the host OS native API (`_wstat64`, `CreateFileW`, `FindFirstFileW`, `stat`, `dirent`, etc.) and the C standard library.
 - **Strict C89 Compliance:** Compiles gracefully on legacy compilers without requiring C99/C11 features. Tested rigorously on MSVC 2005.
 - **Dynamic Strings & Safe CRT:** Completely safe dynamic memory management strictly wrapping OS path limits. Avoids fixed `MAX_PATH` buffers. On MSVC, automatically leverages Safe CRT functions (e.g., `wcscpy_s`) while elegantly falling back to standard string manipulation on GCC/Clang.
-- **Single-Header Native:** Distribute strictly as `include/cfs/cfs.h` for easy, drop-in integration.
-- **C++17 Behavioral Mapping:** Functions meticulously map to the expected behavioral quirks and boundary cases of C++'s `<filesystem>`.
+- **Header-Only Capable:** Drop in the `include/cfs/` header directory (`cfs.h`, `log.h`, `no_discard.h`) for header-only integration via `CFS_IMPLEMENTATION`, or build as a static/shared library.
+- **C++17 Behavioral Mapping:** Functions meticulously map to the expected behavioral quirks and boundary cases of C++'s `<filesystem>`, returning `CFS_NO_DISCARD`-annotated `cfs_errc` status codes.
 - **Wide Character Support:** Native toggleable integration seamlessly utilizing wide character API layers strictly on Windows, bypassing legacy ANSI codepage conversion loss.
-- **Flexible Build Options:** Choose between a static library, a shared library (.dll/.so), or a completely header-only integration to suit your project's architecture.
-- **Asynchronous & Multithreaded Modalities:** First-class support for deferred execution via configurable runtimes (Thread pools, Green threads, Multiprocessing, Message Passing), enabling fully non-blocking and async filesystem operations.
+- **Flexible Build Options:** Choose between a static library, a shared library (`.dll`/`.so`/`.dylib`), or a header-only `INTERFACE` target to suit your project's architecture.
+- **Asynchronous & Multithreaded Modalities:** Built-in deferred execution via configurable runtimes (synchronous inline and multi-threaded worker pools), with foundational API scaffolding for green threads, multiprocessing, and message passing.
 
 ## `std::filesystem` Compliance Table
 
@@ -28,10 +28,10 @@ Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling
 |---------------------------|-------------------|--------|-------|
 | **Classes & Types**       |                   |        |       |
 | [`path`](https://en.cppreference.com/w/cpp/filesystem/path) | `cfs_path`        | ✅   | Comprehensive path parsing & manipulation |
-| [`filesystem_error`](https://en.cppreference.com/w/cpp/filesystem/filesystem_error) | `cfs_error_code`  | ✅   | Core POSIX `errc` mapping |
+| [`filesystem_error`](https://en.cppreference.com/w/cpp/filesystem/filesystem_error) | `cfs_error_code`  | ✅   | Raw OS code + full OS-to-POSIX `cfs_errc` translation & `cfs_error_message` |
 | [`directory_entry`](https://en.cppreference.com/w/cpp/filesystem/directory_entry) | `cfs_directory_entry` | ✅ | |
-| [`directory_iterator`](https://en.cppreference.com/w/cpp/filesystem/directory_iterator) | `cfs_directory_iterator` | ✅ | |
-| [`recursive_directory_iterator`](https://en.cppreference.com/w/cpp/filesystem/recursive_directory_iterator) | `cfs_recursive_directory_iterator` | ✅ | |
+| [`directory_iterator`](https://en.cppreference.com/w/cpp/filesystem/directory_iterator) | `cfs_directory_iterator` | ✅ | Includes async init (`cfs_dir_itr_init_async`) |
+| [`recursive_directory_iterator`](https://en.cppreference.com/w/cpp/filesystem/recursive_directory_iterator) | `cfs_recursive_directory_iterator` | ✅ | Depth-tracking stack traversal (`depth`, `pop`, `disable_recursion_pending`) |
 | [`file_status`](https://en.cppreference.com/w/cpp/filesystem/file_status) | `cfs_file_status` | ✅   | |
 | [`space_info`](https://en.cppreference.com/w/cpp/filesystem/space_info) | `cfs_space_info`  | ✅   | |
 | [`file_type`](https://en.cppreference.com/w/cpp/filesystem/file_type) | `cfs_file_type`   | ✅   | |
@@ -51,10 +51,10 @@ Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling
 | [`create_hard_link`](https://en.cppreference.com/w/cpp/filesystem/create_hard_link) | `cfs_create_hard_link` | ✅ | |
 | [`create_symlink`](https://en.cppreference.com/w/cpp/filesystem/create_symlink) | `cfs_create_symlink` | ✅ | |
 | [`create_directory_symlink`](https://en.cppreference.com/w/cpp/filesystem/create_directory_symlink) | `cfs_create_directory_symlink` | ✅ | |
-| [`current_path`](https://en.cppreference.com/w/cpp/filesystem/current_path) | `cfs_current_path` | ✅  | Set/Get both available |
+| [`current_path`](https://en.cppreference.com/w/cpp/filesystem/current_path) | `cfs_current_path` | ✅  | Set (`cfs_current_path_set`) / Get both available |
 | [`equivalent`](https://en.cppreference.com/w/cpp/filesystem/equivalent) | `cfs_equivalent`  | ✅   | |
-| [`exists`](https://en.cppreference.com/w/cpp/filesystem/exists) | `cfs_exists_path` | ✅   | |
-| [`file_size`](https://en.cppreference.com/w/cpp/filesystem/file_size) | `cfs_file_size`   | ✅   | Includes async definition |
+| [`exists`](https://en.cppreference.com/w/cpp/filesystem/exists) | `cfs_exists` / `cfs_exists_path` | ✅   | Status and path overloads available |
+| [`file_size`](https://en.cppreference.com/w/cpp/filesystem/file_size) | `cfs_file_size`   | ✅   | Includes async definition (`cfs_file_size_async`) |
 | [`hard_link_count`](https://en.cppreference.com/w/cpp/filesystem/hard_link_count) | `cfs_hard_link_count` | ✅   | |
 | [`is_block_file`](https://en.cppreference.com/w/cpp/filesystem/is_block_file) | `cfs_is_block_file` | ✅ | |
 | [`is_character_file`](https://en.cppreference.com/w/cpp/filesystem/is_character_file) | `cfs_is_character_file` | ✅ | |
@@ -65,12 +65,12 @@ Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling
 | [`is_regular_file`](https://en.cppreference.com/w/cpp/filesystem/is_regular_file) | `cfs_is_regular_file` | ✅ | |
 | [`is_socket`](https://en.cppreference.com/w/cpp/filesystem/is_socket) | `cfs_is_socket`   | ✅   | |
 | [`is_symlink`](https://en.cppreference.com/w/cpp/filesystem/is_symlink) | `cfs_is_symlink`  | ✅   | |
-| [`last_write_time`](https://en.cppreference.com/w/cpp/filesystem/last_write_time) | `cfs_last_write_time` | ✅ | |
+| [`last_write_time`](https://en.cppreference.com/w/cpp/filesystem/last_write_time) | `cfs_last_write_time` / `cfs_last_write_time_set` | ✅ | Getter and setter both implemented |
 | [`permissions`](https://en.cppreference.com/w/cpp/filesystem/permissions) | `cfs_permissions` | ✅   | |
-| [`proximate`](https://en.cppreference.com/w/cpp/filesystem/proximate) | `cfs_proximate`   | ✅   | FS-aware missing, Lexical wrapper added |
+| [`proximate`](https://en.cppreference.com/w/cpp/filesystem/proximate) | `cfs_proximate`   | ✅   | FS-aware via `cfs_weakly_canonical` + `cfs_path_lexically_proximate` |
 | [`read_symlink`](https://en.cppreference.com/w/cpp/filesystem/read_symlink) | `cfs_read_symlink` | ✅   | |
-| [`relative`](https://en.cppreference.com/w/cpp/filesystem/relative) | `cfs_relative`    | ✅   | FS-aware missing, Lexical wrapper added |
-| [`remove`](https://en.cppreference.com/w/cpp/filesystem/remove) | `cfs_remove`      | ✅   | Includes async definition |
+| [`relative`](https://en.cppreference.com/w/cpp/filesystem/relative) | `cfs_relative`    | ✅   | FS-aware via `cfs_weakly_canonical` + `cfs_path_lexically_relative` |
+| [`remove`](https://en.cppreference.com/w/cpp/filesystem/remove) | `cfs_remove`      | ✅   | Includes async definition (`cfs_remove_async`) |
 | [`remove_all`](https://en.cppreference.com/w/cpp/filesystem/remove) | `cfs_remove_all`  | ✅   | |
 | [`rename`](https://en.cppreference.com/w/cpp/filesystem/rename) | `cfs_rename`      | ✅   | |
 | [`resize_file`](https://en.cppreference.com/w/cpp/filesystem/resize_file) | `cfs_resize_file` | ✅   | |
@@ -86,13 +86,13 @@ Beyond standard filesystem operations, `c-fs` introduces asynchronous scheduling
 
 The library relies heavily on platform detection macros to switch between backend implementations natively.
 
-*   **Compilers:** GCC, Clang, MSVC (2005 through 2026), MinGW.
-*   **Operating Systems:** DOS, Windows, macOS, Linux, FreeBSD/OpenBSD.
-*   **Environments:** Native, Cygwin, Alpine (Musl), Debian (Glibc).
+*   **Compilers:** GCC, Clang, MSVC (2005 through 2026), MinGW, Open Watcom.
+*   **Operating Systems:** DOS, Windows, macOS, Linux, FreeBSD/NetBSD/OpenBSD/DragonFly.
+*   **Environments:** Native, Cygwin, Emscripten, Alpine (Musl), Ubuntu/Debian (Glibc).
 
 ## Integration
 
-`c-fs` follows the single-header `stb` library philosophy. Include `cfs.h` in your project. In exactly *one* C file, define `CFS_IMPLEMENTATION` before including it to construct the compilation object.
+`c-fs` follows the `stb`-style implementation macro pattern when used without building `src/cfs.c`. Ensure `include/` (containing `cfs/cfs.h`, `cfs/log.h`, and `cfs/no_discard.h`) is on your include path, and in exactly *one* C file define `CFS_IMPLEMENTATION` before including `cfs/cfs.h` *(note: if compiling with `DEBUG` defined, also compile `src/cfs.c` or provide `cfs_log_debug`)*:
 
 ```c
 /* In exactly ONE source file: */
@@ -111,17 +111,28 @@ In all other files, just include the header:
 ```c
 #include "cfs/cfs.h"
 #include <stdio.h>
-#include <assert.h>
+#if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
+#include <wchar.h>
+#endif
 
-int main() {
+int main(void) {
     cfs_path p;
     const cfs_char_t *str;
 
-    assert(cfs_path_init_str(&p, CFS_STR("var/log")) == 0);
-    assert(cfs_path_append(&p, CFS_STR("application.log")) == 0);
+    if (cfs_path_init_str(&p, CFS_STR("var/log")) != cfs_errc_success) {
+        return 1;
+    }
+    if (cfs_path_append(&p, CFS_STR("application.log")) != cfs_errc_success ||
+        cfs_path_c_str(&p, &str) != cfs_errc_success) {
+        cfs_path_destroy(&p);
+        return 1;
+    }
 
-    assert(cfs_path_c_str(&p, &str) == 0);
+#if defined(CFS_OS_WINDOWS) && defined(CFS_UNICODE)
+    wprintf(L"Full Path: %ls\n", str);
+#else
     printf("Full Path: %s\n", str);
+#endif
 
     cfs_path_destroy(&p);
     return 0;
@@ -132,31 +143,47 @@ int main() {
 ```c
 #include "cfs/cfs.h"
 #include <stdio.h>
-#include <assert.h>
 
-void on_size(cfs_request_t* req, void* user_data) {
-    if (req->error.value == 0) {
-        printf("Size: " CFS_UNUM_FORMAT "\n", *(cfs_uintmax_t*)req->result_buffer);
+static void on_size(cfs_request_t *req, void *user_data) {
+    cfs_bool *done = (cfs_bool *)user_data;
+    if (req->error.errc == cfs_errc_success && req->result_buffer != NULL) {
+        printf("Size: " CFS_UNUM_FORMAT "\n",
+               *(const cfs_uintmax_t *)req->result_buffer);
+    }
+    if (done != NULL) {
+        *done = cfs_true;
     }
 }
 
-int main() {
+int main(void) {
     cfs_runtime_config cfg;
     cfs_error_code ec;
-    cfs_runtime_t* rt;
+    cfs_runtime_t *rt;
     cfs_path p;
+    cfs_bool done = cfs_false;
 
     cfg.mode = cfs_modality_async;
     cfg.thread_pool_size = 4;
     cfg.ipc_path = NULL;
 
-    assert(cfs_runtime_init(&cfg, &rt, &ec) == 0);
+    if (cfs_runtime_init(&cfg, &rt, &ec) != cfs_errc_success) {
+        return 1;
+    }
+    if (cfs_path_init_str(&p, CFS_STR("file.bin")) != cfs_errc_success) {
+        cfs_runtime_destroy(rt);
+        return 1;
+    }
+    if (cfs_file_size_async(rt, &p, on_size, &done) != cfs_errc_success) {
+        cfs_path_destroy(&p);
+        cfs_runtime_destroy(rt);
+        return 1;
+    }
 
-    assert(cfs_path_init_str(&p, CFS_STR("file.bin")) == 0);
-
-    assert(cfs_file_size_async(rt, &p, on_size, NULL) == 0);
-
-    while (cfs_runtime_poll(rt) == 0) { /* event loop */ }
+    while (!done) {
+        if (cfs_runtime_poll(rt) != cfs_errc_success) {
+            break;
+        }
+    }
 
     cfs_path_destroy(&p);
     cfs_runtime_destroy(rt);
@@ -166,16 +193,24 @@ int main() {
 
 ## CMake Support
 
-Easily integrate via FetchContent or `add_subdirectory`:
+Easily integrate via `FetchContent`, `add_subdirectory`, or an installed CMake package (`find_package(cfs CONFIG REQUIRED)`):
 ```cmake
 add_subdirectory(c-fs)
-target_link_libraries(my_app PRIVATE cfs)
+target_link_libraries(my_app PRIVATE cfs::cfs) # or cfs
 ```
 
 Options:
-- `CFS_BUILD_SHARED`: (OFF) Enable `.dll` / `.so` generation.
-- `CFS_UNICODE`: (ON) Enable native `wchar_t` bridging on Windows targets.
-- `CFS_HEADER_ONLY`: (OFF) Expose strictly as an interface wrapper for parent projects.
+- `CFS_BUILD_STATIC`: (`ON`) Build `c-fs` as a static library (defaults to `!BUILD_SHARED_LIBS` when `BUILD_SHARED_LIBS` is defined).
+- `CFS_BUILD_SHARED`: (`OFF`) Build `c-fs` as a shared library (`.dll` / `.so` / `.dylib`).
+- `CFS_HEADER_ONLY`: (`OFF`) Expose `cfs` as a header-only `INTERFACE` target.
+- `CFS_INSTALL` *(or `C_FS_INSTALL`)*: (`ON` when top-level, `OFF` as a subproject) Generate install and `cfsConfig.cmake` package export rules.
+- `C_FS_CHARSET` *(or `CFS_CHARSET` / `CFS_UNICODE`)*: (`"Unicode"`) Character encoding on Windows (`"Unicode"` defines `CFS_UNICODE` for `wchar_t` APIs; `"ANSI"` / `"MBCS"` selects narrow `char` APIs).
+- `C_FS_THREADING` *(or `CFS_THREADING`)*: (`"Multi-threaded"`) Threading configuration (`"Multi-threaded"` defines `CFS_MULTITHREADED`; or `"Single-threaded"`).
+- `C_FS_LTO` *(or `CFS_LTO`)*: (`OFF`) Enable Link-Time Optimization (`INTERPROCEDURAL_OPTIMIZATION` and `CFS_ENABLE_LTO`).
+- `C_FS_CRT_LINKAGE` *(or `CFS_CRT_LINKAGE`)*: (`"Shared"`) Per-target MSVC CRT linkage (`"Shared"` `/MD` or `"Static"` `/MT`) when `CMAKE_MSVC_RUNTIME_LIBRARY` is unset.
+- `C_FS_MSVC_RTC` *(or `CFS_MSVC_RTC`)*: (`""`) Optional MSVC runtime error checks (`RTC1`, `RTCs`, `RTCu`).
+- `CFS_BUILD_TESTING` *(or `C_FS_BUILD_TESTING` / `BUILD_TESTING`)*: (`OFF`, top-level only) Build the test suite.
+- `C_FS_COVERAGE` *(or `CFS_COVERAGE`)*: (`OFF`, top-level only) Enable `--coverage` instrumentation on GCC/Clang.
 
 ## Project Documentation
 

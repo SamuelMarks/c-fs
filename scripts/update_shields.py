@@ -3,51 +3,83 @@ import re
 import subprocess
 import sys
 
+
 def get_color(pct):
-    if pct >= 90: return "brightgreen"
-    if pct >= 80: return "green"
-    if pct >= 70: return "yellowgreen"
-    if pct >= 60: return "yellow"
+    if pct >= 90:
+        return "brightgreen"
+    if pct >= 80:
+        return "green"
+    if pct >= 70:
+        return "yellowgreen"
+    if pct >= 60:
+        return "yellow"
     return "red"
 
+
 def get_doc_coverage():
+    headers = [
+        "include/cfs/cfs.h",
+        "include/cfs/log.h",
+        "include/cfs/no_discard.h",
+    ]
+    total = 0
+    documented = 0
     try:
-        with open("include/cfs/cfs.h", "r") as f:
-            lines = [line.strip() for line in f.readlines()]
-        total = 0
-        documented = 0
-        for i, line in enumerate(lines):
-            if line.startswith("CFS_API "):
-                total += 1
-                j = i - 1
-                while j >= 0 and lines[j] == "":
-                    j -= 1
-                if j >= 0 and lines[j].endswith("*/"):
-                    documented += 1
-        if total == 0: return 0.0
+        for hdr in headers:
+            if not os.path.exists(hdr):
+                continue
+            with open(hdr, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f.readlines()]
+            for i, line in enumerate(lines):
+                if line.startswith("CFS_API ") or line.startswith(
+                    "CFS_NO_DISCARD CFS_API "
+                ):
+                    total += 1
+                    j = i - 1
+                    while j >= 0 and lines[j] == "":
+                        j -= 1
+                    if j >= 0 and lines[j].endswith("*/"):
+                        documented += 1
+        if total == 0:
+            return 0.0
         return (documented / total) * 100.0
     except Exception as e:
         print(f"Error calculating doc coverage: {e}")
         return 0.0
 
+
 def get_test_coverage():
     try:
-        if os.name == 'nt':
+        if os.name == "nt":
             return None
-        cmd = ["gcovr", "-r", "..", ".", "-f", r".*/cfs\.h$", "-f", r".*/cfs\.c$",
-               "--gcov-ignore-parse-errors=negative_hits.warn", "--print-summary"]
+        cmd = [
+            "gcovr",
+            "-r",
+            "..",
+            ".",
+            "-f",
+            r".*/cfs\.h$",
+            "-f",
+            r".*/cfs\.c$",
+            "--gcov-ignore-parse-errors=all",
+            "--print-summary",
+        ]
         res = subprocess.run(cmd, cwd="build_gcc", capture_output=True, text=True)
         if res.returncode != 0:
             print("gcovr failed:\n" + res.stderr)
             return None
 
-        match = re.search(r"lines:\s+([0-9.]+)%", res.stdout)
-        if match:
-            return float(match.group(1))
+        line_m = re.search(r"lines:\s+([0-9.]+)%", res.stdout)
+        branch_m = re.search(r"branches:\s+([0-9.]+)%", res.stdout)
+        if line_m and branch_m:
+            return min(float(line_m.group(1)), float(branch_m.group(1)))
+        if line_m:
+            return float(line_m.group(1))
         return None
     except Exception as e:
         print(f"Error calculating test coverage: {e}")
         return None
+
 
 def main():
     doc_cov = get_doc_coverage()
@@ -58,7 +90,7 @@ def main():
         print(f"Test Coverage: {test_cov:.1f}%")
     else:
         print("Test Coverage: N/A")
-        test_cov = 0.0 # Default for failure or missing
+        test_cov = 0.0  # Default for failure or missing
 
     try:
         with open("README.md", "r") as f:
@@ -91,6 +123,7 @@ def main():
     except Exception as e:
         print(f"Error updating README.md: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
