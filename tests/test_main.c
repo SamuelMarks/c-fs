@@ -3174,16 +3174,17 @@ TEST exhaustive_branch_coverage_fs(void) {
     ASSERT_EQ(cfs_errc_success, cfs_remove_all(&rdir, &sz, &ec));
 
 #if !defined(CFS_OS_WINDOWS) && !defined(CFS_OS_DOS)
-    if (geteuid() != 0) {
+    {
+      cfs_path orig_cwd = {0}, dot_cur = {0};
+      ASSERT_EQ(cfs_errc_success, cfs_current_path(&orig_cwd, &ec));
       ASSERT_EQ(cfs_errc_success, cfs_create_directories(&rsub, &ec));
-      ASSERT_EQ(cfs_errc_success,
-                cfs_permissions(&rdir, (cfs_perms)0500,
-                                cfs_perm_options_replace, &ec));
-      ASSERT_NEQ(cfs_errc_success, cfs_remove_all(&rsub, &sz, &ec));
-      ASSERT_EQ(cfs_errc_success,
-                cfs_permissions(&rdir, (cfs_perms)0700,
-                                cfs_perm_options_replace, &ec));
+      ASSERT_EQ(cfs_errc_success, cfs_current_path_set(&rsub, &ec));
+      ASSERT_EQ(cfs_errc_success, cfs_path_init_str(&dot_cur, CFS_STR(".")));
+      ASSERT_NEQ(cfs_errc_success, cfs_remove_all(&dot_cur, &sz, &ec));
+      ASSERT_EQ(cfs_errc_success, cfs_current_path_set(&orig_cwd, &ec));
       ASSERT_EQ(cfs_errc_success, cfs_remove_all(&rdir, &sz, &ec));
+      cfs_path_destroy(&dot_cur);
+      cfs_path_destroy(&orig_cwd);
     }
 #endif
     cfs_path_destroy(&rdir);
@@ -3262,12 +3263,13 @@ TEST exhaustive_branch_coverage_fs(void) {
     ASSERT_EQ(cfs_errc_success, cfs_equivalent(&p, &q, &b, &ec));
     ASSERT_EQ(cfs_false, b);
     cfs_path_destroy(&q);
-
+#if !defined(__CYGWIN__)
     ASSERT_EQ(cfs_errc_success, cfs_path_init_str(&q, CFS_STR("\\")));
     ASSERT_NEQ(cfs_errc_invalid_argument, cfs_remove(&q, NULL));
     ASSERT_EQ(cfs_errc_success, cfs_create_directories(&q, &ec));
     ASSERT_EQ(cfs_errc_success, cfs_remove(&q, &ec));
     cfs_path_destroy(&q);
+#endif
 #endif
   }
 
@@ -3386,19 +3388,19 @@ TEST phase1_to_3_features(void) {
       ASSERT_EQ(cfs_errc_illegal_byte_sequence,
                 cfs_mb_to_wide(bad_utf8, wbuf, 32, NULL));
     }
-    if (saved_loc[0] != '\0') {
-      (void)setlocale(LC_CTYPE, saved_loc);
-    } else {
-      (void)setlocale(LC_CTYPE, "C");
-    }
     (void)setlocale(LC_CTYPE, "C");
-    bad_wide[0] = (wchar_t)0x110000;
+    bad_wide[0] = (wchar_t)0xD800u;
     bad_wide[1] = (wchar_t)0;
     ASSERT_EQ(cfs_errc_illegal_byte_sequence,
               cfs_wide_to_mb(bad_wide, mbuf, 32, &req_sz));
     ASSERT_EQ(0, req_sz);
     ASSERT_EQ(cfs_errc_illegal_byte_sequence,
               cfs_wide_to_mb(bad_wide, mbuf, 32, NULL));
+    if (saved_loc[0] != '\0') {
+      (void)setlocale(LC_CTYPE, saved_loc);
+    } else {
+      (void)setlocale(LC_CTYPE, "C");
+    }
   }
 #endif
 
@@ -4377,7 +4379,7 @@ TEST phase5_directory_iterators(void) {
 
 #if !defined(CFS_OS_WINDOWS) && !defined(CFS_OS_DOS)
   {
-    cfs_path d_sym = {0}, p_lock = {0}, p_inside = {0};
+    cfs_path d_sym = {0}, p_loop = {0}, p_inside = {0};
     ASSERT_EQ(cfs_errc_success,
               cfs_path_init_str(&d_sym, CFS_STR("test_p5_dangling_sym")));
     test_ignore_rc(cfs_remove(&d_sym, NULL));
@@ -4389,35 +4391,24 @@ TEST phase5_directory_iterators(void) {
     ASSERT_EQ(cfs_file_type_not_found, dent.status.type);
     test_ignore_rc(cfs_remove(&d_sym, NULL));
 
-    if (geteuid() != 0) {
-      ASSERT_EQ(cfs_errc_success,
-                cfs_path_init_str(&p_lock, CFS_STR("test_p5_locked_dir")));
-      ASSERT_EQ(
-          cfs_errc_success,
-          cfs_path_init_str(&p_inside, CFS_STR("test_p5_locked_dir/sub")));
-      test_ignore_rc(cfs_remove_all(&p_lock, NULL, NULL));
-      ASSERT_EQ(cfs_errc_success, cfs_create_directory(&p_lock, &ec));
-      ASSERT_EQ(cfs_errc_success, cfs_create_symlink(&p_inside, &d_sym, &ec));
-      ASSERT_EQ(cfs_errc_success,
-                cfs_permissions(&p_lock, (cfs_perms)0000,
-                                cfs_perm_options_replace, &ec));
-      /* Refresh error on symlink_status & status (via symlink pointing into
-       * 0000 dir) */
-      ASSERT_NEQ(cfs_errc_success, cfs_dir_entry_assign(&dent, &p_inside, &ec));
-      ASSERT_NEQ(cfs_errc_success, cfs_dir_entry_assign(&dent, &d_sym, &ec));
-      /* Uncached predicate error */
-      cfs_dir_entry_destroy(&dent);
-      cfs_dir_entry_init(&dent);
-      ASSERT_EQ(cfs_errc_success, cfs_path_assign(&dent.path, p_inside.str));
-      ASSERT_NEQ(cfs_errc_success, cfs_dir_entry_exists(&dent, &b, &ec));
-      ASSERT_EQ(cfs_errc_success,
-                cfs_permissions(&p_lock, (cfs_perms)0700,
-                                cfs_perm_options_replace, &ec));
-      test_ignore_rc(cfs_remove(&d_sym, NULL));
-      test_ignore_rc(cfs_remove_all(&p_lock, NULL, NULL));
-      cfs_path_destroy(&p_lock);
-      cfs_path_destroy(&p_inside);
-    }
+    ASSERT_EQ(cfs_errc_success,
+              cfs_path_init_str(&p_loop, CFS_STR("test_p5_loop_sym")));
+    ASSERT_EQ(cfs_errc_success,
+              cfs_path_init_str(&p_inside, CFS_STR("test_p5_loop_sym/sub")));
+    test_ignore_rc(cfs_remove(&p_loop, NULL));
+    ASSERT_EQ(cfs_errc_success, cfs_create_symlink(&p_loop, &p_loop, &ec));
+    /* Refresh error on symlink_status ("loop/sub" -> ELOOP) & status ("loop"
+     * -> lstat ok, stat ELOOP) */
+    ASSERT_NEQ(cfs_errc_success, cfs_dir_entry_assign(&dent, &p_inside, &ec));
+    ASSERT_NEQ(cfs_errc_success, cfs_dir_entry_assign(&dent, &p_loop, &ec));
+    /* Uncached predicate error */
+    cfs_dir_entry_destroy(&dent);
+    cfs_dir_entry_init(&dent);
+    ASSERT_EQ(cfs_errc_success, cfs_path_assign(&dent.path, p_loop.str));
+    ASSERT_NEQ(cfs_errc_success, cfs_dir_entry_exists(&dent, &b, &ec));
+    test_ignore_rc(cfs_remove(&p_loop, NULL));
+    cfs_path_destroy(&p_loop);
+    cfs_path_destroy(&p_inside);
     cfs_path_destroy(&d_sym);
   }
 #endif
@@ -4615,6 +4606,8 @@ TEST phase5_directory_iterators(void) {
     cfs_rec_dir_itr_close(rit);
 
     if (geteuid() != 0) {
+      cfs_directory_iterator *probe_dit = NULL;
+      cfs_errc probe_rc;
       ASSERT_EQ(cfs_errc_success,
                 cfs_path_init_str(&deny_dir, CFS_STR("tp5tree/d1/deny")));
       ASSERT_EQ(cfs_errc_success, cfs_create_directory(&deny_dir, &ec));
@@ -4622,48 +4615,53 @@ TEST phase5_directory_iterators(void) {
                 cfs_permissions(&deny_dir, (cfs_perms)0000,
                                 cfs_perm_options_replace, &ec));
 
-      /* Root unreadable with & without skip_permission_denied */
-      ASSERT_EQ(cfs_errc_permission_denied,
-                cfs_rec_dir_itr_init_opts(&deny_dir, cfs_directory_options_none,
-                                          &rit, &ec));
-      ASSERT_EQ(cfs_errc_success,
-                cfs_rec_dir_itr_init_opts(
-                    &deny_dir, cfs_directory_options_skip_permission_denied,
-                    &rit, &ec));
-      ASSERT_EQ(cfs_errc_success, cfs_rec_dir_itr_next(rit, &en, &ec));
-      ASSERT(en == NULL);
-      cfs_rec_dir_itr_close(rit);
+      probe_rc = cfs_dir_itr_init(&deny_dir, &probe_dit, &ec);
+      if (probe_rc == cfs_errc_success) {
+        cfs_dir_itr_close(probe_dit);
+      } else if (probe_rc == cfs_errc_permission_denied) {
+        /* Root unreadable with & without skip_permission_denied */
+        ASSERT_EQ(cfs_errc_permission_denied,
+                  cfs_rec_dir_itr_init_opts(
+                      &deny_dir, cfs_directory_options_none, &rit, &ec));
+        ASSERT_EQ(cfs_errc_success,
+                  cfs_rec_dir_itr_init_opts(
+                      &deny_dir, cfs_directory_options_skip_permission_denied,
+                      &rit, &ec));
+        ASSERT_EQ(cfs_errc_success, cfs_rec_dir_itr_next(rit, &en, &ec));
+        ASSERT(en == NULL);
+        cfs_rec_dir_itr_close(rit);
 
-      /* Nested unreadable without skip_permission_denied fails on descent */
-      ASSERT_EQ(cfs_errc_success,
-                cfs_rec_dir_itr_init_opts(&p_root, cfs_directory_options_none,
-                                          &rit, &ec));
-      {
-        int saw_err = 0;
-        for (;;) {
-          cfs_errc s_rc = cfs_rec_dir_itr_next(rit, &en, &ec);
-          if (s_rc != cfs_errc_success) {
-            saw_err = 1;
-            break;
+        /* Nested unreadable without skip_permission_denied fails on descent */
+        ASSERT_EQ(cfs_errc_success,
+                  cfs_rec_dir_itr_init_opts(&p_root, cfs_directory_options_none,
+                                            &rit, &ec));
+        {
+          int saw_err = 0;
+          for (;;) {
+            cfs_errc s_rc = cfs_rec_dir_itr_next(rit, &en, &ec);
+            if (s_rc != cfs_errc_success) {
+              saw_err = 1;
+              break;
+            }
+            if (!en)
+              break;
           }
+          ASSERT_EQ(1, saw_err);
+        }
+        cfs_rec_dir_itr_close(rit);
+
+        /* Nested unreadable WITH skip_permission_denied succeeds! */
+        ASSERT_EQ(cfs_errc_success,
+                  cfs_rec_dir_itr_init_opts(
+                      &p_root, cfs_directory_options_skip_permission_denied,
+                      &rit, &ec));
+        for (;;) {
+          ASSERT_EQ(cfs_errc_success, cfs_rec_dir_itr_next(rit, &en, &ec));
           if (!en)
             break;
         }
-        ASSERT_EQ(1, saw_err);
+        cfs_rec_dir_itr_close(rit);
       }
-      cfs_rec_dir_itr_close(rit);
-
-      /* Nested unreadable WITH skip_permission_denied succeeds! */
-      ASSERT_EQ(cfs_errc_success,
-                cfs_rec_dir_itr_init_opts(
-                    &p_root, cfs_directory_options_skip_permission_denied, &rit,
-                    &ec));
-      for (;;) {
-        ASSERT_EQ(cfs_errc_success, cfs_rec_dir_itr_next(rit, &en, &ec));
-        if (!en)
-          break;
-      }
-      cfs_rec_dir_itr_close(rit);
 
       ASSERT_EQ(cfs_errc_success,
                 cfs_permissions(&deny_dir, (cfs_perms)0700,

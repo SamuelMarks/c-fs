@@ -3803,8 +3803,8 @@ static cfs_errc cfs_thread_pool_create(cfs_size_t num_threads,
     (void)i;
 #else
     {
-      int pt_rc = pthread_create(&pool->threads[pool->num_threads].t, NULL,
-                                 cfs_worker_thread, pool);
+      pthread_t *pt_slot = &pool->threads[pool->num_threads].t;
+      int pt_rc = pthread_create(pt_slot, NULL, cfs_worker_thread, pool);
       if (pt_rc == 0)
         pool->num_threads++;
     }

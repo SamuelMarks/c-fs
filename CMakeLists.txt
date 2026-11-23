@@ -1,6 +1,6 @@
 # File: CMakeLists.txt
-# Brief: CMake build configuration for c-fs project.
-cmake_minimum_required(VERSION 3.15...3.31)
+# Brief: Target-scoped CMake build configuration for c-fs.
+cmake_minimum_required(VERSION 3.18...3.31)
 
 if(POLICY CMP0141)
     cmake_policy(SET CMP0141 NEW)
@@ -10,148 +10,94 @@ project(c-fs VERSION 0.1.0 LANGUAGES C)
 
 if(DEFINED PROJECT_IS_TOP_LEVEL)
     set(CFS_IS_TOP_LEVEL "${PROJECT_IS_TOP_LEVEL}")
-elseif(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    set(CFS_IS_TOP_LEVEL TRUE)
 else()
-    set(CFS_IS_TOP_LEVEL FALSE)
+    string(COMPARE EQUAL "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}" CFS_IS_TOP_LEVEL)
 endif()
 
-string(TOUPPER "${PROJECT_NAME}" PROJECT_PREFIX)
-string(REPLACE "-" "_" PROJECT_PREFIX "${PROJECT_PREFIX}")
-
-set(_CFS_CLI_HAD_COVERAGE FALSE)
-if(CFS_IS_TOP_LEVEL AND "${CMAKE_C_FLAGS};${CMAKE_C_FLAGS_DEBUG}" MATCHES "(--coverage|-fprofile-arcs|-ftest-coverage)")
-    set(_CFS_CLI_HAD_COVERAGE TRUE)
-endif()
-
-# Strip global coverage flags from directory scope: prevents parent flags from leaking
-# into subprojects, and converts top-level CLI -DCMAKE_C_FLAGS=--coverage into the
-# target-scoped `cfs_internal_coverage` INTERFACE target.
-foreach(_flag_var
-    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-    CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_C_FLAGS_MINSIZEREL
-    CMAKE_EXE_LINKER_FLAGS CMAKE_EXE_LINKER_FLAGS_DEBUG
-    CMAKE_SHARED_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS_DEBUG)
-    if(DEFINED ${_flag_var})
-        string(REPLACE "--coverage" "" ${_flag_var} "${${_flag_var}}")
-        string(REPLACE "-fprofile-arcs" "" ${_flag_var} "${${_flag_var}}")
-        string(REPLACE "-ftest-coverage" "" ${_flag_var} "${${_flag_var}}")
-    endif()
-endforeach()
-
-# Suppress unused-variable warnings from variables passed by shared c-ci matrix scripts
-set(CDD_CHARSET "" CACHE STRING "c-ci matrix override for character set")
-set(CDD_DEPS "" CACHE STRING "c-ci matrix override for dependencies")
-set(CDD_MSVC_RTC "" CACHE STRING "c-ci matrix override for MSVC runtime checks")
-set(CDD_THREADING "" CACHE STRING "c-ci matrix override for threading mode")
-mark_as_advanced(CDD_CHARSET CDD_DEPS CDD_MSVC_RTC CDD_THREADING)
-
-# Phase 1: Build System Options
+# Build options
 option(CFS_HEADER_ONLY "Use c-fs as a header-only INTERFACE library" OFF)
 
-set(_CFS_EXPLICIT_SHARED_SET FALSE)
-if(DEFINED CFS_BUILD_SHARED)
-    set(_CFS_EXPLICIT_SHARED_SET TRUE)
+set(_CFS_DEFAULT_SHARED OFF)
+if(DEFINED BUILD_SHARED_LIBS AND BUILD_SHARED_LIBS)
+    set(_CFS_DEFAULT_SHARED ON)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "DOS" OR DOS)
+    set(_CFS_DEFAULT_SHARED OFF)
 endif()
 
+option(CFS_BUILD_SHARED "Build c-fs as a shared library" ${_CFS_DEFAULT_SHARED})
+if(CFS_BUILD_SHARED)
+    set(_CFS_DEFAULT_STATIC OFF)
+else()
+    set(_CFS_DEFAULT_STATIC ON)
+endif()
+option(CFS_BUILD_STATIC "Build c-fs as a static library" ${_CFS_DEFAULT_STATIC})
+
 if(CMAKE_SYSTEM_NAME STREQUAL "DOS" OR DOS)
-    option(CFS_BUILD_SHARED "Build c-fs as a shared library" OFF)
-    option(CFS_BUILD_STATIC "Build c-fs as a static library" ON)
     set(CFS_BUILD_SHARED OFF)
     set(CFS_BUILD_STATIC ON)
-elseif(NOT _CFS_EXPLICIT_SHARED_SET AND DEFINED BUILD_SHARED_LIBS)
-    if(BUILD_SHARED_LIBS)
-        option(CFS_BUILD_SHARED "Build c-fs as a shared library" ON)
-        option(CFS_BUILD_STATIC "Build c-fs as a static library" OFF)
-        set(CFS_BUILD_SHARED ON)
-        set(CFS_BUILD_STATIC OFF)
-    else()
-        option(CFS_BUILD_SHARED "Build c-fs as a shared library" OFF)
-        option(CFS_BUILD_STATIC "Build c-fs as a static library" ON)
-        set(CFS_BUILD_SHARED OFF)
-        set(CFS_BUILD_STATIC ON)
-    endif()
-else()
-    option(CFS_BUILD_SHARED "Build c-fs as a shared library" OFF)
-    option(CFS_BUILD_STATIC "Build c-fs as a static library" ON)
 endif()
 
 if(NOT CFS_HEADER_ONLY AND NOT CFS_BUILD_SHARED AND NOT CFS_BUILD_STATIC)
     message(FATAL_ERROR "At least one of CFS_BUILD_STATIC, CFS_BUILD_SHARED, or CFS_HEADER_ONLY must be ON.")
 endif()
 
-set(${PROJECT_PREFIX}_CHARSET "Unicode" CACHE STRING "Charset to use: Unicode, ANSI, or MBCS")
-set_property(CACHE ${PROJECT_PREFIX}_CHARSET PROPERTY STRINGS "Unicode" "ANSI" "MBCS")
+set(CFS_CHARSET "Unicode" CACHE STRING "Charset to use: Unicode, ANSI, or MBCS")
+set_property(CACHE CFS_CHARSET PROPERTY STRINGS "Unicode" "ANSI" "MBCS")
 
-set(${PROJECT_PREFIX}_THREADING "Multi-threaded" CACHE STRING "Threading: Multi-threaded or Single-threaded")
-set_property(CACHE ${PROJECT_PREFIX}_THREADING PROPERTY STRINGS "Multi-threaded" "Single-threaded")
+set(CFS_THREADING "Multi-threaded" CACHE STRING "Threading: Multi-threaded or Single-threaded")
+set_property(CACHE CFS_THREADING PROPERTY STRINGS "Multi-threaded" "Single-threaded")
 
-set(${PROJECT_PREFIX}_LTO OFF CACHE BOOL "Enable Link-Time Optimization (LTO)")
+option(CFS_LTO "Enable Link-Time Optimization (IPO/LTO)" OFF)
 
-set(${PROJECT_PREFIX}_MSVC_RTC "" CACHE STRING "MSVC Runtime Checks: RTC1, RTCs, RTCu, or empty")
-set_property(CACHE ${PROJECT_PREFIX}_MSVC_RTC PROPERTY STRINGS "" "RTC1" "RTCs" "RTCu" "OFF")
+set(CFS_MSVC_RTC "" CACHE STRING "MSVC Runtime Checks: RTC1, RTCs, RTCu, or OFF")
+set_property(CACHE CFS_MSVC_RTC PROPERTY STRINGS "" "RTC1" "RTCs" "RTCu" "OFF")
 
-set(${PROJECT_PREFIX}_CRT_LINKAGE "Shared" CACHE STRING "MSVC CRT Linkage: Static or Shared")
-set_property(CACHE ${PROJECT_PREFIX}_CRT_LINKAGE PROPERTY STRINGS "Shared" "Static")
+set(CFS_CRT_LINKAGE "Shared" CACHE STRING "MSVC CRT Linkage: Shared or Static")
+set_property(CACHE CFS_CRT_LINKAGE PROPERTY STRINGS "Shared" "Static")
 
 option(CFS_INSTALL "Generate install and CMake package export rules for c-fs" ${CFS_IS_TOP_LEVEL})
-option(${PROJECT_PREFIX}_INSTALL "Generate install and CMake package export rules for c-fs" ${CFS_INSTALL})
 
 if(CFS_IS_TOP_LEVEL)
-    option(${PROJECT_PREFIX}_COVERAGE "Enable code coverage instrumentation" OFF)
-    option(CFS_COVERAGE "Enable code coverage instrumentation" ${${PROJECT_PREFIX}_COVERAGE})
+    option(CFS_COVERAGE "Enable code coverage instrumentation" OFF)
     option(CFS_BUILD_TESTING "Build the c-fs test suite" OFF)
-    option(${PROJECT_PREFIX}_BUILD_TESTING "Build the c-fs test suite" ${CFS_BUILD_TESTING})
-    option(CFS_TESTING "Build the c-fs test suite" OFF)
-    option(${PROJECT_PREFIX}_TESTING "Build the c-fs test suite" ${CFS_TESTING})
-    option(c_fs_TESTING "Build the c-fs test suite" ${CFS_TESTING})
 endif()
 
-# Honor parent / alias / c-ci configuration overrides
-set(_CFS_EFFECTIVE_CHARSET "${${PROJECT_PREFIX}_CHARSET}")
-if(NOT CDD_CHARSET STREQUAL "")
+# Acknowledge optional CI / superproject pass-through variables without polluting cache
+set(_cfs_cli_passthrough
+    "${CDD_CHARSET}${CDD_THREADING}${CDD_MSVC_RTC}${CDD_DEPS}"
+    "${CFS_UNICODE}${CFS_BUILD_TESTS}${C_FS_BUILD_TESTS}"
+    "${C_FS_BUILD_TESTING}${C_FS_TESTING}${c_fs_TESTING}${CFS_TESTING}"
+)
+unset(_cfs_cli_passthrough)
+
+# Resolve effective configuration (honoring c-ci matrix overrides when provided)
+set(_CFS_EFFECTIVE_CHARSET "${CFS_CHARSET}")
+if(DEFINED CDD_CHARSET AND NOT CDD_CHARSET STREQUAL "")
     set(_CFS_EFFECTIVE_CHARSET "${CDD_CHARSET}")
-elseif(DEFINED CFS_CHARSET AND NOT CFS_CHARSET STREQUAL "")
-    set(_CFS_EFFECTIVE_CHARSET "${CFS_CHARSET}")
 elseif(DEFINED CFS_UNICODE AND NOT CFS_UNICODE STREQUAL "")
     if(CFS_UNICODE)
         set(_CFS_EFFECTIVE_CHARSET "Unicode")
     else()
         set(_CFS_EFFECTIVE_CHARSET "ANSI")
     endif()
-elseif(NOT CFS_IS_TOP_LEVEL)
-    get_directory_property(_PARENT_COMPILE_DEFS COMPILE_DEFINITIONS)
-    if("${_PARENT_COMPILE_DEFS};${CMAKE_C_FLAGS}" MATCHES "(^|[;/ -]D?)_MBCS(=[^; ]*)?($|[; ])")
-        set(_CFS_EFFECTIVE_CHARSET "ANSI")
-    elseif("${_PARENT_COMPILE_DEFS};${CMAKE_C_FLAGS}" MATCHES "(^|[;/ -]D?)_?UNICODE(=[^; ]*)?($|[; ])")
-        set(_CFS_EFFECTIVE_CHARSET "UNICODE")
-    endif()
 endif()
 
-set(_CFS_EFFECTIVE_THREADING "${${PROJECT_PREFIX}_THREADING}")
-if(NOT CDD_THREADING STREQUAL "")
+set(_CFS_EFFECTIVE_THREADING "${CFS_THREADING}")
+if(DEFINED CDD_THREADING AND NOT CDD_THREADING STREQUAL "")
     set(_CFS_EFFECTIVE_THREADING "${CDD_THREADING}")
-elseif(DEFINED CFS_THREADING AND NOT CFS_THREADING STREQUAL "")
-    set(_CFS_EFFECTIVE_THREADING "${CFS_THREADING}")
 endif()
 
-set(_CFS_EFFECTIVE_RTC "${${PROJECT_PREFIX}_MSVC_RTC}")
-if(NOT CDD_MSVC_RTC STREQUAL "")
+set(_CFS_EFFECTIVE_RTC "${CFS_MSVC_RTC}")
+if(DEFINED CDD_MSVC_RTC AND NOT CDD_MSVC_RTC STREQUAL "")
     set(_CFS_EFFECTIVE_RTC "${CDD_MSVC_RTC}")
-elseif(DEFINED CFS_MSVC_RTC AND NOT CFS_MSVC_RTC STREQUAL "")
-    set(_CFS_EFFECTIVE_RTC "${CFS_MSVC_RTC}")
-endif()
-
-set(_CFS_EFFECTIVE_CRT "${${PROJECT_PREFIX}_CRT_LINKAGE}")
-if(DEFINED CFS_CRT_LINKAGE AND NOT CFS_CRT_LINKAGE STREQUAL "")
-    set(_CFS_EFFECTIVE_CRT "${CFS_CRT_LINKAGE}")
 endif()
 
 string(TOUPPER "${_CFS_EFFECTIVE_CHARSET}" _CFS_CHARSET_UPPER)
 string(TOUPPER "${_CFS_EFFECTIVE_THREADING}" _CFS_THREADING_UPPER)
-string(TOUPPER "${_CFS_EFFECTIVE_CRT}" _CFS_CRT_UPPER)
+string(TOUPPER "${CFS_CRT_LINKAGE}" _CFS_CRT_UPPER)
 
-# Identify compiler frontend (handles clang.exe GNU driver vs clang-cl / cl.exe on Windows)
+# Identify compiler frontend (distinguishes clang GNU driver vs clang-cl / cl.exe)
 set(_CFS_IS_MSVC_FRONTEND FALSE)
 set(_CFS_IS_GNU_FRONTEND FALSE)
 if(MSVC AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
@@ -160,13 +106,13 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR CMAKE_C_COMPILER_FRONTEND_VARI
     set(_CFS_IS_GNU_FRONTEND TRUE)
 endif()
 
-# Compute per-target MSVC CRT linkage & debug info properties (avoiding global mutations)
+# Per-target MSVC CRT linkage & debug information properties
 set(_CFS_MSVC_RUNTIME_LIBRARY "")
 set(_CFS_MSVC_DEBUG_FORMAT "")
 if(_CFS_IS_MSVC_FRONTEND)
     if(DEFINED CMAKE_MSVC_RUNTIME_LIBRARY AND NOT CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "")
         set(_CFS_MSVC_RUNTIME_LIBRARY "${CMAKE_MSVC_RUNTIME_LIBRARY}")
-    elseif(CFS_IS_TOP_LEVEL OR DEFINED CFS_CRT_LINKAGE OR NOT "${${PROJECT_PREFIX}_CRT_LINKAGE}" STREQUAL "Shared")
+    elseif(CFS_IS_TOP_LEVEL OR NOT "${CFS_CRT_LINKAGE}" STREQUAL "Shared")
         if(_CFS_CRT_UPPER STREQUAL "STATIC" OR _CFS_CRT_UPPER STREQUAL "MT")
             set(_CFS_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
         else()
@@ -183,7 +129,7 @@ if(_CFS_IS_MSVC_FRONTEND)
     endif()
 endif()
 
-# Normalize MSVC RTC setting
+# Normalize per-target MSVC runtime checks (/RTC1, /RTCs, /RTCu)
 set(_CFS_RTC_FLAG "")
 if(_CFS_IS_MSVC_FRONTEND AND NOT _CFS_EFFECTIVE_RTC STREQUAL "" AND NOT _CFS_EFFECTIVE_RTC STREQUAL "OFF")
     string(REGEX REPLACE "^/" "" _CFS_RTC_CLEAN "${_CFS_EFFECTIVE_RTC}")
@@ -192,38 +138,24 @@ if(_CFS_IS_MSVC_FRONTEND AND NOT _CFS_EFFECTIVE_RTC STREQUAL "" AND NOT _CFS_EFF
     else()
         set(_CFS_RTC_FLAG "/${_CFS_RTC_CLEAN}")
     endif()
-
-    if(CFS_IS_TOP_LEVEL)
-        # cl.exe rejects '/O2 ... /Od /RTC1' with command-line error D8016, so strip
-        # conflicting optimization/LTO flags only in top-level RTC test builds.
-        foreach(_flag_var
-            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-            CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_C_FLAGS_MINSIZEREL)
-            if(DEFINED ${_flag_var})
-                string(REGEX REPLACE "/RTC[1csu]+" "" ${_flag_var} "${${_flag_var}}")
-                string(REGEX REPLACE "/O(1|2|x|b1|b2)" "/Od" ${_flag_var} "${${_flag_var}}")
-                string(REPLACE "/GL" "" ${_flag_var} "${${_flag_var}}")
-            endif()
-        endforeach()
-    endif()
 endif()
 
-# Internal build-only target encapsulating warning flags & private OS feature-test macros
-add_library(cfs_internal_flags INTERFACE)
+# Internal build-only INTERFACE target for strict compiler warnings & private OS macros
+add_library(cfs_build_flags INTERFACE)
 
 if(_CFS_IS_MSVC_FRONTEND)
     if(MSVC_VERSION LESS 1400)
         message(WARNING "MSVC version earlier than 2005 is not officially supported.")
     endif()
-    target_compile_options(cfs_internal_flags INTERFACE "/W4" "/WX")
+    target_compile_options(cfs_build_flags INTERFACE "/W4" "/WX")
     if(NOT _CFS_RTC_FLAG STREQUAL "")
-        target_compile_options(cfs_internal_flags INTERFACE "/Od" "${_CFS_RTC_FLAG}")
+        target_compile_options(cfs_build_flags INTERFACE "/Od" "/Ob0" "${_CFS_RTC_FLAG}")
     endif()
 elseif(_CFS_IS_GNU_FRONTEND)
     if(NOT "c_std_90" IN_LIST CMAKE_C_COMPILE_FEATURES)
-        target_compile_options(cfs_internal_flags INTERFACE "$<$<COMPILE_LANGUAGE:C>:-ansi>")
+        target_compile_options(cfs_build_flags INTERFACE "$<$<COMPILE_LANGUAGE:C>:-ansi>")
     endif()
-    target_compile_options(cfs_internal_flags INTERFACE
+    target_compile_options(cfs_build_flags INTERFACE
         "-pedantic"
         "-Wall"
         "-Wextra"
@@ -240,50 +172,41 @@ elseif(_CFS_IS_GNU_FRONTEND)
         "-Wshadow"
     )
     if(APPLE)
-        target_compile_definitions(cfs_internal_flags INTERFACE _DARWIN_C_SOURCE)
+        target_compile_definitions(cfs_build_flags INTERFACE _DARWIN_C_SOURCE)
     elseif(MINGW)
-        target_compile_definitions(cfs_internal_flags INTERFACE __USE_MINGW_ANSI_STDIO=1)
-    elseif(CYGWIN)
-        target_compile_definitions(cfs_internal_flags INTERFACE _DEFAULT_SOURCE _GNU_SOURCE)
-    elseif(UNIX OR EMSCRIPTEN)
-        target_compile_definitions(cfs_internal_flags INTERFACE _DEFAULT_SOURCE _GNU_SOURCE)
+        target_compile_definitions(cfs_build_flags INTERFACE __USE_MINGW_ANSI_STDIO=1)
+    elseif(UNIX OR CYGWIN OR EMSCRIPTEN)
+        target_compile_definitions(cfs_build_flags INTERFACE _DEFAULT_SOURCE _GNU_SOURCE)
     endif()
 elseif(CMAKE_C_COMPILER_ID MATCHES "Watcom")
-    target_compile_options(cfs_internal_flags INTERFACE "-wx" "-we")
+    target_compile_options(cfs_build_flags INTERFACE "-wx" "-we")
 endif()
 
-# Determine testing & coverage state before target configuration
+# Top-level testing & coverage flags
 set(_CFS_ENABLE_TESTING FALSE)
-if(CFS_IS_TOP_LEVEL AND (BUILD_TESTING OR CFS_BUILD_TESTING OR ${PROJECT_PREFIX}_BUILD_TESTING OR CFS_TESTING OR ${PROJECT_PREFIX}_TESTING OR c_fs_TESTING))
+if(CFS_IS_TOP_LEVEL AND (BUILD_TESTING OR CFS_BUILD_TESTING OR C_FS_BUILD_TESTING OR CFS_TESTING OR C_FS_TESTING OR c_fs_TESTING))
     set(_CFS_ENABLE_TESTING TRUE)
 endif()
 
-set(_CFS_COVERAGE_ACTIVE FALSE)
-if(CFS_IS_TOP_LEVEL AND (${PROJECT_PREFIX}_COVERAGE OR CFS_COVERAGE OR _CFS_CLI_HAD_COVERAGE))
-    set(_CFS_COVERAGE_ACTIVE TRUE)
-endif()
-
-if(_CFS_COVERAGE_ACTIVE AND _CFS_IS_GNU_FRONTEND)
+if(CFS_IS_TOP_LEVEL AND _CFS_IS_GNU_FRONTEND AND (CFS_COVERAGE OR "${CMAKE_C_FLAGS};${CMAKE_C_FLAGS_DEBUG}" MATCHES "(--coverage|-fprofile-arcs|-ftest-coverage)"))
     include(CheckCCompilerFlag)
     check_c_compiler_flag("-fprofile-update=atomic" _CFS_HAS_PROFILE_ATOMIC)
-    add_library(cfs_internal_coverage INTERFACE)
-    target_compile_options(cfs_internal_coverage INTERFACE
+    add_library(cfs_coverage_flags INTERFACE)
+    target_compile_options(cfs_coverage_flags INTERFACE
         "--coverage"
         "$<$<BOOL:${_CFS_HAS_PROFILE_ATOMIC}>:-fprofile-update=atomic>"
     )
-    target_link_options(cfs_internal_coverage INTERFACE "--coverage")
+    target_link_options(cfs_coverage_flags INTERFACE "--coverage")
 endif()
 
-# Link-Time Optimization (IPO) detection
-set(_CFS_WANT_LTO FALSE)
-if(${PROJECT_PREFIX}_LTO OR CFS_LTO OR CMAKE_INTERPROCEDURAL_OPTIMIZATION)
-    if(_CFS_RTC_FLAG STREQUAL "" AND NOT (APPLE AND CMAKE_C_COMPILER_ID STREQUAL "GNU") AND NOT CMAKE_C_COMPILER_ID MATCHES "Watcom" AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS" AND NOT DOS)
-        set(_CFS_WANT_LTO TRUE)
-    endif()
-endif()
-
+# Per-target Link-Time Optimization (IPO) detection
 set(_CFS_IPO_SUPPORTED FALSE)
-if(_CFS_WANT_LTO)
+if((CFS_LTO OR CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+   AND _CFS_RTC_FLAG STREQUAL ""
+   AND NOT (APPLE AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+   AND NOT CMAKE_C_COMPILER_ID MATCHES "Watcom"
+   AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS"
+   AND NOT DOS)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT _CFS_IPO_SUPPORTED OUTPUT _CFS_IPO_ERROR)
     if(NOT _CFS_IPO_SUPPORTED)
@@ -292,41 +215,53 @@ if(_CFS_WANT_LTO)
 endif()
 
 set(_CFS_USE_UNICODE FALSE)
-if(_CFS_CHARSET_UPPER STREQUAL "UNICODE" OR _CFS_CHARSET_UPPER STREQUAL "ON" OR
-   _CFS_CHARSET_UPPER STREQUAL "TRUE" OR _CFS_CHARSET_UPPER STREQUAL "1")
+if(_CFS_CHARSET_UPPER MATCHES "^(UNICODE|ON|TRUE|1)$")
     set(_CFS_USE_UNICODE TRUE)
 endif()
 
 set(_CFS_USE_MULTITHREAD FALSE)
-if(_CFS_THREADING_UPPER STREQUAL "MULTI-THREADED" OR
-   _CFS_THREADING_UPPER STREQUAL "MULTITHREADED" OR
-   _CFS_THREADING_UPPER STREQUAL "MULTI" OR
-   _CFS_THREADING_UPPER STREQUAL "ON" OR
-   _CFS_THREADING_UPPER STREQUAL "TRUE" OR
-   _CFS_THREADING_UPPER STREQUAL "1")
+if(_CFS_THREADING_UPPER MATCHES "^(MULTI-THREADED|MULTITHREADED|MULTI|ON|TRUE|1)$")
     set(_CFS_USE_MULTITHREAD TRUE)
 endif()
 
-if(_CFS_USE_MULTITHREAD AND NOT WIN32 AND NOT EMSCRIPTEN AND NOT DOS AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
+function(_cfs_find_threads)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)
+endfunction()
+
+if(_CFS_USE_MULTITHREAD AND NOT WIN32 AND NOT EMSCRIPTEN AND NOT DOS AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS")
+    _cfs_find_threads()
 endif()
 
-if(NOT DEFINED CMAKE_INSTALL_LIBDIR AND (CMAKE_SYSTEM_NAME STREQUAL "DOS" OR DOS))
-    set(CMAKE_INSTALL_LIBDIR "lib" CACHE PATH "Object code libraries")
+if(CFS_INSTALL AND NOT CMAKE_SYSTEM_NAME STREQUAL "DOS" AND NOT DOS)
+    include(GNUInstallDirs)
+    set(_CFS_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}")
+    set(_CFS_INSTALL_LIBDIR "${CMAKE_INSTALL_LIBDIR}")
+    set(_CFS_INSTALL_BINDIR "${CMAKE_INSTALL_BINDIR}")
+else()
+    set(_CFS_INSTALL_INCLUDEDIR "include")
+    set(_CFS_INSTALL_LIBDIR "lib")
+    set(_CFS_INSTALL_BINDIR "bin")
 endif()
-include(GNUInstallDirs)
 
-set(CFS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
-set(CFS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/cfs.c")
+set(_CFS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(_CFS_SOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/cfs.c")
 
-# Per-target configuration helpers (eliminating global directory/flag side effects)
-function(cfs_apply_common_target_properties target_name)
+# Target-scoped helper functions
+function(cfs_apply_target_defaults target_name)
     if(CFS_IS_TOP_LEVEL)
         set_target_properties(${target_name} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
             ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        )
+    endif()
+
+    if("c_std_90" IN_LIST CMAKE_C_COMPILE_FEATURES)
+        set_target_properties(${target_name} PROPERTIES
+            C_STANDARD 90
+            C_STANDARD_REQUIRED ON
+            C_EXTENSIONS OFF
         )
     endif()
 
@@ -342,28 +277,16 @@ function(cfs_apply_common_target_properties target_name)
     if(_CFS_IPO_SUPPORTED)
         target_compile_definitions(${target_name} PRIVATE CFS_ENABLE_LTO)
     endif()
-endfunction()
 
-function(cfs_apply_c_target_settings target_name)
-    cfs_apply_common_target_properties(${target_name})
-
-    if("c_std_90" IN_LIST CMAKE_C_COMPILE_FEATURES)
-        set_target_properties(${target_name} PROPERTIES
-            C_STANDARD 90
-            C_STANDARD_REQUIRED ON
-            C_EXTENSIONS OFF
-        )
-    endif()
-
-    target_link_libraries(${target_name} PRIVATE $<BUILD_INTERFACE:cfs_internal_flags>)
+    target_link_libraries(${target_name} PRIVATE $<BUILD_INTERFACE:cfs_build_flags>)
 endfunction()
 
 function(cfs_configure_compiled_library target_name)
-    cfs_apply_c_target_settings(${target_name})
+    cfs_apply_target_defaults(${target_name})
 
     target_include_directories(${target_name} PUBLIC
-        $<BUILD_INTERFACE:${CFS_INCLUDE_DIR}>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<BUILD_INTERFACE:${_CFS_INCLUDE_DIR}>
+        $<INSTALL_INTERFACE:${_CFS_INSTALL_INCLUDEDIR}>
     )
 
     if(CFS_BUILD_SHARED)
@@ -398,12 +321,12 @@ function(cfs_configure_compiled_library target_name)
     endif()
 endfunction()
 
-# Primary library target definition
+# Primary library target
 if(CFS_HEADER_ONLY)
     add_library(cfs INTERFACE)
     target_include_directories(cfs INTERFACE
-        $<BUILD_INTERFACE:${CFS_INCLUDE_DIR}>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<BUILD_INTERFACE:${_CFS_INCLUDE_DIR}>
+        $<INSTALL_INTERFACE:${_CFS_INSTALL_INCLUDEDIR}>
     )
     if(MINGW)
         target_compile_definitions(cfs INTERFACE __USE_MINGW_ANSI_STDIO=1)
@@ -423,15 +346,22 @@ if(CFS_HEADER_ONLY)
     endif()
 else()
     if(CFS_BUILD_SHARED)
-        add_library(cfs SHARED "${CFS_SOURCES}")
+        add_library(cfs SHARED "${_CFS_SOURCE_FILE}")
     else()
-        add_library(cfs STATIC "${CFS_SOURCES}")
+        add_library(cfs STATIC "${_CFS_SOURCE_FILE}")
     endif()
 
     cfs_configure_compiled_library(cfs)
 
-    if(TARGET cfs_internal_coverage AND NOT _CFS_ENABLE_TESTING)
-        target_link_libraries(cfs PUBLIC $<BUILD_INTERFACE:cfs_internal_coverage>)
+    if(TARGET cfs_coverage_flags)
+        if(_CFS_ENABLE_TESTING)
+            if(UNIX AND CMAKE_C_COMPILER_ID STREQUAL "GNU"
+               AND "${CMAKE_C_FLAGS};${CMAKE_C_FLAGS_DEBUG}" MATCHES "(--coverage|-fprofile-arcs|-ftest-coverage)")
+                target_compile_options(cfs PRIVATE "-fprofile-note=/dev/null" "-fprofile-dir=/tmp")
+            endif()
+        else()
+            target_link_libraries(cfs PUBLIC $<BUILD_INTERFACE:cfs_coverage_flags>)
+        endif()
     endif()
 endif()
 
@@ -440,24 +370,24 @@ if(NOT TARGET cfs::cfs)
 endif()
 
 # Install & CMake package config export rules
-if(CFS_INSTALL AND ${PROJECT_PREFIX}_INSTALL)
+if(CFS_INSTALL)
     include(CMakePackageConfigHelpers)
 
-    set(_CFS_CMAKE_CONFIG_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cfs")
+    set(_CFS_CMAKE_CONFIG_DESTINATION "${_CFS_INSTALL_LIBDIR}/cmake/cfs")
     set(_CFS_NEEDS_THREADS_DEPENDENCY FALSE)
-    if(TARGET Threads::Threads)
+    if(TARGET Threads::Threads AND (CFS_HEADER_ONLY OR NOT CFS_BUILD_SHARED))
         set(_CFS_NEEDS_THREADS_DEPENDENCY TRUE)
     endif()
 
     install(TARGETS cfs
         EXPORT cfs-targets
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION "${_CFS_INSTALL_LIBDIR}"
+        ARCHIVE DESTINATION "${_CFS_INSTALL_LIBDIR}"
+        RUNTIME DESTINATION "${_CFS_INSTALL_BINDIR}"
     )
 
-    install(DIRECTORY "${CFS_INCLUDE_DIR}/"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    install(DIRECTORY "${_CFS_INCLUDE_DIR}/"
+        DESTINATION "${_CFS_INSTALL_INCLUDEDIR}"
     )
 
     install(EXPORT cfs-targets
@@ -472,20 +402,16 @@ if(CFS_INSTALL AND ${PROJECT_PREFIX}_INSTALL)
         INSTALL_DESTINATION "${_CFS_CMAKE_CONFIG_DESTINATION}"
     )
 
+    set(_cfs_arch_opt "")
     if(CFS_HEADER_ONLY)
-        write_basic_package_version_file(
-            "${CMAKE_CURRENT_BINARY_DIR}/cfsConfigVersion.cmake"
-            VERSION ${PROJECT_VERSION}
-            COMPATIBILITY SameMajorVersion
-            ARCH_INDEPENDENT
-        )
-    else()
-        write_basic_package_version_file(
-            "${CMAKE_CURRENT_BINARY_DIR}/cfsConfigVersion.cmake"
-            VERSION ${PROJECT_VERSION}
-            COMPATIBILITY SameMajorVersion
-        )
+        set(_cfs_arch_opt ARCH_INDEPENDENT)
     endif()
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/cfsConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+        ${_cfs_arch_opt}
+    )
 
     install(FILES
         "${CMAKE_CURRENT_BINARY_DIR}/cfsConfig.cmake"
@@ -494,8 +420,8 @@ if(CFS_INSTALL AND ${PROJECT_PREFIX}_INSTALL)
     )
 endif()
 
-# Testing (strictly top-level only)
+# Testing (top-level only)
 if(_CFS_ENABLE_TESTING)
-    include(CTest)
+    enable_testing()
     add_subdirectory(tests)
 endif()
