@@ -138,6 +138,18 @@ if(_CFS_IS_MSVC_FRONTEND AND NOT _CFS_EFFECTIVE_RTC STREQUAL "" AND NOT _CFS_EFF
     else()
         set(_CFS_RTC_FLAG "/${_CFS_RTC_CLEAN}")
     endif()
+
+    if(CFS_IS_TOP_LEVEL)
+        foreach(_flag_var
+            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_C_FLAGS_MINSIZEREL)
+            if(DEFINED ${_flag_var})
+                string(REGEX REPLACE "/RTC[1csu]+" "" ${_flag_var} "${${_flag_var}}")
+                string(REGEX REPLACE "/O(1|2|x|b1|b2)" "" ${_flag_var} "${${_flag_var}}")
+                string(REPLACE "/GL" "" ${_flag_var} "${${_flag_var}}")
+            endif()
+        endforeach()
+    endif()
 endif()
 
 # Internal build-only INTERFACE target for strict compiler warnings & private OS macros
@@ -422,6 +434,10 @@ endif()
 
 # Testing (top-level only)
 if(_CFS_ENABLE_TESTING)
+    if(NOT DEFINED BUILD_TESTING)
+        set(BUILD_TESTING ON)
+    endif()
+    include(CTest)
     enable_testing()
     add_subdirectory(tests)
 endif()

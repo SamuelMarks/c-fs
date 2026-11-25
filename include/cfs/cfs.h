@@ -22,8 +22,10 @@
 #include <sys/stat.h>
 #include <wchar.h>
 #if defined(_WIN32) || defined(_WIN64)
+#ifndef WIN32_LEAN_AND_MEAN
 /** @brief Excludes rarely-used APIs from Win32 headers. */
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <winsock2.h>
 #include <io.h>
 #include <direct.h>
@@ -7420,7 +7422,7 @@ cfs_runtime_set_sandbox(cfs_runtime_t *rt, const cfs_sandbox_config *config) {
   cfs_errc rc;
   if (!rt || !config)
     return cfs_errc_invalid_argument;
-  cfs_path_clear(&rt->sandbox_root);
+  cfs_path_destroy(&rt->sandbox_root);
   if (config->root_chroot.str && config->root_chroot.length > 0) {
     rc = cfs_weakly_canonical(&config->root_chroot, &rt->sandbox_root, NULL);
     if (rc != cfs_errc_success)
@@ -8850,14 +8852,18 @@ CFS_NO_DISCARD CFS_API cfs_errc cfs_path_lexically_relative(
 
   for (k = 0; k < up_count; ++k) {
     rc = cfs_path_append(out, CFS_STR(".."));
-    if (rc != cfs_errc_success)
+    if (rc != cfs_errc_success) {
+      cfs_path_destroy(out);
       return rc;
+    }
   }
 
   while (has_p) {
     rc = cfs_path_append_n(out, el_p.str, el_p.length);
-    if (rc != cfs_errc_success)
+    if (rc != cfs_errc_success) {
+      cfs_path_destroy(out);
       return rc;
+    }
     cfs_next_rel_elem(&it_p, &el_p, &has_p);
   }
 

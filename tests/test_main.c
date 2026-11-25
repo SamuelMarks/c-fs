@@ -19,7 +19,10 @@
 #include "greatest.h"
 
 #if defined(CFS_OS_WINDOWS)
+#ifndef WIN32_LEAN_AND_MEAN
+/** @brief Excludes rarely-used APIs from Win32 headers. */
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <winsock2.h>
 #ifdef __cplusplus
 extern "C" {
@@ -3728,6 +3731,7 @@ TEST phase1_to_3_features(void) {
     g_cfs_realloc_fail = 1;
     ASSERT_EQ(cfs_errc_not_enough_memory,
               cfs_path_lexically_relative(&lr_a, &lr_b, &out));
+    ASSERT(out.str == NULL);
     g_cfs_realloc_fail = 0;
     cfs_path_destroy(&lr_a);
     cfs_path_destroy(&lr_b);
@@ -4515,9 +4519,10 @@ TEST phase5_directory_iterators(void) {
   cfs_rec_dir_itr_close(rit);
 
   /* OOM sweeps on cfs_rec_dir_itr_init & cfs_rec_dir_itr_next */
-  for (k = 1; k <= 4; ++k) {
+  for (k = 1; k <= 3; ++k) {
     g_cfs_malloc_fail = k;
-    test_ignore_rc(cfs_rec_dir_itr_init(&p_root, &rit, &ec));
+    ASSERT_EQ(cfs_errc_not_enough_memory,
+              cfs_rec_dir_itr_init(&p_root, &rit, &ec));
     g_cfs_malloc_fail = 0;
   }
   g_cfs_calloc_fail = 1;
@@ -5000,7 +5005,10 @@ TEST phase6_async_ipc_sandbox(void) {
       cfg.ipc_path = (mi == 3) ? CFS_STR("custom_ipc") : NULL;
       for (k = 1; k <= 4; ++k) {
         g_cfs_malloc_fail = k;
-        test_ignore_rc(cfs_runtime_init(&cfg, &rt, &ec));
+        if (cfs_runtime_init(&cfg, &rt, &ec) == cfs_errc_success) {
+          cfs_runtime_destroy(rt);
+          rt = NULL;
+        }
         g_cfs_malloc_fail = 0;
       }
       ASSERT_EQ(cfs_errc_success, cfs_runtime_init(&cfg, &rt, &ec));
